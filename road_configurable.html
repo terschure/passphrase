@@ -1,0 +1,1213 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Road Talk Configurable</title>
+        <style>
+            :root {
+                color-scheme: dark;
+                font-family: ui-monospace, SFMono-Regular, Menlo, Consolas,
+                    monospace;
+                background: #0a0a0a;
+                color: #eeeeee;
+            }
+
+            body {
+                min-height: 100vh;
+                max-width: none;
+                margin: 0 auto;
+                padding: 0;
+                line-height: 1.35;
+                background: #0a0a0a;
+                overflow: hidden;
+            }
+
+            h1 {
+                position: fixed;
+                top: 14px;
+                left: 50%;
+                z-index: 3;
+                transform: translateX(-50%);
+                font-size: 1.35rem;
+                margin: 0;
+                font-weight: 700;
+                color: #facc15;
+                letter-spacing: 0.08em;
+                text-align: center;
+                text-shadow: 0 2px 12px #000000;
+            }
+
+            .controls {
+                position: fixed;
+                top: 54px;
+                left: 50%;
+                z-index: 3;
+                transform: translateX(-50%);
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                justify-content: center;
+                width: min(94vw, 480px);
+            }
+
+            #open-settings {
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                z-index: 4;
+                padding: 3px 7px;
+                border: 1px solid #333333;
+                border-radius: 5px;
+                background: rgba(32, 32, 32, 0.72);
+                color: #777777;
+                font-size: 0.72rem;
+                font-weight: 400;
+            }
+
+            #open-settings:hover {
+                color: #aaaaaa;
+                background: rgba(48, 48, 48, 0.9);
+            }
+
+            main {
+                display: block;
+            }
+
+            #game {
+                width: 100%;
+                min-height: 100vh;
+                background: #111111;
+                user-select: none;
+            }
+
+            button {
+                font: inherit;
+                padding: 6px 12px;
+                border: 0;
+                border-radius: 8px;
+                cursor: pointer;
+                background: #facc15;
+                color: #111111;
+                font-weight: 700;
+            }
+
+            button:disabled {
+                cursor: not-allowed;
+                opacity: 0.35;
+            }
+
+            #status {
+                position: fixed;
+                top: 96px;
+                left: 50%;
+                z-index: 3;
+                transform: translateX(-50%);
+                min-height: 1.35em;
+                color: #aaaaaa;
+                text-align: center;
+                text-shadow: 0 2px 8px #000000;
+            }
+
+            #visualizer {
+                position: fixed;
+                right: 14px;
+                bottom: 92px;
+                z-index: 3;
+                display: block;
+                width: min(300px, 42vw);
+                height: 52px;
+                border-radius: 6px;
+                background: rgba(17, 17, 17, 0.78);
+            }
+
+            #transcript {
+                position: fixed;
+                left: 50%;
+                bottom: 14px;
+                z-index: 3;
+                transform: translateX(-50%);
+                width: min(420px, calc(100vw - 28px));
+                min-height: 56px;
+                padding: 8px 14px;
+                border: 1px solid #333333;
+                border-radius: 8px;
+                background: rgba(26, 26, 26, 0.86);
+                color: #facc15;
+                font-size: 0.95rem;
+                font-style: italic;
+                white-space: normal;
+                overflow-wrap: anywhere;
+            }
+
+            #settings-backdrop {
+                position: fixed;
+                inset: 0;
+                z-index: 10;
+                display: none;
+                background: rgba(0, 0, 0, 0.58);
+            }
+
+            #settings-backdrop.open {
+                display: block;
+            }
+
+            #settings-panel {
+                position: fixed;
+                inset: 0 0 0 auto;
+                z-index: 11;
+                width: min(360px, 88vw);
+                padding: 16px;
+                border-left: 1px solid #333333;
+                background: #0d0d0d;
+                color: #aaaaaa;
+                overflow-y: auto;
+                transform: translateX(100%);
+                transition: transform 180ms ease;
+            }
+
+            #settings-panel.open {
+                transform: translateX(0);
+            }
+
+            .settings-header {
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                gap: 12px;
+                color: #facc15;
+                font-weight: 700;
+            }
+
+            label {
+                display: block;
+                margin: 10px 0 4px;
+                color: #666666;
+                font-size: 0.75rem;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+            }
+
+            textarea,
+            select,
+            input {
+                box-sizing: border-box;
+                width: 100%;
+                font: inherit;
+                padding: 6px 8px;
+                border: 1px solid #333333;
+                border-radius: 6px;
+                background: #1a1a1a;
+                color: #eeeeee;
+            }
+
+            textarea {
+                min-height: 120px;
+                resize: vertical;
+            }
+
+            ul {
+                list-style: none;
+                padding: 0;
+                margin: 10px 0 0;
+            }
+
+            li {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+
+            li.current {
+                font-weight: 700;
+                color: #facc15;
+            }
+
+            li.checked {
+                text-decoration: line-through;
+                opacity: 0.7;
+            }
+
+            li.failed {
+                color: #ffffff;
+                text-decoration: underline;
+            }
+
+            input[type="checkbox"] {
+                width: auto;
+            }
+
+            .sequence-panel {
+                margin-top: 10px;
+            }
+
+            #sequence-status {
+                min-height: 4em;
+                margin-top: 8px;
+                white-space: pre-wrap;
+            }
+
+            .timeline-panel {
+                position: fixed;
+                inset: 0;
+                z-index: 1;
+                background: #111111;
+                overflow: hidden;
+            }
+
+            .timeline-header {
+                position: fixed;
+                top: 12px;
+                left: 14px;
+                z-index: 3;
+                display: flex;
+                justify-content: space-between;
+                gap: 12px;
+                color: #aaaaaa;
+                font-size: 0.8rem;
+                text-shadow: 0 2px 8px #000000;
+            }
+
+            #timer-display {
+                position: fixed;
+                top: 120px;
+                left: 50%;
+                z-index: 3;
+                transform: translateX(-50%);
+                font-size: 2.4rem;
+                line-height: 1;
+                color: #facc15;
+                text-align: center;
+                text-shadow: 0 2px 8px #000000;
+            }
+
+            #current-word {
+                position: fixed;
+                right: 50%;
+                bottom: 130px;
+                z-index: 3;
+                transform: translateX(50%);
+                min-width: 120px;
+                min-height: 2.2em;
+                margin: 0;
+                padding: 4px 18px;
+                border: 1.5px solid #facc15;
+                border-radius: 6px;
+                background: rgba(0, 0, 0, 0.82);
+                color: #facc15;
+                font-size: 1.3rem;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                text-align: center;
+            }
+
+            #timeline {
+                position: fixed;
+                top: 0;
+                bottom: 0;
+                left: 50%;
+                z-index: 1;
+                width: max-content;
+                height: 100vh;
+                margin: 0;
+                overflow: hidden;
+                transform: translateX(-50%);
+                white-space: pre;
+                color: #dddddd;
+                font-size: clamp(11px, 1.65vw, 18px);
+                line-height: 1.08;
+                letter-spacing: 0.04em;
+            }
+
+            .muted {
+                color: #666666;
+            }
+
+            .ok {
+                color: #22c55e;
+            }
+
+            .warn {
+                color: #facc15;
+            }
+
+            .bad {
+                color: #ef4444;
+            }
+
+            @media (max-width: 760px) {
+                #visualizer {
+                    left: 14px;
+                    right: auto;
+                    width: calc(100vw - 28px);
+                    bottom: 88px;
+                }
+
+                #current-word {
+                    bottom: 154px;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <div id="game">
+            <h1>&#9650; ROAD TALK &#9650;</h1>
+            <main>
+                <section>
+                <div class="controls">
+                    <button id="start">START</button>
+                    <button id="stop" disabled>STOP</button>
+                    <button id="clear">CLEAR</button>
+                </div>
+                <button id="open-settings" type="button">settings</button>
+
+                <div id="status">Idle</div>
+                <div class="timeline-panel" aria-live="polite">
+                    <div class="timeline-header">
+                        <span>ROAD</span>
+                        <span id="timeline-state">mode: sequence</span>
+                    </div>
+                    <pre id="timeline">//////////////////////////////////////////
+//////////////////////////////////////////
+//////////////////////////////////////////</pre>
+                    <div id="timer-display">--.-</div>
+                    <div id="current-word">
+                        <span class="muted">--</span>
+                    </div>
+                </div>
+                <canvas
+                    id="visualizer"
+                    width="900"
+                    height="120"
+                    aria-label="Microphone audio visualizer"
+                ></canvas>
+                <div id="transcript" aria-live="polite"><span id="final"></span><span id="interim"></span></div>
+                </section>
+
+            </main>
+        </div>
+
+        <div id="settings-backdrop"></div>
+        <aside id="settings-panel" aria-hidden="true">
+                <div class="settings-header">
+                    <span>[ settings ]</span>
+                    <button id="close-settings" type="button">CLOSE</button>
+                </div>
+                <label for="mode">mode</label>
+                <select id="mode">
+                    <option value="catch">catch any word</option>
+                    <option value="sequence" selected>sequence timer</option>
+                </select>
+
+                <label for="seconds">seconds for next word</label>
+                <input
+                    id="seconds"
+                    type="number"
+                    min="1"
+                    max="60"
+                    step="1"
+                    value="5"
+                />
+
+                <label for="transcript-source">transcript source</label>
+                <select id="transcript-source">
+                    <option value="interim">unstable interim</option>
+                    <option value="final">final results only</option>
+                </select>
+
+                <div class="sequence-panel">
+                    <button id="reset-sequence">[ reset seq ]</button>
+                    <div id="sequence-status">sequence: waiting</div>
+                </div>
+
+                <label for="words">one word or phrase per line</label>
+                <textarea id="words" aria-label="Words to catch">
+hello
+test
+microphone</textarea
+                >
+                <ul id="word-list" aria-label="Caught words"></ul>
+        </aside>
+
+        <script>
+            const SpeechRecognition =
+                window.SpeechRecognition || window.webkitSpeechRecognition;
+            const startButton = document.querySelector("#start");
+            const stopButton = document.querySelector("#stop");
+            const clearButton = document.querySelector("#clear");
+            const openSettingsButton = document.querySelector("#open-settings");
+            const closeSettingsButton =
+                document.querySelector("#close-settings");
+            const settingsBackdrop =
+                document.querySelector("#settings-backdrop");
+            const settingsPanel = document.querySelector("#settings-panel");
+            const resetSequenceButton =
+                document.querySelector("#reset-sequence");
+            const modeInput = document.querySelector("#mode");
+            const secondsInput = document.querySelector("#seconds");
+            const transcriptSourceInput =
+                document.querySelector("#transcript-source");
+            const wordsInput = document.querySelector("#words");
+            const wordList = document.querySelector("#word-list");
+            const sequenceStatus = document.querySelector("#sequence-status");
+            const timelineState = document.querySelector("#timeline-state");
+            const timerDisplay = document.querySelector("#timer-display");
+            const currentWord = document.querySelector("#current-word");
+            const timeline = document.querySelector("#timeline");
+            const status = document.querySelector("#status");
+            const finalText = document.querySelector("#final");
+            const interimText = document.querySelector("#interim");
+            const visualizer = document.querySelector("#visualizer");
+            const canvas = visualizer.getContext("2d");
+            const finalChunks = [];
+            const caughtWords = new Set();
+            let interimTranscript = "";
+            let sequenceIndex = 0;
+            let sequenceFailed = false;
+            let deadline = null;
+            let timerInterval = null;
+            let audioContext;
+            let analyser;
+            let micStream;
+            let visualizerFrame;
+            let roadAnimationFrame;
+            let lastRoadRender = 0;
+            function getRoadMetrics() {
+                const styles = getComputedStyle(timeline);
+                const fontSize = parseFloat(styles.fontSize) || 14;
+                const lineHeight = parseFloat(styles.lineHeight) || fontSize * 1.08;
+                const letterSpacing =
+                    parseFloat(styles.letterSpacing) || 0;
+                const measurer =
+                    getRoadMetrics.measurer ||
+                    (getRoadMetrics.measurer = document.createElement("canvas"));
+                const context = measurer.getContext("2d");
+                context.font = `${styles.fontWeight} ${fontSize}px ${styles.fontFamily}`;
+                const charWidth =
+                    context.measureText("M").width + letterSpacing;
+                const width = Math.max(
+                    42,
+                    Math.ceil(window.innerWidth / charWidth) + 12,
+                );
+                const height = Math.max(
+                    24,
+                    Math.ceil(window.innerHeight / lineHeight) + 2,
+                );
+                const center = Math.floor(width / 2);
+                const laneHalfWidth = Math.max(
+                    9,
+                    Math.min(18, Math.floor(width * 0.16)),
+                );
+
+                return {
+                    width,
+                    height,
+                    laneLeft: center - laneHalfWidth,
+                    laneRight: center + laneHalfWidth,
+                    carCol: center - 2,
+                    carRow: height - 5,
+                };
+            }
+
+            function openSettings() {
+                settingsBackdrop.classList.add("open");
+                settingsPanel.classList.add("open");
+                settingsPanel.setAttribute("aria-hidden", "false");
+            }
+
+            function closeSettings() {
+                settingsBackdrop.classList.remove("open");
+                settingsPanel.classList.remove("open");
+                settingsPanel.setAttribute("aria-hidden", "true");
+            }
+
+            function startRoadAnimation() {
+                if (roadAnimationFrame) {
+                    return;
+                }
+
+                function frame(timestamp) {
+                    roadAnimationFrame = requestAnimationFrame(frame);
+
+                    if (timestamp - lastRoadRender < 90) {
+                        return;
+                    }
+
+                    lastRoadRender = timestamp;
+                    renderSequenceStatus();
+                }
+
+                roadAnimationFrame = requestAnimationFrame(frame);
+            }
+
+            function stopRoadAnimation() {
+                if (roadAnimationFrame) {
+                    cancelAnimationFrame(roadAnimationFrame);
+                    roadAnimationFrame = null;
+                }
+            }
+
+            function restartSequenceIfListening() {
+                if (stopButton.disabled) {
+                    return;
+                }
+
+                startRoadAnimation();
+
+                if (
+                    modeInput.value === "sequence" &&
+                    getTargetWords().length &&
+                    !deadline &&
+                    !sequenceFailed
+                ) {
+                    startSequenceTimer();
+                }
+            }
+
+            function escapeRegExp(text) {
+                return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            }
+
+            function getTargetWords() {
+                return wordsInput.value
+                    .split("\n")
+                    .map((word) => word.trim())
+                    .filter(Boolean);
+            }
+
+            function renderWordList() {
+                const words = getTargetWords();
+                wordList.innerHTML = "";
+
+                for (const [index, word] of words.entries()) {
+                    const normalized = word.toLowerCase();
+                    const item = document.createElement("li");
+                    const isChecked = caughtWords.has(normalized);
+                    const isCurrent =
+                        modeInput.value === "sequence" &&
+                        index === sequenceIndex &&
+                        !sequenceFailed;
+                    item.className = [
+                        isChecked ? "checked" : "",
+                        isCurrent ? "current" : "",
+                        sequenceFailed &&
+                        modeInput.value === "sequence" &&
+                        index === sequenceIndex
+                            ? "failed"
+                            : "",
+                    ]
+                        .filter(Boolean)
+                        .join(" ");
+                    item.innerHTML = `<input type="checkbox" disabled ${caughtWords.has(normalized) ? "checked" : ""}> <span></span>`;
+                    item.querySelector("span").textContent =
+                        `${isCurrent ? "> " : "  "}${word}`;
+                    wordList.append(item);
+                }
+            }
+
+            function renderTranscript() {
+                finalText.textContent =
+                    transcriptSourceInput.value === "interim"
+                        ? interimTranscript
+                        : finalChunks.join(" ");
+
+                interimText.textContent = "";
+            }
+
+            function getSelectedTranscriptText() {
+                return transcriptSourceInput.value === "interim"
+                    ? interimTranscript
+                    : finalChunks.join(" ");
+            }
+
+            function catchWords(text) {
+                for (const word of getTargetWords()) {
+                    const matcher = new RegExp(
+                        `\\b${escapeRegExp(word)}\\b`,
+                        "i",
+                    );
+
+                    if (matcher.test(text)) {
+                        caughtWords.add(word.toLowerCase());
+                    }
+                }
+            }
+
+            function getSecondsLimit() {
+                return Math.max(1, Number(secondsInput.value) || 5);
+            }
+
+            function textHasWord(text, word) {
+                return new RegExp(`\\b${escapeRegExp(word)}\\b`, "i").test(
+                    text,
+                );
+            }
+
+            function stopSequenceTimer() {
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                }
+            }
+
+            function resetSequence() {
+                sequenceIndex = 0;
+                sequenceFailed = false;
+                deadline = null;
+                caughtWords.clear();
+
+                if (modeInput.value === "catch") {
+                    catchWords(getSelectedTranscriptText());
+                }
+
+                stopSequenceTimer();
+                renderSequenceStatus();
+                renderWordList();
+            }
+
+            function failSequence() {
+                sequenceFailed = true;
+                deadline = null;
+                stopSequenceTimer();
+                renderSequenceStatus();
+                renderWordList();
+            }
+
+            function startSequenceTimer() {
+                stopSequenceTimer();
+                deadline = Date.now() + getSecondsLimit() * 1000;
+                timerInterval = setInterval(() => {
+                    if (deadline && Date.now() >= deadline) {
+                        failSequence();
+                        return;
+                    }
+
+                    renderSequenceStatus();
+                }, 100);
+                renderSequenceStatus();
+            }
+
+            function renderSequenceStatus() {
+                const words = getTargetWords();
+                renderTimeline(words);
+
+                if (modeInput.value !== "sequence") {
+                    sequenceStatus.textContent = "sequence: off";
+                    return;
+                }
+
+                if (!words.length) {
+                    sequenceStatus.textContent = "sequence: no words";
+                    return;
+                }
+
+                if (sequenceFailed) {
+                    sequenceStatus.textContent = `sequence: timeout\nexpected: ${words[sequenceIndex] || "done"}\npress reset seq`;
+                    return;
+                }
+
+                if (sequenceIndex >= words.length) {
+                    sequenceStatus.textContent =
+                        "sequence: complete\nall words spoken";
+                    return;
+                }
+
+                if (!deadline) {
+                    sequenceStatus.textContent = `sequence: armed\nspeak first: ${words[sequenceIndex]}`;
+                    return;
+                }
+
+                const remaining = Math.max(0, (deadline - Date.now()) / 1000);
+                sequenceStatus.textContent = `sequence: running\nnext: ${words[sequenceIndex]}\ntime: ${remaining.toFixed(1)}s`;
+            }
+
+            function colorSpan(className, text) {
+                const span = document.createElement("span");
+                span.className = className;
+                span.textContent = text;
+                return span;
+            }
+
+            function buildRoad(word, wallRow) {
+                const {
+                    width,
+                    height,
+                    laneLeft,
+                    laneRight,
+                    carCol,
+                    carRow,
+                } = getRoadMetrics();
+                const rows = [];
+                const scroll = Math.floor(Date.now() / 140);
+
+                for (let r = 0; r < height; r += 1) {
+                    const row = Array(width).fill(" ");
+
+                    for (let c = 0; c < width; c += 1) {
+                        if (c < laneLeft - 1) {
+                            row[c] = "/";
+                        } else if (c > laneRight + 1) {
+                            row[c] = "\\";
+                        }
+                    }
+
+                    row[laneLeft - 1] = "|";
+                    row[laneRight + 1] = "|";
+
+                    if ((r + scroll) % 4 < 2) {
+                        row[Math.floor((laneLeft + laneRight) / 2)] = ":";
+                    }
+
+                    if (word && r === wallRow) {
+                        for (let c = laneLeft; c <= laneRight; c += 1) {
+                            row[c] = "#";
+                        }
+                    }
+
+                    if (word && r === wallRow + 1) {
+                        const label = word.toUpperCase();
+                        const start = Math.max(
+                            laneLeft,
+                            Math.floor(
+                                (laneLeft + laneRight - label.length) / 2,
+                            ),
+                        );
+
+                        for (let c = laneLeft; c <= laneRight; c += 1) {
+                            row[c] = "=";
+                        }
+
+                        for (
+                            let i = 0;
+                            i < label.length && start + i <= laneRight;
+                            i += 1
+                        ) {
+                            row[start + i] = label[i];
+                        }
+                    }
+
+                    if (word && r === wallRow + 2) {
+                        for (let c = laneLeft; c <= laneRight; c += 1) {
+                            row[c] = "#";
+                        }
+                    }
+
+                    if (r === carRow - 1) {
+                        row[carCol] = "/";
+                        row[carCol + 1] = "~";
+                        row[carCol + 2] = "^";
+                        row[carCol + 3] = "~";
+                        row[carCol + 4] = "\\";
+                    }
+
+                    if (r === carRow) {
+                        const car = [" ", "[", "=", "=", "=", "]", " "];
+                        for (let i = 0; i < car.length; i += 1) {
+                            row[carCol - 1 + i] = car[i];
+                        }
+                    }
+
+                    if (r === carRow + 1) {
+                        row[carCol + 1] = "O";
+                        row[carCol + 3] = "O";
+                    }
+
+                    rows.push(row.join(""));
+                }
+
+                return rows.join("\n");
+            }
+
+            function renderTimeline(words = getTargetWords()) {
+                timeline.replaceChildren();
+
+                if (modeInput.value !== "sequence") {
+                    timelineState.textContent = "mode: catch";
+                    timerDisplay.textContent = "--.-";
+                    currentWord.replaceChildren(
+                        colorSpan("muted", "--"),
+                    );
+                    timeline.textContent = buildRoad(null, -10);
+                    return;
+                }
+
+                const limit = getSecondsLimit();
+                const remaining = deadline
+                    ? Math.max(0, (deadline - Date.now()) / 1000)
+                    : limit;
+                const elapsed = deadline
+                    ? Math.min(limit, limit - remaining)
+                    : 0;
+                const { carRow } = getRoadMetrics();
+                const wallRow = Math.round(-3 + (elapsed / limit) * (carRow - 1));
+                const activeWord = words[sequenceIndex] || "--";
+                const complete =
+                    sequenceIndex >= words.length && words.length > 0;
+
+                timelineState.textContent = `mode: sequence ${sequenceIndex}/${words.length}`;
+
+                if (!words.length) {
+                    timerDisplay.textContent = "--.-";
+                    currentWord.replaceChildren(
+                        colorSpan("muted", "NO WORDS"),
+                    );
+                    timeline.textContent = buildRoad(null, -10);
+                    return;
+                }
+
+                if (sequenceFailed) {
+                    timerDisplay.textContent = "00.0";
+                    currentWord.replaceChildren(
+                        colorSpan("bad", `timeout: ${activeWord}`),
+                    );
+                    timeline.textContent = buildRoad(activeWord, carRow - 2);
+                    return;
+                }
+
+                if (complete) {
+                    timerDisplay.textContent = "DONE";
+                    currentWord.replaceChildren(
+                        colorSpan("ok", "sequence complete"),
+                    );
+                    timeline.textContent = buildRoad(null, -10);
+                    return;
+                }
+
+                timerDisplay.textContent = deadline
+                    ? remaining.toFixed(1)
+                    : `${limit}.0`;
+                currentWord.replaceChildren(
+                    colorSpan(
+                        deadline ? "warn" : "ok",
+                        activeWord.toUpperCase(),
+                    ),
+                );
+
+                timeline.textContent = buildRoad(activeWord, wallRow);
+            }
+
+            function processSequenceText(text) {
+                if (modeInput.value !== "sequence" || sequenceFailed) {
+                    return false;
+                }
+
+                const words = getTargetWords();
+                let changed = false;
+
+                while (
+                    sequenceIndex < words.length &&
+                    textHasWord(text, words[sequenceIndex])
+                ) {
+                    caughtWords.add(words[sequenceIndex].toLowerCase());
+                    sequenceIndex += 1;
+                    changed = true;
+
+                    if (sequenceIndex >= words.length) {
+                        deadline = null;
+                        stopSequenceTimer();
+                        break;
+                    }
+
+                    startSequenceTimer();
+                }
+
+                renderSequenceStatus();
+                return changed;
+            }
+
+            function processTranscriptText(text) {
+                if (!text.trim()) {
+                    return;
+                }
+
+                if (modeInput.value === "sequence") {
+                    processSequenceText(text);
+                } else {
+                    catchWords(text);
+                }
+            }
+
+            function rebuildCatchWordsFromSource() {
+                caughtWords.clear();
+
+                if (transcriptSourceInput.value === "interim") {
+                    catchWords(interimTranscript);
+                    return;
+                }
+
+                for (const chunk of finalChunks) {
+                    catchWords(chunk);
+                }
+            }
+
+            function drawIdleVisualizer() {
+                const width = visualizer.width;
+                const height = visualizer.height;
+                canvas.clearRect(0, 0, width, height);
+                canvas.fillStyle = "#666666";
+                canvas.font = "16px monospace";
+                canvas.fillText(
+                    "---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----",
+                    18,
+                    height / 2 + 5,
+                );
+            }
+
+            async function startVisualizer() {
+                if (
+                    !navigator.mediaDevices ||
+                    !navigator.mediaDevices.getUserMedia
+                ) {
+                    return;
+                }
+
+                micStream = await navigator.mediaDevices.getUserMedia({
+                    audio: true,
+                });
+                audioContext = new AudioContext();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+
+                const source = audioContext.createMediaStreamSource(micStream);
+                source.connect(analyser);
+
+                const data = new Uint8Array(analyser.frequencyBinCount);
+                const width = visualizer.width;
+                const height = visualizer.height;
+                const columns = 48;
+                const rows = 6;
+                const cellWidth = width / columns;
+                const cellHeight = height / (rows + 1);
+                const rowColors = [
+                    "#333333",
+                    "#666666",
+                    "#aaaaaa",
+                    "#facc15",
+                    "#facc15",
+                    "#ef4444",
+                ];
+
+                function draw() {
+                    visualizerFrame = requestAnimationFrame(draw);
+                    analyser.getByteFrequencyData(data);
+                    canvas.clearRect(0, 0, width, height);
+                    canvas.font = "14px monospace";
+
+                    for (let column = 0; column < columns; column += 1) {
+                        const start = Math.floor(
+                            (column / columns) * data.length,
+                        );
+                        const end = Math.floor(
+                            ((column + 1) / columns) * data.length,
+                        );
+                        let total = 0;
+
+                        for (
+                            let i = start;
+                            i < Math.max(end, start + 1);
+                            i += 1
+                        ) {
+                            total += data[i];
+                        }
+
+                        const average = total / Math.max(1, end - start);
+                        const activeRows = Math.max(
+                            1,
+                            Math.round((average / 255) * rows),
+                        );
+
+                        for (let row = 0; row < activeRows; row += 1) {
+                            const x = column * cellWidth + 8;
+                            const y = height - row * cellHeight - 14;
+                            canvas.fillStyle =
+                                rowColors[Math.min(row, rowColors.length - 1)];
+                            canvas.fillText(
+                                row === activeRows - 1 ? "+" : "#",
+                                x,
+                                y,
+                            );
+                        }
+                    }
+                }
+
+                draw();
+            }
+
+            function stopVisualizer() {
+                if (visualizerFrame) {
+                    cancelAnimationFrame(visualizerFrame);
+                    visualizerFrame = null;
+                }
+
+                if (micStream) {
+                    for (const track of micStream.getTracks()) {
+                        track.stop();
+                    }
+                    micStream = null;
+                }
+
+                if (audioContext) {
+                    audioContext.close();
+                    audioContext = null;
+                }
+
+                analyser = null;
+                drawIdleVisualizer();
+            }
+
+            wordsInput.addEventListener("input", () => {
+                resetSequence();
+                if (modeInput.value === "catch") {
+                    rebuildCatchWordsFromSource();
+                }
+                renderWordList();
+                renderTranscript();
+                restartSequenceIfListening();
+            });
+
+            modeInput.addEventListener("change", () => {
+                resetSequence();
+                renderTranscript();
+                restartSequenceIfListening();
+            });
+
+            secondsInput.addEventListener("input", () => {
+                if (
+                    modeInput.value === "sequence" &&
+                    deadline &&
+                    !sequenceFailed
+                ) {
+                    startSequenceTimer();
+                }
+                renderSequenceStatus();
+            });
+
+            transcriptSourceInput.addEventListener("change", () => {
+                resetSequence();
+                processTranscriptText(getSelectedTranscriptText());
+
+                renderTranscript();
+                renderWordList();
+            });
+
+            resetSequenceButton.addEventListener("click", () => {
+                resetSequence();
+                restartSequenceIfListening();
+            });
+
+            openSettingsButton.addEventListener("click", openSettings);
+            closeSettingsButton.addEventListener("click", closeSettings);
+            settingsBackdrop.addEventListener("click", closeSettings);
+            window.addEventListener("resize", () => {
+                renderSequenceStatus();
+            });
+
+            renderWordList();
+            renderSequenceStatus();
+            drawIdleVisualizer();
+
+            if (!SpeechRecognition) {
+                status.textContent =
+                    "Speech recognition is not supported in this browser. Try Chrome or Edge.";
+                startButton.disabled = true;
+            } else {
+                const recognition = new SpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = navigator.language || "en-US";
+
+                recognition.onstart = () => {
+                    status.textContent = "Listening...";
+                    startButton.disabled = true;
+                    stopButton.disabled = false;
+                    startRoadAnimation();
+
+                    if (
+                        modeInput.value === "sequence" &&
+                        getTargetWords().length &&
+                        !deadline &&
+                        !sequenceFailed
+                    ) {
+                        startSequenceTimer();
+                    }
+                };
+
+                recognition.onend = () => {
+                    status.textContent = "Stopped";
+                    startButton.disabled = false;
+                    stopButton.disabled = true;
+                    interimText.textContent = "";
+                    stopRoadAnimation();
+                    stopVisualizer();
+                };
+
+                recognition.onerror = (event) => {
+                    status.textContent = `Error: ${event.error}`;
+                };
+
+                recognition.onresult = (event) => {
+                    const liveResults = [];
+
+                    for (
+                        let i = event.resultIndex;
+                        i < event.results.length;
+                        i += 1
+                    ) {
+                        const text = event.results[i][0].transcript;
+
+                        if (event.results[i].isFinal) {
+                            const chunk = text.trim();
+                            finalChunks.push(chunk);
+
+                            if (transcriptSourceInput.value === "final") {
+                                processTranscriptText(chunk);
+                            }
+                        }
+                    }
+
+                    for (const result of event.results) {
+                        const text = result[0].transcript.trim();
+
+                        if (text) {
+                            liveResults.push(text);
+                        }
+                    }
+
+                    interimTranscript = liveResults.join(" ");
+
+                    if (transcriptSourceInput.value === "interim") {
+                        if (modeInput.value === "catch") {
+                            rebuildCatchWordsFromSource();
+                        } else {
+                            processTranscriptText(interimTranscript);
+                        }
+                    }
+
+                    renderTranscript();
+                    renderWordList();
+                };
+
+                startButton.addEventListener("click", async () => {
+                    try {
+                        await startVisualizer();
+                        recognition.start();
+                    } catch (error) {
+                        status.textContent =
+                            "Microphone access was blocked or unavailable.";
+                        stopVisualizer();
+                    }
+                });
+                stopButton.addEventListener("click", () => recognition.stop());
+            }
+
+            clearButton.addEventListener("click", () => {
+                finalChunks.length = 0;
+                interimTranscript = "";
+                finalText.textContent = "";
+                interimText.textContent = "";
+                resetSequence();
+                restartSequenceIfListening();
+            });
+        </script>
+    </body>
+</html>
