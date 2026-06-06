@@ -7,106 +7,94 @@
         <style>
             :root {
                 color-scheme: dark;
-                font-family:
-                    "SFMono-Regular", Consolas, "Liberation Mono", Menlo,
+                font-family: ui-monospace, SFMono-Regular, Menlo, Consolas,
                     monospace;
-                background: #080a0f;
-                color: #d7e2ff;
+                background: #050505;
+                color: #eeeeee;
             }
 
             body {
-                max-width: 1040px;
+                max-width: 1120px;
                 margin: 0 auto;
-                padding: 32px 20px;
-                line-height: 1.5;
-                background: #080a0f;
+                padding: 20px;
+                line-height: 1.35;
+                background: #050505;
             }
 
             h1 {
-                font-size: 1.2rem;
-                margin: 0 0 16px;
-                font-weight: 700;
-                color: #8be9fd;
+                font-size: 1rem;
+                margin: 0 0 12px;
+                font-weight: 400;
             }
 
             .controls {
                 display: flex;
-                gap: 10px;
-                margin-bottom: 16px;
+                gap: 8px;
+                margin-bottom: 10px;
                 flex-wrap: wrap;
             }
 
             main {
                 display: grid;
-                grid-template-columns: minmax(0, 1fr) 280px;
-                gap: 20px;
+                grid-template-columns: minmax(0, 1fr) auto;
+                gap: 18px;
                 align-items: start;
             }
 
             button {
                 font: inherit;
-                padding: 9px 14px;
-                border: 1px solid #536179;
+                padding: 0;
+                border: 0;
                 border-radius: 0;
                 cursor: pointer;
-                background: #101522;
-                color: #d7e2ff;
-                text-transform: uppercase;
+                background: transparent;
+                color: inherit;
             }
 
             button:disabled {
                 cursor: not-allowed;
-                opacity: 0.5;
-            }
-
-            button:not(:disabled):hover,
-            select:hover,
-            input:hover,
-            textarea:hover {
-                background: #151d2e;
+                color: #777777;
             }
 
             #status {
-                min-height: 1.5em;
-                margin-bottom: 16px;
+                min-height: 1.35em;
+                margin-bottom: 10px;
             }
 
             #visualizer {
                 display: block;
                 width: 100%;
-                height: 96px;
-                margin-bottom: 16px;
-                border: 1px solid #536179;
-                border-radius: 0;
-                background: #0c111d;
+                height: 72px;
+                margin-bottom: 10px;
             }
 
             #transcript {
-                min-height: 220px;
-                padding: 16px;
-                border: 1px solid #536179;
-                border-radius: 0;
-                white-space: pre-wrap;
-                background: #0c111d;
+                min-height: 120px;
+                white-space: normal;
+                overflow-wrap: anywhere;
             }
 
-            aside {
-                padding: 14px;
-                border: 1px solid #536179;
-                border-radius: 0;
-                background: #0c111d;
+            details {
+                width: 32ch;
             }
 
-            h2 {
-                font-size: 1rem;
-                margin: 0 0 10px;
-                color: #8be9fd;
+            details:not([open]) {
+                width: max-content;
+            }
+
+            summary {
+                cursor: pointer;
+                list-style: none;
+                margin-bottom: 10px;
+            }
+
+            summary::-webkit-details-marker {
+                display: none;
             }
 
             label {
                 display: block;
-                margin: 12px 0 6px;
-                font-size: 0.85rem;
+                margin: 10px 0 4px;
             }
 
             textarea,
@@ -115,11 +103,11 @@
                 box-sizing: border-box;
                 width: 100%;
                 font: inherit;
-                padding: 8px;
-                border: 1px solid #536179;
+                padding: 2px 4px;
+                border: 1px solid #666666;
                 border-radius: 0;
-                background: #080a0f;
-                color: #d7e2ff;
+                background: #050505;
+                color: inherit;
             }
 
             textarea {
@@ -130,18 +118,16 @@
             ul {
                 list-style: none;
                 padding: 0;
-                margin: 14px 0 0;
+                margin: 10px 0 0;
             }
 
             li {
                 display: flex;
                 align-items: center;
-                gap: 8px;
-                padding: 5px 0;
+                gap: 6px;
             }
 
             li.current {
-                color: #f1fa8c;
                 font-weight: 700;
             }
 
@@ -151,7 +137,8 @@
             }
 
             li.failed {
-                color: #ff6e6e;
+                color: #ffffff;
+                text-decoration: underline;
             }
 
             input[type="checkbox"] {
@@ -159,71 +146,66 @@
             }
 
             .sequence-panel {
-                margin-top: 14px;
-                padding-top: 12px;
-                border-top: 1px dashed #536179;
+                margin-top: 10px;
             }
 
             #sequence-status {
-                min-height: 4.5em;
-                margin-top: 10px;
+                min-height: 4em;
+                margin-top: 8px;
                 white-space: pre-wrap;
             }
 
             .timeline-panel {
-                margin-bottom: 16px;
-                padding: 16px;
-                border: 1px solid #536179;
-                background: #0c111d;
+                margin-bottom: 10px;
             }
 
             .timeline-header {
                 display: flex;
                 justify-content: space-between;
-                gap: 16px;
-                margin-bottom: 10px;
-                color: #8be9fd;
+                gap: 12px;
+                margin-bottom: 6px;
             }
 
             #timer-display {
-                font-size: clamp(2.2rem, 8vw, 5rem);
-                line-height: 0.95;
-                margin-bottom: 8px;
-                color: #f1fa8c;
+                font-size: 4rem;
+                line-height: 1;
+                margin-bottom: 4px;
             }
 
             #current-word {
-                min-height: 1.5em;
-                margin-bottom: 8px;
-                color: #50fa7b;
-                font-size: 1.1rem;
+                min-height: 1.35em;
+                margin-bottom: 4px;
             }
 
             #timeline {
                 overflow-x: auto;
                 white-space: pre;
-                color: #d7e2ff;
             }
 
             .muted {
-                color: #7f8aa3;
+                color: #888888;
             }
 
             .ok {
-                color: #50fa7b;
+                color: #eeeeee;
             }
 
             .warn {
-                color: #f1fa8c;
+                color: #ffff00;
             }
 
             .bad {
-                color: #ff6e6e;
+                color: #ffffff;
+                text-decoration: underline;
             }
 
             @media (max-width: 760px) {
                 main {
                     grid-template-columns: 1fr;
+                }
+
+                details {
+                    width: 100%;
                 }
             }
         </style>
@@ -243,7 +225,7 @@
                 <div class="timeline-panel" aria-live="polite">
                     <div class="timeline-header">
                         <span>SEQ TIMER</span>
-                        <span id="timeline-state">mode: catch</span>
+                        <span id="timeline-state">mode: sequence</span>
                     </div>
                     <div id="timer-display">--.-</div>
                     <div id="current-word">
@@ -259,17 +241,15 @@
                     height="120"
                     aria-label="Microphone audio visualizer"
                 ></canvas>
-                <div id="transcript" aria-live="polite">
-                    <span id="final"></span><span id="interim"></span>
-                </div>
+                <div id="transcript" aria-live="polite"><span id="final"></span><span id="interim"></span></div>
             </section>
 
-            <aside>
-                <h2>:: WORDS ::</h2>
+            <details id="settings" open>
+                <summary>[ settings ]</summary>
                 <label for="mode">mode</label>
                 <select id="mode">
                     <option value="catch">catch any word</option>
-                    <option value="sequence">sequence timer</option>
+                    <option value="sequence" selected>sequence timer</option>
                 </select>
 
                 <label for="seconds">seconds for next word</label>
@@ -300,7 +280,7 @@ test
 microphone</textarea
                 >
                 <ul id="word-list" aria-label="Caught words"></ul>
-            </aside>
+            </details>
         </main>
 
         <script>
@@ -384,11 +364,7 @@ microphone</textarea
                 finalText.textContent =
                     transcriptSourceInput.value === "interim"
                         ? interimTranscript
-                        : finalChunks.join("\n");
-
-                if (finalText.textContent) {
-                    finalText.textContent += "\n";
-                }
+                        : finalChunks.join(" ");
 
                 interimText.textContent = "";
             }
@@ -396,7 +372,7 @@ microphone</textarea
             function getSelectedTranscriptText() {
                 return transcriptSourceInput.value === "interim"
                     ? interimTranscript
-                    : finalChunks.join("\n");
+                    : finalChunks.join(" ");
             }
 
             function catchWords(text) {
@@ -890,7 +866,7 @@ microphone</textarea
                         }
                     }
 
-                    interimTranscript = liveResults.join("\n");
+                    interimTranscript = liveResults.join(" ");
 
                     if (transcriptSourceInput.value === "interim") {
                         if (modeInput.value === "catch") {
