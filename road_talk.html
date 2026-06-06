@@ -1,0 +1,415 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Road Talk</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: #0a0a0a; display: flex; justify-content: center; align-items: flex-start; min-height: 100vh; padding: 1rem; font-family: monospace; }
+  #game { font-family: monospace; background: #111; color: #eee; min-height: 520px; display: flex; flex-direction: column; align-items: center; padding: 1rem; border-radius: 12px; width: 100%; max-width: 480px; user-select: none; }
+  #score-bar { display: flex; justify-content: space-between; width: 100%; max-width: 420px; font-size: 13px; color: #aaa; margin-bottom: 4px; }
+  #canvas-wrap { position: relative; width: 100%; max-width: 420px; }
+  #road { width: 100%; font-size: 13px; line-height: 1.38; letter-spacing: 0.04em; white-space: pre; color: #ddd; background: #111; border-radius: 6px; overflow: hidden; }
+  #hud { position: absolute; bottom: 8px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; align-items: center; gap: 4px; width: 100%; pointer-events: none; }
+  #word-box { background: rgba(0,0,0,0.82); border: 1.5px solid #facc15; border-radius: 6px; padding: 4px 18px; font-size: 22px; font-weight: 700; letter-spacing: 2px; color: #facc15; min-width: 120px; text-align: center; }
+  #hint { font-size: 12px; color: #666; min-height: 16px; }
+  #feedback { font-size: 13px; color: #aaa; min-height: 18px; text-align: center; max-width: 340px; }
+  #heard-display { font-size: 11px; color: #444; min-height: 15px; font-style: italic; display: none; }
+  #transcript-bar { width: 100%; max-width: 420px; background: #1a1a1a; border: 1px solid #333; border-radius: 8px; padding: 8px 14px; margin-top: 8px; display: flex; flex-direction: column; gap: 3px; }
+  #transcript-label { font-size: 10px; color: #555; text-transform: uppercase; letter-spacing: 1px; }
+  #transcript-text { font-size: 15px; color: #facc15; min-height: 22px; font-style: italic; letter-spacing: 0.5px; transition: color 0.2s; }
+  #transcript-text.match { color: #22c55e; }
+  #transcript-text.no-match { color: #ef4444; }
+  #mic-status { font-size: 11px; display: flex; align-items: center; gap: 5px; color: #555; }
+  #mic-dot { width: 7px; height: 7px; border-radius: 50%; background: #333; display: inline-block; transition: background 0.2s; }
+  #mic-dot.on { background: #22c55e; animation: blink 1.2s infinite; }
+  #mic-dot.hearing { background: #facc15; animation: blink 0.4s infinite; }
+  @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.3} }
+  .screen { display: flex; flex-direction: column; align-items: center; gap: 14px; padding: 2rem 1rem; }
+  .screen h2 { font-size: 22px; color: #facc15; }
+  .screen p { font-size: 14px; color: #aaa; text-align: center; max-width: 300px; line-height: 1.6; }
+  .action-btn { background: #facc15; color: #111; border: none; border-radius: 8px; padding: 10px 32px; font-size: 16px; font-weight: 700; cursor: pointer; }
+  #bounce-bar { width: 100%; max-width: 420px; height: 5px; background: #222; border-radius: 3px; margin-bottom: 4px; overflow: hidden; }
+  #bounce-fill { height: 100%; width: 0%; background: #ef4444; border-radius: 3px; transition: width 0.08s; }
+  #debug-panel { width: 100%; max-width: 420px; background: #0d0d0d; border: 1px solid #222; border-radius: 6px; padding: 8px 12px; font-size: 11px; color: #555; margin-top: 6px; display: none; }
+  #debug-panel.visible { display: block; }
+  #debug-log { max-height: 80px; overflow-y: auto; line-height: 1.5; }
+</style>
+</head>
+<body>
+<div id="game">
+  <div class="screen" id="start-screen">
+    <h2>&#9650; ROAD TALK &#9650;</h2>
+    <p>Walls block your path. <strong>Just say the word</strong> — the mic is always listening. Wrong pronunciation bounces you back to retry!</p>
+    <button class="action-btn" id="start-btn">START DRIVING</button>
+    <p style="font-size:12px;color:#444;">Works best in Chrome or Edge</p>
+  </div>
+</div>
+
+<script>
+// ── Phonetic helpers ──────────────────────────────────────────────────────────
+
+function soundex(s) {
+  s = s.toUpperCase().replace(/[^A-Z]/g,'');
+  if (!s) return '';
+  const map = {B:1,F:1,P:1,V:1,C:2,G:2,J:2,K:2,Q:2,S:2,X:2,Z:2,D:3,T:3,L:4,M:5,N:5,R:6};
+  let code = s[0];
+  let prev = map[s[0]] || 0;
+  for (let i = 1; i < s.length && code.length < 4; i++) {
+    const c = map[s[i]];
+    if (c && c !== prev) { code += c; }
+    prev = c || 0;
+  }
+  return code.padEnd(4,'0');
+}
+
+function editDistance(a, b) {
+  const m = a.length, n = b.length;
+  const dp = Array.from({length:m+1}, (_,i) => Array.from({length:n+1}, (_,j) => i||j));
+  for (let i=1;i<=m;i++) for (let j=1;j<=n;j++)
+    dp[i][j] = a[i-1]===b[j-1] ? dp[i-1][j-1] : 1+Math.min(dp[i-1][j],dp[i][j-1],dp[i-1][j-1]);
+  return dp[m][n];
+}
+
+// Strip silent letters / normalize to phonetic spelling
+function phonetize(word) {
+  return word.toLowerCase()
+    .replace(/wr/g,'r').replace(/kn/g,'n').replace(/gn/g,'n')
+    .replace(/mb$/,'m').replace(/bt$/,'t')
+    .replace(/gh/g,'').replace(/ph/g,'f')
+    .replace(/ck/g,'k').replace(/qu/g,'kw')
+    .replace(/x/g,'ks').replace(/ce/g,'se').replace(/ci/g,'si')
+    .replace(/tion/g,'shun').replace(/sion/g,'zhun')
+    .replace(/ea/g,'ee').replace(/oa/g,'oh')
+    .replace(/[aeiou]+/g,'a') // collapse vowels for consonant skeleton matching
+    .replace(/(.)\1+/g,'$1'); // collapse repeated chars
+}
+
+function isMatch(heard, wordObj) {
+  const alts = wordObj.alts;
+  const target = wordObj.word.toLowerCase();
+  
+  for (let raw of heard) {
+    const h = raw.toLowerCase().trim();
+    
+    // 1. Exact or substring match against any alt
+    if (alts.some(a => h === a || h.includes(a) || a.includes(h))) return true;
+    
+    // 2. Exact target match
+    if (h === target) return true;
+    
+    // 3. Soundex match against target and alts
+    const hSdx = soundex(h);
+    if (hSdx === soundex(target)) return true;
+    if (alts.some(a => hSdx === soundex(a))) return true;
+    
+    // 4. Phonetic skeleton edit distance (very forgiving)
+    const hPhone = phonetize(h);
+    const tPhone = phonetize(target);
+    const maxLen = Math.max(hPhone.length, tPhone.length);
+    if (maxLen > 0 && editDistance(hPhone, tPhone) / maxLen < 0.45) return true;
+    
+    // 5. Edit distance on raw strings (catch near-misses)
+    const rawMax = Math.max(h.length, target.length);
+    if (rawMax > 0 && editDistance(h, target) / rawMax < 0.4) return true;
+    
+    // 6. Check each alt with edit distance
+    for (let a of alts) {
+      const altMax = Math.max(h.length, a.length);
+      if (altMax > 0 && editDistance(h, a) / altMax < 0.4) return true;
+    }
+    
+    // 7. First syllable match (user might trail off)
+    const firstSyl = target.slice(0, Math.ceil(target.length * 0.55));
+    if (h.startsWith(firstSyl) || firstSyl.startsWith(h.slice(0, firstSyl.length))) {
+      if (h.length >= 3) return true;
+    }
+  }
+  return false;
+}
+
+// ── Word list ─────────────────────────────────────────────────────────────────
+
+const WORDS = [
+  {word:'COLONEL',    phonetic:'KUR-nel',       alts:['colonel','kernel','kurnel','kernal','colonel']},
+  {word:'CHOIR',      phonetic:'KWY-er',        alts:['choir','kwire','quire','kwyrer','kwier','wire']},
+  {word:'YACHT',      phonetic:'YOT',           alts:['yacht','yot','yott','yat']},
+  {word:'PSEUDONYM',  phonetic:'SOO-do-nim',    alts:['pseudonym','sudonim','soudonim','soodonym','sudonim','soo-do-nim']},
+  {word:'WEDNESDAY',  phonetic:'WENZ-day',      alts:['wednesday','wendsday','wensday','wenzday','wednezday']},
+  {word:'QUEUE',      phonetic:'KYOO',          alts:['queue','cue','kyoo','q','kyu','que']},
+  {word:'PHLEGM',     phonetic:'FLEM',          alts:['phlegm','flem','flemm','phlem','flehm','phlem']},
+  {word:'KNIFE',      phonetic:'NYF',           alts:['knife','nife','nyfe','knif']},
+  {word:'SUBTLE',     phonetic:'SUT-ul',        alts:['subtle','suttul','suttle','sutull','suttle','suttle']},
+  {word:'RECEIPT',    phonetic:'re-SEET',       alts:['receipt','reseet','reseit','receet','reciept']},
+  {word:'CHAOS',      phonetic:'KAY-os',        alts:['chaos','kayos','kaios','cayos','kaos']},
+  {word:'ISLAND',     phonetic:'EYE-land',      alts:['island','iland','eyeland','iyland','ayland']},
+  {word:'SWORD',      phonetic:'SORD',          alts:['sword','sord','soord','soard']},
+  {word:'DEBT',       phonetic:'DET',           alts:['debt','det','dett','dett']},
+  {word:'SALMON',     phonetic:'SAM-un',        alts:['salmon','samun','samon','sammon','samen']},
+  {word:'MISCHIEVOUS',phonetic:'MIS-chiv-us',   alts:['mischievous','mischivous','mischivious','mischevious','mischievus','mischivus']},
+  {word:'WORCESTERSHIRE',phonetic:'WUS-ter-sheer',alts:['worcestershire','worcester','wustersher','wustershire','wostershire','woostershire','wustersheer']},
+  {word:'PARLIAMENT', phonetic:'PAR-li-ment',   alts:['parliament','parliment','parlement','parlamentt','parlamente']},
+  {word:'FEBRUARY',   phonetic:'FEB-roo-er-ee', alts:['february','feburary','febuary','februay','febrooary']},
+  {word:'LIBRARY',    phonetic:'LY-brer-ee',    alts:['library','libary','liberry','librairy','libery']},
+  {word:'CONSCIENCE', phonetic:'KON-shuns',     alts:['conscience','konshuns','conshuns','conscious','konshience']},
+  {word:'HYPERBOLE',  phonetic:'hy-PER-bo-lee', alts:['hyperbole','hyperboly','hyperbolee','hiperbolee','hi-per-bo-lee']},
+  {word:'ANEMONE',    phonetic:'a-NEM-o-nee',   alts:['anemone','anemonee','anemony','enemone','anemonee']},
+  {word:'ENTREPRENEUR',phonetic:'on-tre-pre-NUR',alts:['entrepreneur','ontrepreneur','entrepeneur','entrepreneurr','on-tre-pre-ner']},
+];
+
+// ── Game state ────────────────────────────────────────────────────────────────
+
+const ROAD_W=42,ROAD_H=20,LANE_LEFT=12,LANE_RIGHT=29,CAR_COL=18,CAR_ROW=15,BOUNCE_DIST=6;
+
+let state='start', score=0, lives=3, speed=1;
+let wallY=-3, wallActive=false, wallWord=null, wallFrozenAt=null;
+let carAnim=0, rafId=null, lastTime=0;
+let feedback='', feedbackTimer=0;
+let passAnim=0, bounceAnim=0, bounceDist=0;
+let recognition=null, micOn=false, hearing=false;
+let debugLines=[];
+
+function dbg(msg) {
+  debugLines.unshift(msg);
+  if (debugLines.length>8) debugLines.pop();
+  const el = document.getElementById('debug-log');
+  if (el) el.innerHTML = debugLines.map(l=>`<div>${l}</div>`).join('');
+}
+
+// ── Rendering ─────────────────────────────────────────────────────────────────
+
+function buildRoad() {
+  const wr = wallFrozenAt!==null ? wallFrozenAt : Math.round(wallY);
+  let rows=[];
+  for (let r=0;r<ROAD_H;r++) {
+    let row=Array(ROAD_W).fill(' ');
+    for (let c=0;c<ROAD_W;c++) {
+      if (c<LANE_LEFT-1) row[c]='/';
+      else if (c>LANE_RIGHT+1) row[c]='\\';
+    }
+    row[LANE_LEFT-1]='|'; row[LANE_RIGHT+1]='|';
+    if ((r+Math.floor(carAnim))%4<2) row[Math.floor((LANE_LEFT+LANE_RIGHT)/2)]=':';
+
+    if (wallActive && wallWord) {
+      if (r===wr && wr>=0 && wr<ROAD_H) {
+        if (passAnim>0) { for(let c=LANE_LEFT;c<=LANE_RIGHT;c++) row[c]=' '; }
+        else { for(let c=LANE_LEFT;c<=LANE_RIGHT;c++) row[c]='#'; }
+      }
+      if (passAnim<=0 && r===wr+1 && wr+1>=0 && wr+1<ROAD_H) {
+        let w=wallWord.word;
+        let start=Math.floor((LANE_LEFT+LANE_RIGHT)/2-w.length/2);
+        for(let i=0;i<w.length;i++) if(start+i<=LANE_RIGHT) row[start+i]=w[i];
+        for(let c=LANE_LEFT;c<start;c++) row[c]='=';
+        for(let c=start+w.length;c<=LANE_RIGHT;c++) row[c]='=';
+      }
+      if (passAnim<=0 && r===wr+2 && wr+2>=0 && wr+2<ROAD_H) {
+        for(let c=LANE_LEFT;c<=LANE_RIGHT;c++) row[c]='#';
+      }
+    }
+
+    let carRowOffset = bounceAnim>0 ? Math.round(bounceDist) : 0;
+    let cr=CAR_ROW+carRowOffset;
+    if (r===cr) { let car=[' ','[','=','=','=',']',' ']; for(let i=0;i<car.length;i++) row[CAR_COL-1+i]=car[i]; }
+    if (r===cr-1) { row[CAR_COL]='/';row[CAR_COL+1]='~';row[CAR_COL+2]='^';row[CAR_COL+3]='~';row[CAR_COL+4]='\\'; }
+    if (r===cr+1) { row[CAR_COL+1]='O';row[CAR_COL+3]='O'; }
+    rows.push(row.join(''));
+  }
+  return rows.join('\n');
+}
+
+function render() {
+  const get = id => document.getElementById(id);
+  if (!get('road')) return;
+  get('road').textContent = buildRoad();
+  get('word-box').textContent = wallActive&&wallWord ? wallWord.word : '...';
+  get('hint').textContent = wallActive&&wallWord ? '/'+wallWord.phonetic+'/' : '';
+  get('feedback').textContent = feedback;
+  let ld='';
+  for(let i=0;i<lives;i++) ld+='♥ ';
+  for(let i=lives;i<3;i++) ld+='♡ ';
+  get('lives-disp').textContent = ld+'  Score: '+score;
+  const dot=get('mic-dot');
+  if (dot) dot.className = hearing?'hearing':micOn?'on':'';
+  const micLabel=get('mic-label');
+  if (micLabel) micLabel.textContent = hearing?'hearing...':micOn?'listening...':'mic off';
+  let pct = bounceAnim>0 ? Math.min(100,(bounceDist/BOUNCE_DIST)*100) : 0;
+  const bf=get('bounce-fill'); if(bf) bf.style.width=pct+'%';
+}
+
+// ── Game logic ────────────────────────────────────────────────────────────────
+
+function spawnWall(reuse) {
+  wallY=-3; wallFrozenAt=null;
+  if (!reuse) wallWord=WORDS[Math.floor(Math.random()*WORDS.length)];
+  wallActive=true; passAnim=0; bounceAnim=0; bounceDist=0;
+  dbg('New word: '+wallWord.word);
+}
+
+function initGame() {
+  score=0;lives=3;speed=1;
+  wallActive=false;wallWord=null;wallFrozenAt=null;
+  carAnim=0;feedback='';feedbackTimer=0;
+  passAnim=0;bounceAnim=0;bounceDist=0;
+  setTimeout(spawnWall,400);
+}
+
+function triggerBounce(msg) {
+  wallFrozenAt=Math.round(wallY);
+  bounceAnim=0.75; bounceDist=0;
+  feedback=msg||'Wrong! Try again!';
+  feedbackTimer=2.5;
+  setTimeout(()=>{ if(state==='playing') spawnWall(true); },800);
+}
+
+function triggerPass() {
+  feedback='✓ Correct!'; feedbackTimer=1.5;
+  passAnim=0.55; wallFrozenAt=Math.round(wallY);
+}
+
+function gameStep(dt) {
+  if (state!=='playing') return;
+  feedbackTimer-=dt; if(feedbackTimer<=0) feedback='';
+
+  if (bounceAnim>0) {
+    bounceAnim-=dt;
+    let p=1-(bounceAnim/0.75);
+    bounceDist=BOUNCE_DIST*Math.sin(Math.PI*p);
+    if (bounceAnim<=0){bounceAnim=0;bounceDist=0;wallFrozenAt=null;}
+    carAnim+=dt*speed*6; render(); return;
+  }
+
+  if (passAnim>0) {
+    passAnim-=dt; wallY+=speed*dt*10;
+    if (passAnim<=0) {
+      passAnim=0; wallActive=false;
+      score++; speed=1+score*0.07;
+      setTimeout(spawnWall,500);
+    }
+    carAnim+=dt*speed*6; render(); return;
+  }
+
+  if (wallActive) {
+    wallY+=speed*dt*7;
+    if (wallY>=CAR_ROW-2) triggerBounce('Too slow! Try again!');
+  }
+
+  carAnim+=dt*speed*6;
+  render();
+}
+
+function endGame() {
+  state='over'; stopMic();
+  const g=document.getElementById('game');
+  g.innerHTML=`<div class="screen">
+    <h2>GAME OVER</h2>
+    <div style="font-size:32px;color:#facc15;">Score: ${score}</div>
+    <div style="font-size:14px;color:#aaa;margin-bottom:8px;">Keep practicing those tricky words!</div>
+    <button class="action-btn" id="restart-btn">PLAY AGAIN</button>
+  </div>`;
+  document.getElementById('restart-btn').onclick=startGame;
+}
+
+// ── Speech recognition ────────────────────────────────────────────────────────
+
+function checkPronunciation(heard) {
+  dbg('Heard: '+heard.join(' | '));
+  if (!wallWord||!wallActive||bounceAnim>0||passAnim>0) return;
+  
+  // Legacy small display (hidden but kept)
+  const heardDisplay=document.getElementById('heard-display');
+  if(heardDisplay) heardDisplay.textContent='heard: "'+heard[0]+'"';
+
+  // New prominent transcript bar
+  const tt=document.getElementById('transcript-text');
+  if(tt) {
+    tt.textContent = '"' + heard[0] + '"';
+    tt.className = '';
+  }
+
+  if (isMatch(heard, wallWord)) {
+    dbg('✓ MATCH');
+    if(tt) { tt.className='match'; tt.textContent='"'+heard[0]+'" ✓'; }
+    triggerPass();
+  } else {
+    dbg('✗ no match');
+    if(tt) { tt.className='no-match'; tt.textContent='"'+heard[0]+'" ✗ — try again'; }
+    triggerBounce('Heard: "'+heard[0]+'" — try again!');
+  }
+}
+
+function startMic() {
+  const SR=window.SpeechRecognition||window.webkitSpeechRecognition;
+  if (!SR) { feedback='Speech not supported — use Chrome or Edge.'; feedbackTimer=8; return; }
+
+  function listen() {
+    if (state!=='playing') return;
+    recognition=new SR();
+    recognition.lang='en-US';
+    recognition.interimResults=false;
+    recognition.maxAlternatives=8;
+    recognition.continuous=false;
+    recognition.onstart=()=>{ micOn=true; hearing=true; const tt=document.getElementById('transcript-text'); if(tt&&tt.textContent==='waiting for speech…') tt.textContent='🎤 listening…'; };
+    recognition.onsoundstart=()=>{ hearing=true; const tt=document.getElementById('transcript-text'); if(tt){tt.className='';tt.textContent='🎤 hearing you…';} };
+    recognition.onsoundend=()=>{ hearing=false; };
+    recognition.onresult=(e)=>{
+      let heard=[];
+      for(let i=0;i<e.results[0].length;i++) heard.push(e.results[0][i].transcript.toLowerCase().trim());
+      checkPronunciation(heard);
+    };
+    recognition.onerror=(e)=>{ dbg('mic error: '+e.error); micOn=false; hearing=false; setTimeout(listen,400); };
+    recognition.onend=()=>{ hearing=false; if(state==='playing') setTimeout(listen,120); };
+    try { recognition.start(); } catch(e){ setTimeout(listen,400); }
+  }
+  listen();
+}
+
+function stopMic() {
+  if(recognition){ try{recognition.abort();}catch(e){} recognition=null; }
+  micOn=false; hearing=false;
+}
+
+// ── Start / restart ───────────────────────────────────────────────────────────
+
+function startGame() {
+  const g=document.getElementById('game');
+  g.innerHTML=`
+    <div id="score-bar"><span id="lives-disp">♥ ♥ ♥   Score: 0</span><span style="color:#444">ROAD TALK</span></div>
+    <div id="bounce-bar"><div id="bounce-fill"></div></div>
+    <div id="canvas-wrap">
+      <pre id="road"></pre>
+      <div id="hud">
+        <div id="word-box">...</div>
+        <div id="hint"></div>
+        <div id="feedback"></div>
+        <div id="heard-display"></div>
+        <div id="mic-status"><span id="mic-dot"></span><span id="mic-label">starting...</span></div>
+      </div>
+    </div>
+    <div id="transcript-bar">
+      <div id="transcript-label">🎤 You said</div>
+      <div id="transcript-text">waiting for speech…</div>
+    </div>
+    <div id="debug-panel"><div id="debug-log"></div></div>`;
+
+  // Toggle debug with D key
+  document.onkeydown=(e)=>{ if(e.key==='d'||e.key==='D'){ const dp=document.getElementById('debug-panel'); if(dp) dp.classList.toggle('visible'); }};
+
+  state='playing';
+  initGame();
+  startMic();
+  lastTime=performance.now();
+  if(rafId) cancelAnimationFrame(rafId);
+  function loop(ts) {
+    if(state!=='playing') return;
+    let dt=Math.min((ts-lastTime)/1000,0.1);
+    lastTime=ts; gameStep(dt);
+    rafId=requestAnimationFrame(loop);
+  }
+  rafId=requestAnimationFrame(loop);
+}
+
+document.getElementById('start-btn').onclick=startGame;
+</script>
+</body>
+</html>
