@@ -906,7 +906,9 @@
                             Speak carefully. The system is listening.
                         </p>
                     </div>
-                    <button id="onboarding-action" type="button">Continue</button>
+                    <button id="onboarding-action" type="button">
+                        Continue
+                    </button>
                     <div class="onboarding-fallback">
                         You can also press Enter.
                     </div>
@@ -1116,10 +1118,11 @@
                 <label for="talkback-phrases">talk-back phrases</label>
                 <textarea id="talkback-phrases" aria-label="Talk-back phrases">
 You are doing better than you think.
-I heard that. Now try the next one.
-This road knows your voice.
-Keep going. The voice is learning you.</textarea
-                >
+The processing of personal data should be designed to serve mankind.
+The protection of natural persons in relation to the processing of personal data is a fundamental right.
+REGULATION (EU) 2016/679 OF THE EUROPEAN PARLIAMENT AND OF THE COUNCIL
+Without prejudice to Article 55, the supervisory authority of the main establishment or of the single establishment of the controller or processor shall be competent to act as lead supervisory authority for the cross-border processing carried out by that controller or processor in accordance with the procedure provided in Article 60.
+                </textarea>
             </div>
 
             <div class="sequence-panel">
@@ -1403,8 +1406,7 @@ I'll be back
                             if (node.phaser >= 1) {
                                 node.phaser -= 1;
                                 node.last =
-                                    step *
-                                    Math.floor(input[i] / step + 0.5);
+                                    step * Math.floor(input[i] / step + 0.5);
                             }
 
                             output[i] = node.last;
@@ -1423,7 +1425,9 @@ I'll be back
                         window.AudioContext || window.webkitAudioContext;
 
                     if (!Context) {
-                        warn("Web Audio is unavailable; music effects disabled.");
+                        warn(
+                            "Web Audio is unavailable; music effects disabled.",
+                        );
                         return false;
                     }
 
@@ -1478,11 +1482,11 @@ I'll be back
                         }
 
                         if (!mainThemePlayPromise) {
-                            mainThemePlayPromise = mainTheme.play().finally(
-                                () => {
+                            mainThemePlayPromise = mainTheme
+                                .play()
+                                .finally(() => {
                                     mainThemePlayPromise = null;
-                                },
-                            );
+                                });
                         }
 
                         await mainThemePlayPromise;
@@ -1530,8 +1534,7 @@ I'll be back
                             (timestamp - startedAt) / duration,
                         );
                         mainTheme.volume =
-                            fromVolume +
-                            (targetVolume - fromVolume) * progress;
+                            fromVolume + (targetVolume - fromVolume) * progress;
 
                         if (progress < 1) {
                             musicFadeFrame = requestAnimationFrame(step);
@@ -1612,8 +1615,7 @@ I'll be back
                         setBitcrusherAmount(bitcrusherAmount);
 
                         if (progress < 1) {
-                            effectTransitionFrame =
-                                requestAnimationFrame(step);
+                            effectTransitionFrame = requestAnimationFrame(step);
                         } else {
                             effectTransitionFrame = null;
                         }
@@ -1626,7 +1628,10 @@ I'll be back
                     currentMusicLevel = Math.max(1, Number(level) || 1);
                     const maxDegradationLevel = 5;
                     const amount = Math.min(
-                        Math.max((currentMusicLevel - 1) / (maxDegradationLevel - 1), 0),
+                        Math.max(
+                            (currentMusicLevel - 1) / (maxDegradationLevel - 1),
+                            0,
+                        ),
                         1,
                     );
                     degradationAmount = amount;
@@ -1657,7 +1662,11 @@ I'll be back
                         bitcrusherAmount,
                         900,
                     );
-                    smoothSetAudioParam(lowpassNode.frequency, lowpassFrequency, 900);
+                    smoothSetAudioParam(
+                        lowpassNode.frequency,
+                        lowpassFrequency,
+                        900,
+                    );
 
                     console.log("[audio] music degradation updated", {
                         level: currentMusicLevel,
@@ -1716,10 +1725,16 @@ I'll be back
                             : DUCK_HOLD_MS;
                         duckMusic(durationMs);
                         instance.play().catch((error) => {
-                            warn("Sound effect " + name + " could not play.", error);
+                            warn(
+                                "Sound effect " + name + " could not play.",
+                                error,
+                            );
                         });
                     } catch (error) {
-                        warn("Sound effect " + name + " could not start.", error);
+                        warn(
+                            "Sound effect " + name + " could not start.",
+                            error,
+                        );
                     }
                 }
 
@@ -1744,8 +1759,7 @@ I'll be back
             const playLevelFailedSound = AudioManager.playLevelFailedSound;
             const playRespawnSound = AudioManager.playRespawnSound;
             const playWallPassSound = AudioManager.playWallPassSound;
-            const updateMusicDegradation =
-                AudioManager.updateMusicDegradation;
+            const updateMusicDegradation = AudioManager.updateMusicDegradation;
 
             function getRoadMetrics() {
                 const styles = getComputedStyle(timeline);
@@ -2642,9 +2656,7 @@ I'll be back
                 rows.forEach((row, r) => {
                     const mid = row.slice(laneLeft - 1, laneRight + 2);
                     const isFirewallRow =
-                        word &&
-                        r >= wallRow &&
-                        r < wallRow + WALL_HEIGHT;
+                        word && r >= wallRow && r < wallRow + WALL_HEIGHT;
                     const isGateRow =
                         isFirewallRow &&
                         gateProgress !== null &&
@@ -2703,8 +2715,7 @@ I'll be back
 
             function getCurrentFireFrame(width) {
                 const frames = createScaryFireFrames(width);
-                const index =
-                    Math.floor(Date.now() / 160) % frames.length;
+                const index = Math.floor(Date.now() / 160) % frames.length;
                 return frames[index];
             }
 
@@ -2877,8 +2888,7 @@ I'll be back
                             } else if (isFireSpot) {
                                 row[c] =
                                     WALL_FIRE_SPOT_CHARS[
-                                        (h >>> 9) %
-                                            WALL_FIRE_SPOT_CHARS.length
+                                        (h >>> 9) % WALL_FIRE_SPOT_CHARS.length
                                     ];
                             } else if (isBorder) {
                                 row[c] = "#";
@@ -2923,7 +2933,8 @@ I'll be back
 
                         for (
                             let i = 0;
-                            i < label.length && start + i <= wallBounds.wallRight;
+                            i < label.length &&
+                            start + i <= wallBounds.wallRight;
                             i += 1
                         ) {
                             row[start + i] = label[i];
@@ -4699,10 +4710,7 @@ I'll be back
 
             function startMainThemeFromGameStart() {
                 startMainTheme().catch((error) => {
-                    console.warn(
-                        "[audio] Main theme could not start.",
-                        error,
-                    );
+                    console.warn("[audio] Main theme could not start.", error);
                 });
             }
 
@@ -4791,7 +4799,10 @@ I'll be back
             }
 
             function normalizeVoiceCommand(text) {
-                return text.toLowerCase().trim().replace(/[.,!?]/g, "");
+                return text
+                    .toLowerCase()
+                    .trim()
+                    .replace(/[.,!?]/g, "");
             }
 
             function isStartCommand(text) {
@@ -4864,10 +4875,7 @@ I'll be back
 
                     if (!gameStarted) {
                         status.textContent = "Voice start idle";
-                        if (
-                            onboardingStep === 2 &&
-                            !onboardingVoiceBlocked
-                        ) {
+                        if (onboardingStep === 2 && !onboardingVoiceBlocked) {
                             setTimeout(startOnboardingVoiceRecognition, 600);
                         }
                         return;
