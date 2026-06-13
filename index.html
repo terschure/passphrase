@@ -3324,6 +3324,9 @@ I'll be back
             const ECHO_TRIM_PAD_MS = 60;
             const ECHO_WAVE_BUCKETS = 40;
             const ECHO_P = { beat: 0.35, wall: 0.5, life: 1, random: 0.25 };
+            const TALKBACK_LOCAL_ENDPOINT = "http://127.0.0.1:8000";
+            const TALKBACK_TUNNEL_ENDPOINT =
+                "https://linux-closure-appointment-install.trycloudflare.com";
             const TALKBACK_MODEL_ID = "qwen3-tts-0.6b-base";
             const TALKBACK_MIN_REF_SECONDS = 5;
             const TALKBACK_TARGET_REF_SECONDS = 12;
@@ -3384,6 +3387,34 @@ I'll be back
                     voiceText,
                     progress >= threshold ? "ok" : "",
                 );
+            }
+
+            function getDefaultTalkbackEndpoint() {
+                const { protocol, hostname, pathname } = window.location;
+                const isGitHubPagesPassphrase =
+                    protocol === "https:" &&
+                    hostname === "terschure.github.io" &&
+                    (pathname === "/passphrase/" ||
+                        pathname.startsWith("/passphrase/"));
+
+                return isGitHubPagesPassphrase
+                    ? TALKBACK_TUNNEL_ENDPOINT
+                    : TALKBACK_LOCAL_ENDPOINT;
+            }
+
+            function applyDefaultTalkbackEndpoint() {
+                const endpoint = getDefaultTalkbackEndpoint();
+
+                if (talkbackEndpointInput.value.trim() === endpoint) {
+                    return;
+                }
+
+                talkbackEndpointInput.value = endpoint;
+                talkbackSessionId += 1;
+                talkbackReady = false;
+                talkbackHealthDetail = "checking";
+                talkbackRef = null;
+                talkbackRefSignature = "";
             }
 
             function getTalkbackEndpoint() {
@@ -4827,6 +4858,7 @@ I'll be back
 
             renderWordList();
             renderSequenceStatus();
+            applyDefaultTalkbackEndpoint();
             renderTalkbackPanel();
             startTalkbackHealthChecks();
             AudioManager.preloadAll();
