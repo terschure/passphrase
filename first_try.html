@@ -1,0 +1,905 @@
+<!doctype html>
+<html lang="en">
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Live Voice Transcript</title>
+        <style>
+            :root {
+                color-scheme: dark;
+                font-family: ui-monospace, SFMono-Regular, Menlo, Consolas,
+                    monospace;
+                background: #050505;
+                color: #eeeeee;
+            }
+
+            body {
+                max-width: 1120px;
+                margin: 0 auto;
+                padding: 20px;
+                line-height: 1.35;
+                background: #050505;
+            }
+
+            h1 {
+                font-size: 1rem;
+                margin: 0 0 12px;
+                font-weight: 400;
+            }
+
+            .controls {
+                display: flex;
+                gap: 8px;
+                margin-bottom: 10px;
+                flex-wrap: wrap;
+            }
+
+            main {
+                display: grid;
+                grid-template-columns: minmax(0, 1fr) auto;
+                gap: 18px;
+                align-items: start;
+            }
+
+            button {
+                font: inherit;
+                padding: 0;
+                border: 0;
+                border-radius: 0;
+                cursor: pointer;
+                background: transparent;
+                color: inherit;
+            }
+
+            button:disabled {
+                cursor: not-allowed;
+                color: #777777;
+            }
+
+            #status {
+                min-height: 1.35em;
+                margin-bottom: 10px;
+            }
+
+            #visualizer {
+                display: block;
+                width: 100%;
+                height: 72px;
+                margin-bottom: 10px;
+            }
+
+            #transcript {
+                min-height: 120px;
+                white-space: normal;
+                overflow-wrap: anywhere;
+            }
+
+            details {
+                width: 32ch;
+            }
+
+            details:not([open]) {
+                width: max-content;
+            }
+
+            summary {
+                cursor: pointer;
+                list-style: none;
+                margin-bottom: 10px;
+            }
+
+            summary::-webkit-details-marker {
+                display: none;
+            }
+
+            label {
+                display: block;
+                margin: 10px 0 4px;
+            }
+
+            textarea,
+            select,
+            input {
+                box-sizing: border-box;
+                width: 100%;
+                font: inherit;
+                padding: 2px 4px;
+                border: 1px solid #666666;
+                border-radius: 0;
+                background: #050505;
+                color: inherit;
+            }
+
+            textarea {
+                min-height: 120px;
+                resize: vertical;
+            }
+
+            ul {
+                list-style: none;
+                padding: 0;
+                margin: 10px 0 0;
+            }
+
+            li {
+                display: flex;
+                align-items: center;
+                gap: 6px;
+            }
+
+            li.current {
+                font-weight: 700;
+            }
+
+            li.checked {
+                text-decoration: line-through;
+                opacity: 0.7;
+            }
+
+            li.failed {
+                color: #ffffff;
+                text-decoration: underline;
+            }
+
+            input[type="checkbox"] {
+                width: auto;
+            }
+
+            .sequence-panel {
+                margin-top: 10px;
+            }
+
+            #sequence-status {
+                min-height: 4em;
+                margin-top: 8px;
+                white-space: pre-wrap;
+            }
+
+            .timeline-panel {
+                margin-bottom: 10px;
+            }
+
+            .timeline-header {
+                display: flex;
+                justify-content: space-between;
+                gap: 12px;
+                margin-bottom: 6px;
+            }
+
+            #timer-display {
+                font-size: 4rem;
+                line-height: 1;
+                margin-bottom: 4px;
+            }
+
+            #current-word {
+                min-height: 1.35em;
+                margin-bottom: 4px;
+            }
+
+            #timeline {
+                overflow-x: auto;
+                white-space: pre;
+            }
+
+            .muted {
+                color: #888888;
+            }
+
+            .ok {
+                color: #eeeeee;
+            }
+
+            .warn {
+                color: #ffff00;
+            }
+
+            .bad {
+                color: #ffffff;
+                text-decoration: underline;
+            }
+
+            @media (max-width: 760px) {
+                main {
+                    grid-template-columns: 1fr;
+                }
+
+                details {
+                    width: 100%;
+                }
+            }
+        </style>
+    </head>
+    <body>
+        <h1>== LIVE VOICE TRANSCRIPT ==</h1>
+
+        <main>
+            <section>
+                <div class="controls">
+                    <button id="start">[ start ]</button>
+                    <button id="stop" disabled>[ stop ]</button>
+                    <button id="clear">[ clear ]</button>
+                </div>
+
+                <div id="status">Idle</div>
+                <div class="timeline-panel" aria-live="polite">
+                    <div class="timeline-header">
+                        <span>SEQ TIMER</span>
+                        <span id="timeline-state">mode: sequence</span>
+                    </div>
+                    <div id="timer-display">--.-</div>
+                    <div id="current-word">
+                        <span class="muted">next word: --</span>
+                    </div>
+                    <div id="timeline">
+                        |----+----+----+----+----+----+----+----+----|
+                    </div>
+                </div>
+                <canvas
+                    id="visualizer"
+                    width="900"
+                    height="120"
+                    aria-label="Microphone audio visualizer"
+                ></canvas>
+                <div id="transcript" aria-live="polite"><span id="final"></span><span id="interim"></span></div>
+            </section>
+
+            <details id="settings" open>
+                <summary>[ settings ]</summary>
+                <label for="mode">mode</label>
+                <select id="mode">
+                    <option value="catch">catch any word</option>
+                    <option value="sequence" selected>sequence timer</option>
+                </select>
+
+                <label for="seconds">seconds for next word</label>
+                <input
+                    id="seconds"
+                    type="number"
+                    min="1"
+                    max="60"
+                    step="1"
+                    value="5"
+                />
+
+                <label for="transcript-source">transcript source</label>
+                <select id="transcript-source">
+                    <option value="interim">unstable interim</option>
+                    <option value="final">final results only</option>
+                </select>
+
+                <div class="sequence-panel">
+                    <button id="reset-sequence">[ reset seq ]</button>
+                    <div id="sequence-status">sequence: waiting</div>
+                </div>
+
+                <label for="words">one word or phrase per line</label>
+                <textarea id="words" aria-label="Words to catch">
+hello
+test
+microphone</textarea
+                >
+                <ul id="word-list" aria-label="Caught words"></ul>
+            </details>
+        </main>
+
+        <script>
+            const SpeechRecognition =
+                window.SpeechRecognition || window.webkitSpeechRecognition;
+            const startButton = document.querySelector("#start");
+            const stopButton = document.querySelector("#stop");
+            const clearButton = document.querySelector("#clear");
+            const resetSequenceButton =
+                document.querySelector("#reset-sequence");
+            const modeInput = document.querySelector("#mode");
+            const secondsInput = document.querySelector("#seconds");
+            const transcriptSourceInput =
+                document.querySelector("#transcript-source");
+            const wordsInput = document.querySelector("#words");
+            const wordList = document.querySelector("#word-list");
+            const sequenceStatus = document.querySelector("#sequence-status");
+            const timelineState = document.querySelector("#timeline-state");
+            const timerDisplay = document.querySelector("#timer-display");
+            const currentWord = document.querySelector("#current-word");
+            const timeline = document.querySelector("#timeline");
+            const status = document.querySelector("#status");
+            const finalText = document.querySelector("#final");
+            const interimText = document.querySelector("#interim");
+            const visualizer = document.querySelector("#visualizer");
+            const canvas = visualizer.getContext("2d");
+            const finalChunks = [];
+            const caughtWords = new Set();
+            let interimTranscript = "";
+            let sequenceIndex = 0;
+            let sequenceFailed = false;
+            let deadline = null;
+            let timerInterval = null;
+            let audioContext;
+            let analyser;
+            let micStream;
+            let visualizerFrame;
+
+            function escapeRegExp(text) {
+                return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+            }
+
+            function getTargetWords() {
+                return wordsInput.value
+                    .split("\n")
+                    .map((word) => word.trim())
+                    .filter(Boolean);
+            }
+
+            function renderWordList() {
+                const words = getTargetWords();
+                wordList.innerHTML = "";
+
+                for (const [index, word] of words.entries()) {
+                    const normalized = word.toLowerCase();
+                    const item = document.createElement("li");
+                    const isChecked = caughtWords.has(normalized);
+                    const isCurrent =
+                        modeInput.value === "sequence" &&
+                        index === sequenceIndex &&
+                        !sequenceFailed;
+                    item.className = [
+                        isChecked ? "checked" : "",
+                        isCurrent ? "current" : "",
+                        sequenceFailed &&
+                        modeInput.value === "sequence" &&
+                        index === sequenceIndex
+                            ? "failed"
+                            : "",
+                    ]
+                        .filter(Boolean)
+                        .join(" ");
+                    item.innerHTML = `<input type="checkbox" disabled ${caughtWords.has(normalized) ? "checked" : ""}> <span></span>`;
+                    item.querySelector("span").textContent =
+                        `${isCurrent ? "> " : "  "}${word}`;
+                    wordList.append(item);
+                }
+            }
+
+            function renderTranscript() {
+                finalText.textContent =
+                    transcriptSourceInput.value === "interim"
+                        ? interimTranscript
+                        : finalChunks.join(" ");
+
+                interimText.textContent = "";
+            }
+
+            function getSelectedTranscriptText() {
+                return transcriptSourceInput.value === "interim"
+                    ? interimTranscript
+                    : finalChunks.join(" ");
+            }
+
+            function catchWords(text) {
+                for (const word of getTargetWords()) {
+                    const matcher = new RegExp(
+                        `\\b${escapeRegExp(word)}\\b`,
+                        "i",
+                    );
+
+                    if (matcher.test(text)) {
+                        caughtWords.add(word.toLowerCase());
+                    }
+                }
+            }
+
+            function getSecondsLimit() {
+                return Math.max(1, Number(secondsInput.value) || 5);
+            }
+
+            function textHasWord(text, word) {
+                return new RegExp(`\\b${escapeRegExp(word)}\\b`, "i").test(
+                    text,
+                );
+            }
+
+            function stopSequenceTimer() {
+                if (timerInterval) {
+                    clearInterval(timerInterval);
+                    timerInterval = null;
+                }
+            }
+
+            function resetSequence() {
+                sequenceIndex = 0;
+                sequenceFailed = false;
+                deadline = null;
+                caughtWords.clear();
+
+                if (modeInput.value === "catch") {
+                    catchWords(getSelectedTranscriptText());
+                }
+
+                stopSequenceTimer();
+                renderSequenceStatus();
+                renderWordList();
+            }
+
+            function failSequence() {
+                sequenceFailed = true;
+                deadline = null;
+                stopSequenceTimer();
+                renderSequenceStatus();
+                renderWordList();
+            }
+
+            function startSequenceTimer() {
+                stopSequenceTimer();
+                deadline = Date.now() + getSecondsLimit() * 1000;
+                timerInterval = setInterval(() => {
+                    if (deadline && Date.now() >= deadline) {
+                        failSequence();
+                        return;
+                    }
+
+                    renderSequenceStatus();
+                }, 100);
+                renderSequenceStatus();
+            }
+
+            function renderSequenceStatus() {
+                const words = getTargetWords();
+                renderTimeline(words);
+
+                if (modeInput.value !== "sequence") {
+                    sequenceStatus.textContent = "sequence: off";
+                    return;
+                }
+
+                if (!words.length) {
+                    sequenceStatus.textContent = "sequence: no words";
+                    return;
+                }
+
+                if (sequenceFailed) {
+                    sequenceStatus.textContent = `sequence: timeout\nexpected: ${words[sequenceIndex] || "done"}\npress reset seq`;
+                    return;
+                }
+
+                if (sequenceIndex >= words.length) {
+                    sequenceStatus.textContent =
+                        "sequence: complete\nall words spoken";
+                    return;
+                }
+
+                if (!deadline) {
+                    sequenceStatus.textContent = `sequence: armed\nspeak first: ${words[sequenceIndex]}`;
+                    return;
+                }
+
+                const remaining = Math.max(0, (deadline - Date.now()) / 1000);
+                sequenceStatus.textContent = `sequence: running\nnext: ${words[sequenceIndex]}\ntime: ${remaining.toFixed(1)}s`;
+            }
+
+            function colorSpan(className, text) {
+                const span = document.createElement("span");
+                span.className = className;
+                span.textContent = text;
+                return span;
+            }
+
+            function renderTimeline(words = getTargetWords()) {
+                timeline.replaceChildren();
+
+                if (modeInput.value !== "sequence") {
+                    timelineState.textContent = "mode: catch";
+                    timerDisplay.textContent = "--.-";
+                    currentWord.replaceChildren(
+                        colorSpan("muted", "next word: --"),
+                    );
+                    timeline.textContent =
+                        "|----+----+----+----+----+----+----+----+----|";
+                    return;
+                }
+
+                const limit = getSecondsLimit();
+                const remaining = deadline
+                    ? Math.max(0, (deadline - Date.now()) / 1000)
+                    : limit;
+                const elapsed = deadline
+                    ? Math.min(limit, limit - remaining)
+                    : 0;
+                const width = 46;
+                const position = Math.min(
+                    width - 1,
+                    Math.max(0, Math.round((elapsed / limit) * (width - 1))),
+                );
+                const activeWord = words[sequenceIndex] || "--";
+                const complete =
+                    sequenceIndex >= words.length && words.length > 0;
+                let track = "";
+
+                for (let i = 0; i < width; i += 1) {
+                    if (i === 0) {
+                        track += "|";
+                    } else if (i === width - 1) {
+                        track += "!";
+                    } else if (i === position && !complete && !sequenceFailed) {
+                        track += "@";
+                    } else if (i % 5 === 0) {
+                        track += "+";
+                    } else {
+                        track += "-";
+                    }
+                }
+
+                timelineState.textContent = `mode: sequence ${sequenceIndex}/${words.length}`;
+
+                if (!words.length) {
+                    timerDisplay.textContent = "--.-";
+                    currentWord.replaceChildren(
+                        colorSpan("muted", "next word: none"),
+                    );
+                    timeline.append(colorSpan("muted", track));
+                    return;
+                }
+
+                if (sequenceFailed) {
+                    timerDisplay.textContent = "00.0";
+                    currentWord.replaceChildren(
+                        colorSpan("bad", `timeout: ${activeWord}`),
+                    );
+                    timeline.append(colorSpan("bad", track));
+                    timeline.append(document.createTextNode("\n"));
+                    timeline.append(
+                        colorSpan(
+                            "bad",
+                            "sequence failed at deadline marker !",
+                        ),
+                    );
+                    return;
+                }
+
+                if (complete) {
+                    timerDisplay.textContent = "DONE";
+                    currentWord.replaceChildren(
+                        colorSpan("ok", "sequence complete"),
+                    );
+                    timeline.append(
+                        colorSpan(
+                            "ok",
+                            "|############################################!",
+                        ),
+                    );
+                    return;
+                }
+
+                timerDisplay.textContent = deadline
+                    ? remaining.toFixed(1)
+                    : `${limit}.0`;
+                currentWord.replaceChildren(
+                    colorSpan(
+                        deadline ? "warn" : "ok",
+                        `next word: ${activeWord}`,
+                    ),
+                );
+
+                timeline.append(colorSpan("muted", track.slice(0, position)));
+                timeline.append(colorSpan("warn", track[position] || "@"));
+                timeline.append(colorSpan("muted", track.slice(position + 1)));
+                timeline.append(document.createTextNode("\n"));
+                timeline.append(
+                    colorSpan(
+                        "ok",
+                        words.slice(0, sequenceIndex).join(" -> ") || "start",
+                    ),
+                );
+                timeline.append(document.createTextNode(" "));
+                timeline.append(colorSpan("warn", `>> ${activeWord} >>`));
+                timeline.append(document.createTextNode(" "));
+                timeline.append(
+                    colorSpan(
+                        "muted",
+                        words.slice(sequenceIndex + 1).join(" -> ") || "finish",
+                    ),
+                );
+            }
+
+            function processSequenceText(text) {
+                if (modeInput.value !== "sequence" || sequenceFailed) {
+                    return false;
+                }
+
+                const words = getTargetWords();
+                let changed = false;
+
+                while (
+                    sequenceIndex < words.length &&
+                    textHasWord(text, words[sequenceIndex])
+                ) {
+                    caughtWords.add(words[sequenceIndex].toLowerCase());
+                    sequenceIndex += 1;
+                    changed = true;
+
+                    if (sequenceIndex >= words.length) {
+                        deadline = null;
+                        stopSequenceTimer();
+                        break;
+                    }
+
+                    startSequenceTimer();
+                }
+
+                renderSequenceStatus();
+                return changed;
+            }
+
+            function processTranscriptText(text) {
+                if (!text.trim()) {
+                    return;
+                }
+
+                if (modeInput.value === "sequence") {
+                    processSequenceText(text);
+                } else {
+                    catchWords(text);
+                }
+            }
+
+            function rebuildCatchWordsFromSource() {
+                caughtWords.clear();
+
+                if (transcriptSourceInput.value === "interim") {
+                    catchWords(interimTranscript);
+                    return;
+                }
+
+                for (const chunk of finalChunks) {
+                    catchWords(chunk);
+                }
+            }
+
+            function drawIdleVisualizer() {
+                const width = visualizer.width;
+                const height = visualizer.height;
+                canvas.clearRect(0, 0, width, height);
+                canvas.fillStyle = "#7f8aa3";
+                canvas.font = "16px monospace";
+                canvas.fillText(
+                    "---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----",
+                    18,
+                    height / 2 + 5,
+                );
+            }
+
+            async function startVisualizer() {
+                if (
+                    !navigator.mediaDevices ||
+                    !navigator.mediaDevices.getUserMedia
+                ) {
+                    return;
+                }
+
+                micStream = await navigator.mediaDevices.getUserMedia({
+                    audio: true,
+                });
+                audioContext = new AudioContext();
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;
+
+                const source = audioContext.createMediaStreamSource(micStream);
+                source.connect(analyser);
+
+                const data = new Uint8Array(analyser.frequencyBinCount);
+                const width = visualizer.width;
+                const height = visualizer.height;
+                const columns = 48;
+                const rows = 6;
+                const cellWidth = width / columns;
+                const cellHeight = height / (rows + 1);
+                const rowColors = [
+                    "#536179",
+                    "#8be9fd",
+                    "#50fa7b",
+                    "#f1fa8c",
+                    "#ffb86c",
+                    "#ff6e6e",
+                ];
+
+                function draw() {
+                    visualizerFrame = requestAnimationFrame(draw);
+                    analyser.getByteFrequencyData(data);
+                    canvas.clearRect(0, 0, width, height);
+                    canvas.font = "14px monospace";
+
+                    for (let column = 0; column < columns; column += 1) {
+                        const start = Math.floor(
+                            (column / columns) * data.length,
+                        );
+                        const end = Math.floor(
+                            ((column + 1) / columns) * data.length,
+                        );
+                        let total = 0;
+
+                        for (
+                            let i = start;
+                            i < Math.max(end, start + 1);
+                            i += 1
+                        ) {
+                            total += data[i];
+                        }
+
+                        const average = total / Math.max(1, end - start);
+                        const activeRows = Math.max(
+                            1,
+                            Math.round((average / 255) * rows),
+                        );
+
+                        for (let row = 0; row < activeRows; row += 1) {
+                            const x = column * cellWidth + 8;
+                            const y = height - row * cellHeight - 14;
+                            canvas.fillStyle =
+                                rowColors[Math.min(row, rowColors.length - 1)];
+                            canvas.fillText(
+                                row === activeRows - 1 ? "+" : "#",
+                                x,
+                                y,
+                            );
+                        }
+                    }
+                }
+
+                draw();
+            }
+
+            function stopVisualizer() {
+                if (visualizerFrame) {
+                    cancelAnimationFrame(visualizerFrame);
+                    visualizerFrame = null;
+                }
+
+                if (micStream) {
+                    for (const track of micStream.getTracks()) {
+                        track.stop();
+                    }
+                    micStream = null;
+                }
+
+                if (audioContext) {
+                    audioContext.close();
+                    audioContext = null;
+                }
+
+                analyser = null;
+                drawIdleVisualizer();
+            }
+
+            wordsInput.addEventListener("input", () => {
+                resetSequence();
+                if (modeInput.value === "catch") {
+                    rebuildCatchWordsFromSource();
+                }
+                renderWordList();
+                renderTranscript();
+            });
+
+            modeInput.addEventListener("change", () => {
+                resetSequence();
+                renderTranscript();
+            });
+
+            secondsInput.addEventListener("input", () => {
+                if (
+                    modeInput.value === "sequence" &&
+                    deadline &&
+                    !sequenceFailed
+                ) {
+                    startSequenceTimer();
+                }
+                renderSequenceStatus();
+            });
+
+            transcriptSourceInput.addEventListener("change", () => {
+                resetSequence();
+                processTranscriptText(getSelectedTranscriptText());
+
+                renderTranscript();
+                renderWordList();
+            });
+
+            resetSequenceButton.addEventListener("click", () => {
+                resetSequence();
+            });
+
+            renderWordList();
+            renderSequenceStatus();
+            drawIdleVisualizer();
+
+            if (!SpeechRecognition) {
+                status.textContent =
+                    "Speech recognition is not supported in this browser. Try Chrome or Edge.";
+                startButton.disabled = true;
+            } else {
+                const recognition = new SpeechRecognition();
+                recognition.continuous = true;
+                recognition.interimResults = true;
+                recognition.lang = navigator.language || "en-US";
+
+                recognition.onstart = () => {
+                    status.textContent = "Listening...";
+                    startButton.disabled = true;
+                    stopButton.disabled = false;
+                };
+
+                recognition.onend = () => {
+                    status.textContent = "Stopped";
+                    startButton.disabled = false;
+                    stopButton.disabled = true;
+                    interimText.textContent = "";
+                    stopVisualizer();
+                };
+
+                recognition.onerror = (event) => {
+                    status.textContent = `Error: ${event.error}`;
+                };
+
+                recognition.onresult = (event) => {
+                    const liveResults = [];
+
+                    for (
+                        let i = event.resultIndex;
+                        i < event.results.length;
+                        i += 1
+                    ) {
+                        const text = event.results[i][0].transcript;
+
+                        if (event.results[i].isFinal) {
+                            const chunk = text.trim();
+                            finalChunks.push(chunk);
+
+                            if (transcriptSourceInput.value === "final") {
+                                processTranscriptText(chunk);
+                            }
+                        }
+                    }
+
+                    for (const result of event.results) {
+                        const text = result[0].transcript.trim();
+
+                        if (text) {
+                            liveResults.push(text);
+                        }
+                    }
+
+                    interimTranscript = liveResults.join(" ");
+
+                    if (transcriptSourceInput.value === "interim") {
+                        if (modeInput.value === "catch") {
+                            rebuildCatchWordsFromSource();
+                        } else {
+                            processTranscriptText(interimTranscript);
+                        }
+                    }
+
+                    renderTranscript();
+                    renderWordList();
+                };
+
+                startButton.addEventListener("click", async () => {
+                    try {
+                        await startVisualizer();
+                        recognition.start();
+                    } catch (error) {
+                        status.textContent =
+                            "Microphone access was blocked or unavailable.";
+                        stopVisualizer();
+                    }
+                });
+                stopButton.addEventListener("click", () => recognition.stop());
+            }
+
+            clearButton.addEventListener("click", () => {
+                finalChunks.length = 0;
+                interimTranscript = "";
+                finalText.textContent = "";
+                interimText.textContent = "";
+                resetSequence();
+            });
+        </script>
+    </body>
+</html>
