@@ -7,8 +7,8 @@
         <style>
             :root {
                 color-scheme: dark;
-                font-family: ui-monospace, SFMono-Regular, Menlo, Consolas,
-                    monospace;
+                font-family:
+                    ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
                 background: #0a0a0a;
                 color: #eeeeee;
             }
@@ -81,6 +81,139 @@
                 user-select: none;
             }
 
+            #game-over-screen {
+                position: fixed;
+                inset: 0;
+                z-index: 5;
+                display: none;
+                place-items: center;
+                padding: 24px;
+                background: rgba(8, 8, 8, 0.88);
+                text-align: center;
+            }
+
+            #game-over-screen.visible {
+                display: grid;
+            }
+
+            #game-over-screen.confirmed {
+                background: rgba(8, 18, 12, 0.9);
+            }
+
+            .game-over-panel {
+                width: min(520px, calc(100vw - 48px));
+                padding: 22px 24px;
+                border: 1px solid #3f3f3f;
+                border-radius: 8px;
+                background: rgba(17, 17, 17, 0.94);
+                box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+            }
+
+            #game-over-screen.confirmed .game-over-panel {
+                border-color: #22c55e;
+                animation: continue-panel-pulse 1.45s ease-in-out both;
+            }
+
+            .game-over-title {
+                color: #ef4444;
+                font-size: 1.4rem;
+                font-weight: 700;
+                letter-spacing: 0.1em;
+                text-transform: uppercase;
+            }
+
+            #game-over-screen.confirmed .game-over-title {
+                color: #22c55e;
+            }
+
+            .game-over-round {
+                margin-top: 10px;
+                color: #facc15;
+                font-weight: 700;
+            }
+
+            .game-over-copy {
+                margin-top: 12px;
+                color: #d4d4d4;
+            }
+
+            .game-over-phrase {
+                display: block;
+                margin-top: 14px;
+                color: #ffffff;
+                font-size: 1.1rem;
+                font-weight: 700;
+            }
+
+            #game-over-visualizer {
+                display: block;
+                width: 100%;
+                height: 86px;
+                margin-top: 18px;
+                border-radius: 6px;
+                background: rgba(10, 10, 10, 0.9);
+            }
+
+            #game-over-transcript {
+                min-height: 72px;
+                max-height: 150px;
+                margin-top: 12px;
+                padding: 10px 12px;
+                border: 1px solid #333333;
+                border-radius: 8px;
+                background: rgba(10, 10, 10, 0.72);
+                color: #c7c7c7;
+                font-size: 0.92rem;
+                font-style: italic;
+                overflow: auto;
+                overflow-wrap: anywhere;
+                text-align: left;
+            }
+
+            #game-over-transcript .hit {
+                color: #facc15;
+                font-weight: 700;
+            }
+
+            @keyframes continue-panel-pulse {
+                0% {
+                    transform: scale(1);
+                    box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
+                }
+
+                35% {
+                    transform: scale(1.035);
+                    box-shadow:
+                        0 0 0 1px rgba(34, 197, 94, 0.75),
+                        0 0 34px rgba(34, 197, 94, 0.38),
+                        0 18px 48px rgba(0, 0, 0, 0.45);
+                }
+
+                100% {
+                    transform: scale(1);
+                    box-shadow:
+                        0 0 0 1px rgba(250, 204, 21, 0.65),
+                        0 0 26px rgba(250, 204, 21, 0.22),
+                        0 18px 48px rgba(0, 0, 0, 0.45);
+                }
+            }
+
+            #game-over-screen.confirmed .game-over-phrase {
+                animation: continue-phrase-flash 1.45s ease-in-out both;
+            }
+
+            @keyframes continue-phrase-flash {
+                0%,
+                100% {
+                    color: #ffffff;
+                }
+
+                35% {
+                    color: #22c55e;
+                    transform: scale(1.08);
+                }
+            }
+
             button {
                 font: inherit;
                 padding: 6px 12px;
@@ -107,6 +240,31 @@
                 color: #aaaaaa;
                 text-align: center;
                 text-shadow: 0 2px 8px #000000;
+            }
+
+            #level-status {
+                position: fixed;
+                top: 92px;
+                right: 14px;
+                z-index: 3;
+                width: min(280px, 32vw);
+                color: #aaaaaa;
+                font-size: 0.78rem;
+                text-align: right;
+                text-shadow: 0 2px 8px #000000;
+            }
+
+            #current-level {
+                color: #facc15;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+            }
+
+            #current-sequence {
+                margin-top: 2px;
+                color: #dddddd;
+                font-style: italic;
             }
 
             #visualizer {
@@ -145,11 +303,18 @@
                 font-weight: 700;
             }
 
-            #echo-panel {
+            #side-panel-stack {
                 position: fixed;
                 top: 90px;
                 left: 14px;
                 z-index: 3;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                align-items: flex-start;
+            }
+
+            #echo-panel {
                 display: none;
                 width: 200px;
                 padding: 8px 10px;
@@ -215,6 +380,60 @@
             .echo-badge.play {
                 color: #facc15;
                 font-weight: 700;
+            }
+
+            #talkback-panel {
+                width: 200px;
+                padding: 8px 10px;
+                border: 1px solid #333333;
+                border-radius: 8px;
+                background: rgba(17, 17, 17, 0.78);
+                color: #aaaaaa;
+                font-size: 0.7rem;
+            }
+
+            .talkback-header {
+                color: #facc15;
+                font-size: 0.7rem;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+            }
+
+            .talkback-row {
+                display: flex;
+                justify-content: space-between;
+                gap: 8px;
+                margin-top: 4px;
+            }
+
+            .talkback-row span:first-child {
+                color: #666666;
+            }
+
+            .talkback-value {
+                max-width: 145px;
+                overflow: hidden;
+                text-align: right;
+                white-space: nowrap;
+                text-overflow: ellipsis;
+            }
+
+            .talkback-value.ok {
+                color: #22c55e;
+            }
+
+            .talkback-value.warn {
+                color: #facc15;
+            }
+
+            .talkback-value.bad {
+                color: #ef4444;
+            }
+
+            .settings-divider {
+                margin-top: 16px;
+                padding-top: 12px;
+                border-top: 1px solid #333333;
             }
 
             #settings-backdrop {
@@ -310,6 +529,24 @@
                 text-decoration: underline;
             }
 
+            li.word-heading {
+                display: block;
+                margin-top: 10px;
+                color: #facc15;
+                font-size: 0.72rem;
+                font-weight: 700;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+            }
+
+            li.sequence-heading {
+                display: block;
+                margin: 6px 0 2px;
+                color: #888888;
+                font-size: 0.72rem;
+                font-style: italic;
+            }
+
             input[type="checkbox"] {
                 width: auto;
             }
@@ -382,6 +619,54 @@
                 letter-spacing: 0.08em;
             }
 
+            #lives-display.refill {
+                animation: refill-pulse 780ms ease-out;
+            }
+
+            #lives-display .refill-note {
+                display: block;
+                margin-top: 2px;
+                color: #22c55e;
+                font-size: 0.72rem;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                animation: refill-rise 780ms ease-out both;
+            }
+
+            @keyframes refill-pulse {
+                0% {
+                    transform: translateX(-50%) scale(1);
+                    filter: brightness(1);
+                }
+
+                35% {
+                    transform: translateX(-50%) scale(1.18);
+                    filter: brightness(1.65);
+                }
+
+                100% {
+                    transform: translateX(-50%) scale(1);
+                    filter: brightness(1);
+                }
+            }
+
+            @keyframes refill-rise {
+                0% {
+                    opacity: 0;
+                    transform: translateY(8px);
+                }
+
+                25% {
+                    opacity: 1;
+                    transform: translateY(0);
+                }
+
+                100% {
+                    opacity: 0;
+                    transform: translateY(-12px);
+                }
+            }
+
             #timeline {
                 position: fixed;
                 top: 0;
@@ -445,7 +730,10 @@
                 }
 
                 #echo-panel,
-                #echo-panel.visible {
+                #echo-panel.visible,
+                #side-panel-stack,
+                #level-status,
+                #talkback-panel {
                     display: none;
                 }
             }
@@ -456,122 +744,245 @@
             <h1>&#9650; ROAD TALK &#9650;</h1>
             <main>
                 <section>
-                <div class="controls">
-                    <button id="start">START</button>
-                    <button id="stop" disabled>STOP</button>
-                    <button id="clear">CLEAR</button>
-                </div>
-                <button id="open-settings" type="button">settings</button>
-
-                <div id="status">Idle</div>
-                <div class="timeline-panel" aria-live="polite">
-                    <div class="timeline-header">
-                        <span>ROAD</span>
-                        <span id="timeline-state">mode: lives</span>
+                    <div class="controls">
+                        <button id="start">START</button>
+                        <button id="stop" disabled>STOP</button>
+                        <button id="clear">CLEAR</button>
                     </div>
-                    <pre id="timeline">//////////////////////////////////////////
-//////////////////////////////////////////
-//////////////////////////////////////////</pre>
-                    <div id="timer-display">--.-</div>
-                    <div id="lives-display"></div>
-                </div>
-                <div id="echo-panel" aria-live="polite">
-                    <div class="echo-header">[ echo ]</div>
-                    <div id="echo-rows"></div>
-                </div>
-                <canvas
-                    id="visualizer"
-                    width="900"
-                    height="120"
-                    aria-label="Microphone audio visualizer"
-                ></canvas>
-                <div id="transcript" aria-live="polite"><span id="final"></span><span id="interim"></span></div>
-                </section>
+                    <button id="open-settings" type="button">settings</button>
 
+                    <div id="status">Idle</div>
+                    <div id="level-status" aria-live="polite">
+                        <div id="current-level">road</div>
+                        <div id="current-sequence">main sequence</div>
+                    </div>
+                    <div class="timeline-panel" aria-live="polite">
+                        <div class="timeline-header">
+                            <span>ROAD</span>
+                            <span id="timeline-state">mode: lives</span>
+                        </div>
+                        <pre id="timeline">
+//////////////////////////////////////////
+//////////////////////////////////////////
+//////////////////////////////////////////</pre
+                        >
+                        <div id="timer-display">--.-</div>
+                        <div id="lives-display"></div>
+                    </div>
+                    <div id="side-panel-stack">
+                        <div id="echo-panel" aria-live="polite">
+                            <div class="echo-header">[ echo ]</div>
+                            <div id="echo-rows"></div>
+                        </div>
+                        <div id="talkback-panel" aria-live="polite">
+                            <div class="talkback-header">[ talk-back ]</div>
+                            <div class="talkback-row">
+                                <span>endpoint</span>
+                                <span
+                                    id="talkback-endpoint"
+                                    class="talkback-value warn"
+                                    >checking</span
+                                >
+                            </div>
+                            <div class="talkback-row">
+                                <span>reference</span>
+                                <span
+                                    id="talkback-reference"
+                                    class="talkback-value"
+                                    >none</span
+                                >
+                            </div>
+                            <div class="talkback-row">
+                                <span>voice</span>
+                                <span id="talkback-voice" class="talkback-value"
+                                    >waiting</span
+                                >
+                            </div>
+                            <div class="talkback-row">
+                                <span>last</span>
+                                <span id="talkback-last" class="talkback-value"
+                                    >idle</span
+                                >
+                            </div>
+                        </div>
+                    </div>
+                    <canvas
+                        id="visualizer"
+                        width="900"
+                        height="120"
+                        aria-label="Microphone audio visualizer"
+                    ></canvas>
+                    <div id="transcript" aria-live="polite">
+                        <span id="final"></span><span id="interim"></span>
+                    </div>
+                </section>
             </main>
+            <div
+                id="game-over-screen"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="game-over-title"
+                aria-live="polite"
+            >
+                <div class="game-over-panel">
+                    <div id="game-over-title" class="game-over-title">
+                        game over
+                    </div>
+                    <div id="game-over-round" class="game-over-round">
+                        round --
+                    </div>
+                    <div id="game-over-copy" class="game-over-copy">
+                        Say the imitation phrase to continue.
+                    </div>
+                    <span id="game-over-phrase" class="game-over-phrase"></span>
+                    <canvas
+                        id="game-over-visualizer"
+                        width="900"
+                        height="120"
+                        aria-label="Game over microphone audio visualizer"
+                    ></canvas>
+                    <div id="game-over-transcript" aria-live="polite"></div>
+                </div>
+            </div>
         </div>
 
         <div id="settings-backdrop"></div>
         <aside id="settings-panel" aria-hidden="true">
-                <div class="settings-header">
-                    <span>[ settings ]</span>
-                    <button id="close-settings" type="button">CLOSE</button>
-                </div>
-                <label for="mode">mode</label>
-                <select id="mode">
-                    <option value="catch">catch any word</option>
-                    <option value="sequence">sequence timer</option>
-                    <option value="rhythm">rhythm (fixed beat)</option>
-                    <option value="lives" selected>lives &amp; retries</option>
-                </select>
+            <div class="settings-header">
+                <span>[ settings ]</span>
+                <button id="close-settings" type="button">CLOSE</button>
+            </div>
+            <label for="mode">mode</label>
+            <select id="mode">
+                <option value="catch">catch any word</option>
+                <option value="sequence">sequence timer</option>
+                <option value="rhythm">rhythm (fixed beat)</option>
+                <option value="lives" selected>lives &amp; retries</option>
+            </select>
 
-                <label for="seconds">seconds for next word</label>
+            <label for="seconds">seconds for next word</label>
+            <input
+                id="seconds"
+                type="number"
+                min="1"
+                max="60"
+                step="1"
+                value="5"
+            />
+
+            <label for="lives">lives (lives mode)</label>
+            <input
+                id="lives"
+                type="number"
+                min="1"
+                max="9"
+                step="1"
+                value="3"
+            />
+
+            <label for="retries">retries per word (lives mode)</label>
+            <input
+                id="retries"
+                type="number"
+                min="0"
+                max="9"
+                step="1"
+                value="2"
+            />
+
+            <label for="transcript-source">transcript source</label>
+            <select id="transcript-source">
+                <option value="interim">unstable interim</option>
+                <option value="final">final results only</option>
+            </select>
+
+            <label for="sentence-fuzzy-match">sentence fuzzy match %</label>
+            <input
+                id="sentence-fuzzy-match"
+                type="number"
+                min="50"
+                max="100"
+                step="1"
+                value="78"
+            />
+
+            <label for="continue-phrase">celebrity continue phrase</label>
+            <input id="continue-phrase" type="text" value="I'll be back" />
+
+            <label for="echo-mode">echo interference</label>
+            <select id="echo-mode">
+                <option value="off">off</option>
+                <option value="random">random moments</option>
+                <option value="key">key moments</option>
+                <option value="both" selected>random + key moments</option>
+            </select>
+
+            <div class="settings-divider">
+                <label>
+                    <input id="talkback-enabled" type="checkbox" checked />
+                    generated talk-back
+                </label>
+
+                <label for="talkback-endpoint-url">tts endpoint</label>
                 <input
-                    id="seconds"
-                    type="number"
-                    min="1"
-                    max="60"
-                    step="1"
-                    value="5"
+                    id="talkback-endpoint-url"
+                    type="url"
+                    value="http://127.0.0.1:8000"
                 />
 
-                <label for="lives">lives (lives mode)</label>
-                <input
-                    id="lives"
-                    type="number"
-                    min="1"
-                    max="9"
-                    step="1"
-                    value="3"
-                />
-
-                <label for="retries">retries per word (lives mode)</label>
-                <input
-                    id="retries"
-                    type="number"
-                    min="0"
-                    max="9"
-                    step="1"
-                    value="2"
-                />
-
-                <label for="transcript-source">transcript source</label>
-                <select id="transcript-source">
-                    <option value="interim">unstable interim</option>
-                    <option value="final">final results only</option>
-                </select>
-
-                <label for="echo-mode">echo interference</label>
-                <select id="echo-mode">
-                    <option value="off">off</option>
-                    <option value="random">random moments</option>
-                    <option value="key">key moments</option>
-                    <option value="both" selected>
-                        random + key moments
-                    </option>
-                </select>
-
-                <div class="sequence-panel">
-                    <button id="reset-sequence">[ reset seq ]</button>
-                    <div id="sequence-status">sequence: waiting</div>
-                </div>
-
-                <label for="words">one word or phrase per line</label>
-                <textarea id="words" aria-label="Words to catch">
-hello
-test
-microphone
-banana
-purple
-window
-tiger
-coffee
-mountain
-seven
-river
-guitar</textarea
+                <label for="talkback-threshold"
+                    >words/phrases before talk-back</label
                 >
-                <ul id="word-list" aria-label="Caught words"></ul>
+                <input
+                    id="talkback-threshold"
+                    type="number"
+                    min="1"
+                    max="99"
+                    step="1"
+                    value="4"
+                />
+
+                <label for="talkback-phrases">talk-back phrases</label>
+                <textarea id="talkback-phrases" aria-label="Talk-back phrases">
+You are doing better than you think.
+I heard that. Now try the next one.
+This road knows your voice.
+Keep going. The voice is learning you.</textarea
+                >
+            </div>
+
+            <div class="sequence-panel">
+                <button id="reset-sequence">[ reset seq ]</button>
+                <div id="sequence-status">sequence: waiting</div>
+            </div>
+
+            <label for="words"># level, ## sequence, then words/phrases</label>
+            <textarea id="words" aria-label="Words to catch">
+# Level 1
+## Round 1
+Albania
+Exit
+Germany
+Transfer
+Arrival
+Departure
+## Round 2
+Expulsion
+Displacement
+Jurisdiction
+Absconder
+Repatriation
+Drill baby drill
+## Round 3
+Contiguous
+Interception
+It's Britney bitch
+Reunification
+Naturalization
+I'll be back
+</textarea
+            >
+            <ul id="word-list" aria-label="Caught words"></ul>
         </aside>
 
         <script>
@@ -594,16 +1005,50 @@ guitar</textarea
             const retriesInput = document.querySelector("#retries");
             const transcriptSourceInput =
                 document.querySelector("#transcript-source");
+            const sentenceFuzzyMatchInput = document.querySelector(
+                "#sentence-fuzzy-match",
+            );
+            const continuePhraseInput =
+                document.querySelector("#continue-phrase");
             const echoModeInput = document.querySelector("#echo-mode");
+            const gameOverScreen = document.querySelector("#game-over-screen");
+            const gameOverTitle = document.querySelector("#game-over-title");
+            const gameOverRound = document.querySelector("#game-over-round");
+            const gameOverCopy = document.querySelector("#game-over-copy");
+            const gameOverPhrase = document.querySelector("#game-over-phrase");
+            const gameOverTranscript = document.querySelector(
+                "#game-over-transcript",
+            );
             const echoPanel = document.querySelector("#echo-panel");
             const echoHeader = document.querySelector(
                 "#echo-panel .echo-header",
             );
             const echoRows = document.querySelector("#echo-rows");
+            const talkbackEnabledInput =
+                document.querySelector("#talkback-enabled");
+            const talkbackEndpointInput = document.querySelector(
+                "#talkback-endpoint-url",
+            );
+            const talkbackThresholdInput = document.querySelector(
+                "#talkback-threshold",
+            );
+            const talkbackPhrasesInput =
+                document.querySelector("#talkback-phrases");
+            const talkbackEndpointStatus =
+                document.querySelector("#talkback-endpoint");
+            const talkbackReferenceStatus = document.querySelector(
+                "#talkback-reference",
+            );
+            const talkbackVoiceStatus =
+                document.querySelector("#talkback-voice");
+            const talkbackLastStatus = document.querySelector("#talkback-last");
             const wordsInput = document.querySelector("#words");
             const wordList = document.querySelector("#word-list");
             const sequenceStatus = document.querySelector("#sequence-status");
             const timelineState = document.querySelector("#timeline-state");
+            const currentLevelTitle = document.querySelector("#current-level");
+            const currentSequenceTitle =
+                document.querySelector("#current-sequence");
             const timerDisplay = document.querySelector("#timer-display");
             const livesDisplay = document.querySelector("#lives-display");
             const timeline = document.querySelector("#timeline");
@@ -612,9 +1057,16 @@ guitar</textarea
             const interimText = document.querySelector("#interim");
             const visualizer = document.querySelector("#visualizer");
             const canvas = visualizer.getContext("2d");
+            const gameOverVisualizer = document.querySelector(
+                "#game-over-visualizer",
+            );
+            const gameOverCanvas = gameOverVisualizer.getContext("2d");
             const finalChunks = [];
             const caughtWords = new Set();
             let interimTranscript = "";
+            let handlingRecognitionResult = false;
+            let transcriptWipedDuringResult = false;
+            let transcriptWasWiped = false;
             let sequenceIndex = 0;
             let sequenceFailed = false;
             let failReason = "timeout";
@@ -624,6 +1076,9 @@ guitar</textarea
             let retriesLeft = 2;
             let wordCaughtThisBeat = false;
             let gateOpenedAt = 0;
+            let refillAnimationUntil = 0;
+            let gameOverContinuing = false;
+            let gameOverContinueTimer = null;
             const echoSnippets = [];
             const activeEchoes = new Set();
             let echoRecorder = null;
@@ -633,6 +1088,20 @@ guitar</textarea
             let wallEchoFiredThisBeat = false;
             let echoRandomInterval = null;
             let echoIdCounter = 0;
+            const talkbackSegments = [];
+            const talkbackQueue = [];
+            let talkbackRecorder = null;
+            let talkbackRecorderStartedAt = 0;
+            let talkbackHealthInterval = null;
+            let talkbackReady = false;
+            let talkbackHealthDetail = "checking";
+            let talkbackRef = null;
+            let talkbackRefSignature = "";
+            let talkbackUploadPromise = null;
+            let talkbackGeneratePromise = null;
+            let talkbackAudio = null;
+            let lastTalkbackAt = 0;
+            let talkbackSessionId = 0;
             let audioContext;
             let analyser;
             let micStream;
@@ -642,12 +1111,13 @@ guitar</textarea
             function getRoadMetrics() {
                 const styles = getComputedStyle(timeline);
                 const fontSize = parseFloat(styles.fontSize) || 14;
-                const lineHeight = parseFloat(styles.lineHeight) || fontSize * 1.08;
-                const letterSpacing =
-                    parseFloat(styles.letterSpacing) || 0;
+                const lineHeight =
+                    parseFloat(styles.lineHeight) || fontSize * 1.08;
+                const letterSpacing = parseFloat(styles.letterSpacing) || 0;
                 const measurer =
                     getRoadMetrics.measurer ||
-                    (getRoadMetrics.measurer = document.createElement("canvas"));
+                    (getRoadMetrics.measurer =
+                        document.createElement("canvas"));
                 const context = measurer.getContext("2d");
                 context.font = `${styles.fontWeight} ${fontSize}px ${styles.fontFamily}`;
                 const charWidth =
@@ -735,18 +1205,113 @@ guitar</textarea
                 return text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
             }
 
+            function parseTargetPlan() {
+                const entries = [];
+                let levelTitle = "Road";
+                let sequenceTitle = "Main sequence";
+                let levelIndex = 0;
+                let sequenceIndexInLevel = 0;
+                let hasExplicitLevel = false;
+
+                for (const rawLine of wordsInput.value.split("\n")) {
+                    const line = rawLine.trim();
+
+                    if (!line) {
+                        continue;
+                    }
+
+                    const sequenceMatch = line.match(/^##\s*(.+)$/);
+                    if (sequenceMatch) {
+                        sequenceTitle = sequenceMatch[1].trim();
+                        sequenceIndexInLevel += 1;
+                        continue;
+                    }
+
+                    const levelMatch = line.match(/^#\s*(.+)$/);
+                    if (levelMatch) {
+                        levelTitle = levelMatch[1].trim();
+                        levelIndex += hasExplicitLevel ? 1 : 0;
+                        sequenceIndexInLevel = 0;
+                        sequenceTitle = "Main sequence";
+                        hasExplicitLevel = true;
+                        continue;
+                    }
+
+                    entries.push({
+                        text: line,
+                        levelTitle,
+                        sequenceTitle,
+                        levelIndex,
+                        sequenceIndex: sequenceIndexInLevel,
+                    });
+                }
+
+                return entries;
+            }
+
+            function getTargetEntries() {
+                return parseTargetPlan();
+            }
+
             function getTargetWords() {
-                return wordsInput.value
-                    .split("\n")
-                    .map((word) => word.trim())
-                    .filter(Boolean);
+                return getTargetEntries().map((entry) => entry.text);
+            }
+
+            function getCurrentTargetEntry(words = getTargetEntries()) {
+                if (!words.length) {
+                    return null;
+                }
+
+                return words[Math.min(sequenceIndex, words.length - 1)];
+            }
+
+            function renderLevelStatus(entries = getTargetEntries()) {
+                if (entries.length && sequenceIndex >= entries.length) {
+                    currentLevelTitle.textContent = "complete";
+                    currentSequenceTitle.textContent = "all sequences spoken";
+                    return;
+                }
+
+                const entry = getCurrentTargetEntry(entries);
+
+                if (!entry) {
+                    currentLevelTitle.textContent = "no level";
+                    currentSequenceTitle.textContent = "no sequence";
+                    return;
+                }
+
+                currentLevelTitle.textContent = entry.levelTitle;
+                currentSequenceTitle.textContent = entry.sequenceTitle;
             }
 
             function renderWordList() {
-                const words = getTargetWords();
+                const entries = getTargetEntries();
                 wordList.innerHTML = "";
+                let lastLevelKey = null;
+                let lastSequenceKey = null;
 
-                for (const [index, word] of words.entries()) {
+                for (const [index, entry] of entries.entries()) {
+                    const levelKey = `${entry.levelIndex}:${entry.levelTitle}`;
+                    const sequenceKey = `${levelKey}:${entry.sequenceIndex}:${entry.sequenceTitle}`;
+
+                    if (levelKey !== lastLevelKey) {
+                        const levelItem = document.createElement("li");
+                        levelItem.className = "word-heading";
+                        levelItem.textContent = `# ${entry.levelTitle}`;
+                        wordList.append(levelItem);
+                        lastLevelKey = levelKey;
+                        lastSequenceKey = null;
+                    }
+
+                    if (sequenceKey !== lastSequenceKey) {
+                        const sequenceItem = document.createElement("li");
+                        sequenceItem.className = "sequence-heading";
+                        sequenceItem.textContent = `## ${entry.sequenceTitle}`;
+                        wordList.append(sequenceItem);
+                        lastSequenceKey = sequenceKey;
+                    }
+
+                    const word = entry.text;
                     const normalized = word.toLowerCase();
                     const item = document.createElement("li");
                     const isChecked = caughtWords.has(normalized);
@@ -776,10 +1341,15 @@ guitar</textarea
                 const text = getSelectedTranscriptText();
                 const words = getTargetWords();
                 interimText.textContent = "";
-                finalText.replaceChildren();
+                renderTranscriptInto(finalText, text, words);
+                renderTranscriptInto(gameOverTranscript, text, words);
+            }
+
+            function renderTranscriptInto(container, text, words) {
+                container.replaceChildren();
 
                 if (!text || !words.length) {
-                    finalText.textContent = text;
+                    container.textContent = text;
                     return;
                 }
 
@@ -796,14 +1366,27 @@ guitar</textarea
 
                 for (const match of text.matchAll(matcher)) {
                     if (match.index > last) {
-                        finalText.append(text.slice(last, match.index));
+                        container.append(text.slice(last, match.index));
                     }
 
-                    finalText.append(colorSpan("hit", match[0]));
+                    container.append(colorSpan("hit", match[0]));
                     last = match.index + match[0].length;
                 }
 
-                finalText.append(text.slice(last));
+                container.append(text.slice(last));
+            }
+
+            function clearTranscript() {
+                finalChunks.length = 0;
+                interimTranscript = "";
+                interimText.textContent = "";
+                transcriptWasWiped = true;
+
+                if (handlingRecognitionResult) {
+                    transcriptWipedDuringResult = true;
+                }
+
+                renderTranscript();
             }
 
             function getSelectedTranscriptText() {
@@ -812,16 +1395,168 @@ guitar</textarea
                     : finalChunks.join(" ");
             }
 
-            function catchWords(text) {
-                for (const word of getTargetWords()) {
-                    const matcher = new RegExp(
-                        `\\b${escapeRegExp(word)}\\b`,
-                        "i",
-                    );
+            function getSentenceFuzzyThreshold() {
+                return (
+                    Math.max(
+                        50,
+                        Math.min(
+                            100,
+                            Number(sentenceFuzzyMatchInput.value) || 78,
+                        ),
+                    ) / 100
+                );
+            }
 
-                    if (matcher.test(text)) {
-                        caughtWords.add(word.toLowerCase());
+            function isSentenceTarget(target) {
+                return target.trim().split(/\s+/).length > 1;
+            }
+
+            function tokenizeForFuzzy(text) {
+                const tokens = [];
+                const matcher = /[a-z0-9]+(?:'[a-z0-9]+)?/gi;
+                let match;
+
+                while ((match = matcher.exec(text))) {
+                    tokens.push({
+                        value: match[0].toLowerCase(),
+                        start: match.index,
+                        end: match.index + match[0].length,
+                    });
+                }
+
+                return tokens;
+            }
+
+            function tokenEditDistance(a, b) {
+                const previous = Array.from(
+                    { length: b.length + 1 },
+                    (_, index) => index,
+                );
+
+                for (let i = 1; i <= a.length; i += 1) {
+                    const current = [i];
+
+                    for (let j = 1; j <= b.length; j += 1) {
+                        current[j] =
+                            a[i - 1] === b[j - 1]
+                                ? previous[j - 1]
+                                : Math.min(
+                                      previous[j - 1],
+                                      previous[j],
+                                      current[j - 1],
+                                  ) + 1;
                     }
+
+                    previous.splice(0, previous.length, ...current);
+                }
+
+                return previous[b.length];
+            }
+
+            function findFuzzySentenceEnd(text, target, fromIndex) {
+                const threshold = getSentenceFuzzyThreshold();
+
+                if (threshold >= 1) {
+                    return -1;
+                }
+
+                const targetTokens = tokenizeForFuzzy(target).map(
+                    (token) => token.value,
+                );
+
+                if (targetTokens.length < 2) {
+                    return -1;
+                }
+
+                const textTokens = tokenizeForFuzzy(text).filter(
+                    (token) => token.end > fromIndex,
+                );
+                const targetLength = targetTokens.length;
+                const windowSlack = Math.max(
+                    1,
+                    Math.ceil(targetLength * (1 - threshold)) + 1,
+                );
+
+                for (let start = 0; start < textTokens.length; start += 1) {
+                    let bestAtStart = null;
+
+                    for (
+                        let length = Math.max(1, targetLength - windowSlack);
+                        length <= targetLength + windowSlack;
+                        length += 1
+                    ) {
+                        const window = textTokens.slice(start, start + length);
+
+                        if (window.length !== length) {
+                            continue;
+                        }
+
+                        const distance = tokenEditDistance(
+                            targetTokens,
+                            window.map((token) => token.value),
+                        );
+                        const score =
+                            1 -
+                            distance /
+                                Math.max(targetTokens.length, window.length);
+
+                        if (
+                            score >= threshold &&
+                            (!bestAtStart || score > bestAtStart.score)
+                        ) {
+                            bestAtStart = {
+                                score,
+                                end: window[window.length - 1].end,
+                            };
+                        }
+                    }
+
+                    if (bestAtStart) {
+                        return bestAtStart.end;
+                    }
+                }
+
+                return -1;
+            }
+
+            function findTargetEnd(text, target, fromIndex = 0) {
+                const matcher = new RegExp(
+                    `\\b${escapeRegExp(target)}\\b`,
+                    "gi",
+                );
+                matcher.lastIndex = fromIndex;
+                const match = matcher.exec(text);
+
+                if (match) {
+                    return match.index + match[0].length;
+                }
+
+                return isSentenceTarget(target)
+                    ? findFuzzySentenceEnd(text, target, fromIndex)
+                    : -1;
+            }
+
+            function textMatchesTarget(text, target) {
+                return findTargetEnd(text, target) !== -1;
+            }
+
+            function catchWords(text) {
+                let changed = false;
+
+                for (const word of getTargetWords()) {
+                    if (textMatchesTarget(text, word)) {
+                        const normalized = word.toLowerCase();
+
+                        if (!caughtWords.has(normalized)) {
+                            changed = true;
+                        }
+
+                        caughtWords.add(normalized);
+                    }
+                }
+
+                if (changed) {
+                    maybeTriggerTalkback("beat");
                 }
             }
 
@@ -837,31 +1572,32 @@ guitar</textarea
                 return Math.max(0, Number(retriesInput.value) || 0);
             }
 
+            function refillLivesAndRetries() {
+                livesLeft = getLivesLimit();
+                retriesLeft = getRetriesLimit();
+                refillAnimationUntil = Date.now() + 780;
+            }
+
+            function getContinuePhrase() {
+                return continuePhraseInput.value.trim() || "I'll be back";
+            }
+
             function isSequenceMode() {
                 return modeInput.value !== "catch";
             }
 
             function isBeatMode() {
                 return (
-                    modeInput.value === "rhythm" ||
-                    modeInput.value === "lives"
+                    modeInput.value === "rhythm" || modeInput.value === "lives"
                 );
             }
 
             function textHasWord(text, word) {
-                return new RegExp(`\\b${escapeRegExp(word)}\\b`, "i").test(
-                    text,
-                );
+                return textMatchesTarget(text, word);
             }
 
             function findWordEnd(text, word, fromIndex) {
-                const matcher = new RegExp(
-                    `\\b${escapeRegExp(word)}\\b`,
-                    "gi",
-                );
-                matcher.lastIndex = fromIndex;
-                const match = matcher.exec(text);
-                return match ? match.index + match[0].length : -1;
+                return findTargetEnd(text, word, fromIndex);
             }
 
             function stopSequenceTimer() {
@@ -871,7 +1607,45 @@ guitar</textarea
                 }
             }
 
+            function clearGameOverContinueTimer() {
+                if (gameOverContinueTimer) {
+                    clearTimeout(gameOverContinueTimer);
+                    gameOverContinueTimer = null;
+                }
+                gameOverContinuing = false;
+            }
+
+            function renderGameOverScreen() {
+                if (
+                    (!sequenceFailed && !gameOverContinuing) ||
+                    !isSequenceMode()
+                ) {
+                    gameOverScreen.classList.remove("visible");
+                    gameOverScreen.classList.remove("confirmed");
+                    return;
+                }
+
+                const words = getTargetWords();
+                const round = Math.min(sequenceIndex + 1, words.length || 1);
+                gameOverTitle.textContent = gameOverContinuing
+                    ? "phrase accepted"
+                    : "game over";
+                gameOverRound.textContent = `round ${round} of ${words.length || 1}`;
+                gameOverCopy.textContent = gameOverContinuing
+                    ? "Hold tight. Restarting from this round..."
+                    : "Say the imitation phrase to continue.";
+                gameOverPhrase.textContent = gameOverContinuing
+                    ? "get ready"
+                    : `"${getContinuePhrase()}"`;
+                gameOverScreen.classList.toggle(
+                    "confirmed",
+                    gameOverContinuing,
+                );
+                gameOverScreen.classList.add("visible");
+            }
+
             function resetSequence() {
+                clearGameOverContinueTimer();
                 sequenceIndex = 0;
                 sequenceFailed = false;
                 failReason = "timeout";
@@ -880,6 +1654,7 @@ guitar</textarea
                 retriesLeft = getRetriesLimit();
                 wordCaughtThisBeat = false;
                 gateOpenedAt = 0;
+                refillAnimationUntil = 0;
                 caughtWords.clear();
 
                 if (modeInput.value === "catch") {
@@ -889,22 +1664,77 @@ guitar</textarea
                 stopSequenceTimer();
                 renderSequenceStatus();
                 renderWordList();
+                renderGameOverScreen();
             }
 
             function failSequence(reason) {
+                clearGameOverContinueTimer();
+                clearTranscript();
                 sequenceFailed = true;
                 failReason = reason || "timeout";
                 deadline = null;
                 stopSequenceTimer();
                 renderSequenceStatus();
                 renderWordList();
+                renderGameOverScreen();
             }
 
             function completeSequence() {
+                clearGameOverContinueTimer();
                 deadline = null;
                 stopSequenceTimer();
                 renderSequenceStatus();
                 renderWordList();
+                renderGameOverScreen();
+            }
+
+            function continueFromGameOver() {
+                if (
+                    !sequenceFailed ||
+                    !isSequenceMode() ||
+                    gameOverContinuing
+                ) {
+                    return false;
+                }
+
+                gameOverContinuing = true;
+                renderGameOverScreen();
+                renderSequenceStatus();
+
+                gameOverContinueTimer = setTimeout(() => {
+                    gameOverContinueTimer = null;
+                    gameOverContinuing = false;
+                    sequenceFailed = false;
+                    failReason = "timeout";
+                    livesLeft = getLivesLimit();
+                    retriesLeft = getRetriesLimit();
+                    wordCaughtThisBeat = false;
+                    gateOpenedAt = 0;
+                    wallEchoFiredThisBeat = false;
+                    renderGameOverScreen();
+
+                    if (sequenceIndex < getTargetWords().length) {
+                        startSequenceTimer();
+                    } else {
+                        completeSequence();
+                    }
+
+                    renderSequenceStatus();
+                    renderWordList();
+                }, 1450);
+                return true;
+            }
+
+            function checkContinuePhrase(text) {
+                if (
+                    !sequenceFailed ||
+                    !isSequenceMode() ||
+                    !textMatchesTarget(text, getContinuePhrase())
+                ) {
+                    return false;
+                }
+
+                return continueFromGameOver();
             }
 
             function handleDeadline() {
@@ -917,7 +1747,7 @@ guitar</textarea
                     sequenceIndex += 1;
                     wordCaughtThisBeat = false;
                     gateOpenedAt = 0;
-                    retriesLeft = getRetriesLimit();
+                    refillLivesAndRetries();
 
                     if (sequenceIndex >= getTargetWords().length) {
                         completeSequence();
@@ -929,6 +1759,7 @@ guitar</textarea
                     deadline += getSecondsLimit() * 1000;
                     wallEchoFiredThisBeat = false;
                     maybeTriggerEcho("beat");
+                    maybeTriggerTalkback("beat");
                     renderSequenceStatus();
                     renderWordList();
                     return;
@@ -962,6 +1793,7 @@ guitar</textarea
                 deadline += getSecondsLimit() * 1000;
                 wallEchoFiredThisBeat = false;
                 maybeTriggerEcho("life");
+                maybeTriggerTalkback("life");
                 renderSequenceStatus();
                 renderWordList();
             }
@@ -983,6 +1815,7 @@ guitar</textarea
                     ) {
                         wallEchoFiredThisBeat = true;
                         maybeTriggerEcho("wall");
+                        maybeTriggerTalkback("wall");
                     }
 
                     renderSequenceStatus();
@@ -991,11 +1824,15 @@ guitar</textarea
             }
 
             function renderSequenceStatus() {
-                const words = getTargetWords();
+                const entries = getTargetEntries();
+                const words = entries.map((entry) => entry.text);
+                renderLevelStatus(entries);
                 renderTimeline(words);
 
                 if (!isSequenceMode()) {
-                    sequenceStatus.textContent = "sequence: off";
+                    sequenceStatus.textContent = entries.length
+                        ? `sequence: off\nlevel: ${entries[0].levelTitle}`
+                        : "sequence: off";
                     return;
                 }
 
@@ -1005,7 +1842,8 @@ guitar</textarea
                 }
 
                 if (sequenceFailed) {
-                    sequenceStatus.textContent = `sequence: ${failReason}\nexpected: ${words[sequenceIndex] || "done"}\npress reset seq`;
+                    const entry = getCurrentTargetEntry(entries);
+                    sequenceStatus.textContent = `sequence: ${failReason}\nlevel: ${entry ? entry.levelTitle : "done"}\npart: ${entry ? entry.sequenceTitle : "done"}\nexpected: ${words[sequenceIndex] || "done"}\npress reset seq`;
                     return;
                 }
 
@@ -1016,7 +1854,8 @@ guitar</textarea
                 }
 
                 if (!deadline) {
-                    sequenceStatus.textContent = `sequence: armed\nspeak first: ${words[sequenceIndex]}`;
+                    const entry = getCurrentTargetEntry(entries);
+                    sequenceStatus.textContent = `sequence: armed\nlevel: ${entry.levelTitle}\npart: ${entry.sequenceTitle}\nspeak first: ${words[sequenceIndex]}`;
                     return;
                 }
 
@@ -1031,7 +1870,8 @@ guitar</textarea
                     extra += `\nlives: ${livesLeft} retries: ${retriesLeft}`;
                 }
 
-                sequenceStatus.textContent = `sequence: running\nnext: ${words[sequenceIndex]}\ntime: ${remaining.toFixed(1)}s${extra}`;
+                const entry = getCurrentTargetEntry(entries);
+                sequenceStatus.textContent = `sequence: running\nlevel: ${entry.levelTitle}\npart: ${entry.sequenceTitle}\nnext: ${words[sequenceIndex]}\ntime: ${remaining.toFixed(1)}s${extra}`;
             }
 
             function colorSpan(className, text) {
@@ -1042,8 +1882,7 @@ guitar</textarea
             }
 
             function hashCell(row, col) {
-                let h =
-                    Math.imul(row, 374761393) + Math.imul(col, 668265263);
+                let h = Math.imul(row, 374761393) + Math.imul(col, 668265263);
                 h = Math.imul(h ^ (h >>> 13), 1274126177);
                 return (h ^ (h >>> 16)) >>> 0;
             }
@@ -1103,29 +1942,32 @@ guitar</textarea
             function renderLivesDisplay() {
                 if (modeInput.value !== "lives") {
                     livesDisplay.replaceChildren();
+                    livesDisplay.classList.remove("refill");
                     return;
                 }
 
                 const lost = Math.max(0, getLivesLimit() - livesLeft);
-                livesDisplay.replaceChildren(
+                const isRefilling = Date.now() < refillAnimationUntil;
+                const children = [
                     colorSpan(
                         "hearts",
                         "♥".repeat(livesLeft) + "♡".repeat(lost),
                     ),
                     document.createTextNode(" "),
                     colorSpan("retries", `RETRIES ×${retriesLeft}`),
-                );
+                ];
+
+                if (isRefilling) {
+                    children.push(colorSpan("refill-note", "refilled"));
+                }
+
+                livesDisplay.classList.toggle("refill", isRefilling);
+                livesDisplay.replaceChildren(...children);
             }
 
             function buildRoad(word, wallRow, gateProgress = null) {
-                const {
-                    width,
-                    height,
-                    laneLeft,
-                    laneRight,
-                    carCol,
-                    carRow,
-                } = getRoadMetrics();
+                const { width, height, laneLeft, laneRight, carCol, carRow } =
+                    getRoadMetrics();
                 const rows = [];
                 const scroll = Math.floor(Date.now() / 400);
 
@@ -1255,7 +2097,9 @@ guitar</textarea
                     ? Math.min(limit, limit - remaining)
                     : 0;
                 const { carRow } = getRoadMetrics();
-                const wallRow = Math.round(-3 + (elapsed / limit) * (carRow - 1));
+                const wallRow = Math.round(
+                    -3 + (elapsed / limit) * (carRow - 1),
+                );
                 const activeWord = words[sequenceIndex] || "--";
                 const complete =
                     sequenceIndex >= words.length && words.length > 0;
@@ -1327,6 +2171,7 @@ guitar</textarea
                         wordCaughtThisBeat = true;
                         gateOpenedAt = Date.now();
                         caughtWords.add(words[sequenceIndex].toLowerCase());
+                        maybeTriggerTalkback("beat");
                         changed = true;
                     }
 
@@ -1348,6 +2193,8 @@ guitar</textarea
                     searchFrom = end;
                     caughtWords.add(words[sequenceIndex].toLowerCase());
                     sequenceIndex += 1;
+                    refillLivesAndRetries();
+                    maybeTriggerTalkback("beat");
                     changed = true;
 
                     if (sequenceIndex >= words.length) {
@@ -1365,6 +2212,10 @@ guitar</textarea
 
             function processTranscriptText(text) {
                 if (!text.trim()) {
+                    return;
+                }
+
+                if (checkContinuePhrase(text)) {
                     return;
                 }
 
@@ -1389,12 +2240,17 @@ guitar</textarea
             }
 
             function drawIdleVisualizer() {
-                const width = visualizer.width;
-                const height = visualizer.height;
-                canvas.clearRect(0, 0, width, height);
-                canvas.fillStyle = "#666666";
-                canvas.font = "16px monospace";
-                canvas.fillText(
+                drawIdleVisualizerCanvas(visualizer, canvas);
+                drawIdleVisualizerCanvas(gameOverVisualizer, gameOverCanvas);
+            }
+
+            function drawIdleVisualizerCanvas(canvasEl, context) {
+                const width = canvasEl.width;
+                const height = canvasEl.height;
+                context.clearRect(0, 0, width, height);
+                context.fillStyle = "#666666";
+                context.font = "16px monospace";
+                context.fillText(
                     "---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----",
                     18,
                     height / 2 + 5,
@@ -1420,12 +2276,8 @@ guitar</textarea
                 source.connect(analyser);
 
                 const data = new Uint8Array(analyser.frequencyBinCount);
-                const width = visualizer.width;
-                const height = visualizer.height;
                 const columns = 48;
                 const rows = 6;
-                const cellWidth = width / columns;
-                const cellHeight = height / (rows + 1);
                 const rowColors = [
                     "#333333",
                     "#666666",
@@ -1438,15 +2290,36 @@ guitar</textarea
                 function draw() {
                     visualizerFrame = requestAnimationFrame(draw);
                     analyser.getByteFrequencyData(data);
-                    canvas.clearRect(0, 0, width, height);
-                    canvas.font = "14px monospace";
+                    drawSpectrumCanvas(visualizer, canvas, data, columns, rows);
+                    drawSpectrumCanvas(
+                        gameOverVisualizer,
+                        gameOverCanvas,
+                        data,
+                        columns,
+                        rows,
+                    );
+                }
+
+                function drawSpectrumCanvas(
+                    canvasEl,
+                    context,
+                    frequencyData,
+                    columns,
+                    rows,
+                ) {
+                    const width = canvasEl.width;
+                    const height = canvasEl.height;
+                    const cellWidth = width / columns;
+                    const cellHeight = height / (rows + 1);
+                    context.clearRect(0, 0, width, height);
+                    context.font = "14px monospace";
 
                     for (let column = 0; column < columns; column += 1) {
                         const start = Math.floor(
-                            (column / columns) * data.length,
+                            (column / columns) * frequencyData.length,
                         );
                         const end = Math.floor(
-                            ((column + 1) / columns) * data.length,
+                            ((column + 1) / columns) * frequencyData.length,
                         );
                         let total = 0;
 
@@ -1455,7 +2328,7 @@ guitar</textarea
                             i < Math.max(end, start + 1);
                             i += 1
                         ) {
-                            total += data[i];
+                            total += frequencyData[i];
                         }
 
                         const average = total / Math.max(1, end - start);
@@ -1467,9 +2340,9 @@ guitar</textarea
                         for (let row = 0; row < activeRows; row += 1) {
                             const x = column * cellWidth + 8;
                             const y = height - row * cellHeight - 14;
-                            canvas.fillStyle =
+                            context.fillStyle =
                                 rowColors[Math.min(row, rowColors.length - 1)];
-                            canvas.fillText(
+                            context.fillText(
                                 row === activeRows - 1 ? "+" : "#",
                                 x,
                                 y,
@@ -1508,7 +2381,7 @@ guitar</textarea
                 MediaRecorder.isTypeSupported("audio/webm;codecs=opus")
                     ? "audio/webm;codecs=opus"
                     : "";
-            const ECHO_GAIN = 0.85;
+            const ECHO_GAIN = 0.15;
             const ECHO_PREROLL_MS = 600;
             const ECHO_COOLDOWN_MS = 4000;
             const ECHO_PROGRESS_BOOST = 1.5;
@@ -1522,6 +2395,664 @@ guitar</textarea
             const ECHO_TRIM_PAD_MS = 60;
             const ECHO_WAVE_BUCKETS = 40;
             const ECHO_P = { beat: 0.35, wall: 0.5, life: 1, random: 0.25 };
+            const TALKBACK_MODEL_ID = "qwen3-tts-0.6b-base";
+            const TALKBACK_MIN_REF_SECONDS = 5;
+            const TALKBACK_TARGET_REF_SECONDS = 12;
+            const TALKBACK_MAX_SEGMENTS = 16;
+            const TALKBACK_COOLDOWN_MS = 12000;
+            const TALKBACK_FETCH_TIMEOUT_MS = 8000;
+            const TALKBACK_GENERATE_TIMEOUT_MS = 90000;
+            const TALKBACK_P = {
+                beat: 0.2,
+                wall: 0.25,
+                life: 0.45,
+                random: 0.12,
+            };
+
+            function talkbackEnabled() {
+                return Boolean(talkbackEnabledInput.checked);
+            }
+
+            function setTalkbackStatus(element, text, className = "") {
+                element.textContent = text;
+                element.className = ["talkback-value", className]
+                    .filter(Boolean)
+                    .join(" ");
+            }
+
+            function renderTalkbackPanel() {
+                setTalkbackStatus(
+                    talkbackEndpointStatus,
+                    talkbackEnabled()
+                        ? talkbackReady
+                            ? "ready"
+                            : talkbackHealthDetail
+                        : "off",
+                    talkbackEnabled() ? (talkbackReady ? "ok" : "warn") : "",
+                );
+
+                const selected = selectTalkbackReference();
+                const refText = talkbackRef
+                    ? `${talkbackRef.duration_s.toFixed(1)}s uploaded`
+                    : selected
+                      ? `${selected.duration.toFixed(1)}s captured`
+                      : `${talkbackSegments.length} clips`;
+                setTalkbackStatus(
+                    talkbackReferenceStatus,
+                    refText,
+                    talkbackRef || selected ? "ok" : "",
+                );
+
+                const threshold = getTalkbackThreshold();
+                const progress = getTalkbackProgress();
+                const voiceText = talkbackGeneratePromise
+                    ? "generating"
+                    : talkbackAudio
+                      ? "playing"
+                      : `${progress}/${threshold}`;
+                setTalkbackStatus(
+                    talkbackVoiceStatus,
+                    voiceText,
+                    progress >= threshold ? "ok" : "",
+                );
+            }
+
+            function getTalkbackEndpoint() {
+                return talkbackEndpointInput.value.trim().replace(/\/+$/, "");
+            }
+
+            function talkbackUrl(path) {
+                const endpoint = getTalkbackEndpoint();
+                if (!endpoint) {
+                    return "";
+                }
+                return `${endpoint}${path}`;
+            }
+
+            async function fetchWithTimeout(url, options = {}, timeoutMs) {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), timeoutMs);
+
+                try {
+                    return await fetch(url, {
+                        ...options,
+                        signal: controller.signal,
+                    });
+                } finally {
+                    clearTimeout(timer);
+                }
+            }
+
+            async function checkTalkbackHealth() {
+                if (!talkbackEnabled() || !getTalkbackEndpoint()) {
+                    talkbackReady = false;
+                    talkbackHealthDetail = talkbackEnabled()
+                        ? "no endpoint"
+                        : "off";
+                    renderTalkbackPanel();
+                    return;
+                }
+
+                try {
+                    const response = await fetchWithTimeout(
+                        talkbackUrl("/api/health"),
+                        { cache: "no-store" },
+                        TALKBACK_FETCH_TIMEOUT_MS,
+                    );
+
+                    if (!response.ok) {
+                        throw new Error(`health ${response.status}`);
+                    }
+
+                    const health = await response.json();
+                    talkbackReady = Boolean(health.ready);
+                    talkbackHealthDetail = talkbackReady
+                        ? "ready"
+                        : "not ready";
+                } catch (error) {
+                    talkbackReady = false;
+                    talkbackHealthDetail =
+                        error.name === "AbortError" ? "timeout" : "unavailable";
+                }
+
+                renderTalkbackPanel();
+            }
+
+            function startTalkbackHealthChecks() {
+                if (talkbackHealthInterval) {
+                    clearInterval(talkbackHealthInterval);
+                }
+
+                checkTalkbackHealth();
+                talkbackHealthInterval = setInterval(checkTalkbackHealth, 7000);
+            }
+
+            function getTalkbackThreshold() {
+                return Math.max(1, Number(talkbackThresholdInput.value) || 4);
+            }
+
+            function getTalkbackProgress() {
+                if (isSequenceMode()) {
+                    return Math.min(
+                        getTargetWords().length,
+                        sequenceIndex + (wordCaughtThisBeat ? 1 : 0),
+                    );
+                }
+
+                return caughtWords.size;
+            }
+
+            function getTalkbackPhrases() {
+                return talkbackPhrasesInput.value
+                    .split("\n")
+                    .map((phrase) => phrase.trim())
+                    .filter(Boolean);
+            }
+
+            function canTalkback() {
+                return (
+                    talkbackEnabled() &&
+                    talkbackReady &&
+                    getTalkbackProgress() >= getTalkbackThreshold() &&
+                    getTalkbackPhrases().length > 0
+                );
+            }
+
+            function startTalkbackCaptureSystem() {
+                if (!talkbackEnabled() || !micStream || !window.MediaRecorder) {
+                    renderTalkbackPanel();
+                    return;
+                }
+
+                if (!talkbackRecorder) {
+                    startTalkbackSegment();
+                }
+
+                renderTalkbackPanel();
+            }
+
+            function stopTalkbackCaptureSystem() {
+                talkbackSessionId += 1;
+
+                if (talkbackRecorder) {
+                    talkbackRecorder._talkbackDiscard = true;
+
+                    if (talkbackRecorder.state === "recording") {
+                        try {
+                            talkbackRecorder.stop();
+                        } catch (error) {
+                            // already inactive
+                        }
+                    }
+
+                    talkbackRecorder = null;
+                }
+
+                if (talkbackAudio) {
+                    talkbackAudio.pause();
+                    talkbackAudio = null;
+                }
+
+                talkbackQueue.length = 0;
+                talkbackGeneratePromise = null;
+                renderTalkbackPanel();
+            }
+
+            function startTalkbackSegment() {
+                if (!micStream || !talkbackEnabled() || !window.MediaRecorder) {
+                    return;
+                }
+
+                const chunks = [];
+                const startedAt = Date.now();
+                const recorder = new MediaRecorder(
+                    micStream,
+                    ECHO_MIME ? { mimeType: ECHO_MIME } : undefined,
+                );
+
+                recorder.ondataavailable = (event) => {
+                    if (event.data && event.data.size) {
+                        chunks.push(event.data);
+                    }
+                };
+
+                recorder.onstop = () => {
+                    if (recorder._talkbackDiscard || !audioContext) {
+                        return;
+                    }
+
+                    finalizeTalkbackSegment(
+                        new Blob(chunks, ECHO_MIME ? { type: ECHO_MIME } : {}),
+                        recorder._talkbackLabel || "",
+                        Date.now() - startedAt,
+                    );
+                };
+
+                try {
+                    recorder.start();
+                } catch (error) {
+                    setTalkbackStatus(
+                        talkbackLastStatus,
+                        "record failed",
+                        "bad",
+                    );
+                    return;
+                }
+
+                talkbackRecorder = recorder;
+                talkbackRecorderStartedAt = startedAt;
+            }
+
+            function cutTalkbackSegment(label) {
+                if (
+                    !talkbackRecorder ||
+                    talkbackRecorder.state !== "recording"
+                ) {
+                    return;
+                }
+
+                talkbackRecorder._talkbackLabel = label;
+                talkbackRecorder.stop();
+                talkbackRecorder = null;
+                startTalkbackSegment();
+            }
+
+            async function finalizeTalkbackSegment(blob, label, durationMs) {
+                if (durationMs < ECHO_MIN_MS || !blob.size || !label.trim()) {
+                    return;
+                }
+
+                let buffer;
+
+                try {
+                    const bytes = await blob.arrayBuffer();
+
+                    if (!audioContext) {
+                        return;
+                    }
+
+                    buffer = await audioContext.decodeAudioData(bytes);
+                } catch (error) {
+                    setTalkbackStatus(
+                        talkbackLastStatus,
+                        "decode failed",
+                        "bad",
+                    );
+                    return;
+                }
+
+                if (!audioContext) {
+                    return;
+                }
+
+                buffer = trimSilence(buffer);
+
+                if (
+                    !buffer ||
+                    buffer.duration * 1000 < ECHO_MIN_MS ||
+                    computeRms(buffer) < ECHO_MIN_RMS
+                ) {
+                    return;
+                }
+
+                talkbackSegments.push({
+                    blob,
+                    buffer,
+                    transcript: label.trim(),
+                    duration: buffer.duration,
+                    createdAt: Date.now(),
+                });
+
+                while (talkbackSegments.length > TALKBACK_MAX_SEGMENTS) {
+                    talkbackSegments.shift();
+                }
+
+                talkbackRef = null;
+                talkbackRefSignature = "";
+                renderTalkbackPanel();
+                maybeTriggerTalkback("random");
+            }
+
+            function selectTalkbackReference() {
+                if (!talkbackSegments.length) {
+                    return null;
+                }
+
+                const longEnough = talkbackSegments
+                    .filter(
+                        (segment) =>
+                            segment.duration >= TALKBACK_MIN_REF_SECONDS,
+                    )
+                    .sort((a, b) => b.duration - a.duration);
+
+                if (longEnough.length) {
+                    return {
+                        blob: longEnough[0].blob,
+                        transcript: longEnough[0].transcript,
+                        duration: longEnough[0].duration,
+                        signature: `${longEnough[0].createdAt}`,
+                    };
+                }
+
+                const selected = [];
+                let duration = 0;
+
+                for (const segment of talkbackSegments.slice().reverse()) {
+                    selected.unshift(segment);
+                    duration += segment.duration;
+
+                    if (duration >= TALKBACK_MIN_REF_SECONDS) {
+                        break;
+                    }
+                }
+
+                if (duration < TALKBACK_MIN_REF_SECONDS) {
+                    return null;
+                }
+
+                while (
+                    selected.length > 1 &&
+                    duration > TALKBACK_TARGET_REF_SECONDS
+                ) {
+                    duration -= selected[0].duration;
+                    selected.shift();
+                }
+
+                return {
+                    blob: encodeWavFromBuffers(
+                        selected.map((segment) => segment.buffer),
+                    ),
+                    transcript: selected
+                        .map((segment) => segment.transcript)
+                        .join(" "),
+                    duration,
+                    signature: selected
+                        .map((segment) => segment.createdAt)
+                        .join(":"),
+                };
+            }
+
+            function encodeWavFromBuffers(buffers) {
+                const sampleRate = buffers[0].sampleRate;
+                const gapFrames = Math.round(sampleRate * 0.18);
+                const totalFrames = buffers.reduce(
+                    (total, buffer, index) =>
+                        total + buffer.length + (index > 0 ? gapFrames : 0),
+                    0,
+                );
+                const samples = new Float32Array(totalFrames);
+                let offset = 0;
+
+                for (const [index, buffer] of buffers.entries()) {
+                    if (index > 0) {
+                        offset += gapFrames;
+                    }
+
+                    samples.set(buffer.getChannelData(0), offset);
+                    offset += buffer.length;
+                }
+
+                const wav = new ArrayBuffer(44 + samples.length * 2);
+                const view = new DataView(wav);
+                writeAscii(view, 0, "RIFF");
+                view.setUint32(4, 36 + samples.length * 2, true);
+                writeAscii(view, 8, "WAVE");
+                writeAscii(view, 12, "fmt ");
+                view.setUint32(16, 16, true);
+                view.setUint16(20, 1, true);
+                view.setUint16(22, 1, true);
+                view.setUint32(24, sampleRate, true);
+                view.setUint32(28, sampleRate * 2, true);
+                view.setUint16(32, 2, true);
+                view.setUint16(34, 16, true);
+                writeAscii(view, 36, "data");
+                view.setUint32(40, samples.length * 2, true);
+
+                for (let i = 0; i < samples.length; i += 1) {
+                    const value = Math.max(-1, Math.min(1, samples[i]));
+                    view.setInt16(
+                        44 + i * 2,
+                        value < 0 ? value * 0x8000 : value * 0x7fff,
+                        true,
+                    );
+                }
+
+                return new Blob([wav], { type: "audio/wav" });
+            }
+
+            function writeAscii(view, offset, text) {
+                for (let i = 0; i < text.length; i += 1) {
+                    view.setUint8(offset + i, text.charCodeAt(i));
+                }
+            }
+
+            async function ensureTalkbackRef() {
+                const selected = selectTalkbackReference();
+
+                if (!selected) {
+                    setTalkbackStatus(
+                        talkbackLastStatus,
+                        "need 5s voice",
+                        "warn",
+                    );
+                    return null;
+                }
+
+                if (
+                    talkbackRef &&
+                    talkbackRefSignature === selected.signature
+                ) {
+                    return talkbackRef;
+                }
+
+                if (talkbackUploadPromise) {
+                    return talkbackUploadPromise;
+                }
+
+                talkbackUploadPromise = (async () => {
+                    const form = new FormData();
+                    form.append(
+                        "audio",
+                        selected.blob,
+                        selected.blob.type === "audio/wav"
+                            ? "passphrase-reference.wav"
+                            : "passphrase-reference.webm",
+                    );
+                    form.append("transcript", selected.transcript);
+                    form.append("source", "recording");
+                    form.append("label", "passphrase talk-back");
+                    setTalkbackStatus(
+                        talkbackLastStatus,
+                        "uploading ref",
+                        "warn",
+                    );
+
+                    const response = await fetchWithTimeout(
+                        talkbackUrl("/api/refs"),
+                        { method: "POST", body: form },
+                        TALKBACK_GENERATE_TIMEOUT_MS,
+                    );
+
+                    if (!response.ok) {
+                        const detail = await response.text();
+                        throw new Error(`ref ${response.status}: ${detail}`);
+                    }
+
+                    const ref = await response.json();
+                    talkbackRef = ref;
+                    talkbackRefSignature = selected.signature;
+                    setTalkbackStatus(talkbackLastStatus, "ref ready", "ok");
+                    renderTalkbackPanel();
+                    return ref;
+                })();
+
+                try {
+                    return await talkbackUploadPromise;
+                } catch (error) {
+                    setTalkbackStatus(talkbackLastStatus, "ref failed", "bad");
+                    return null;
+                } finally {
+                    talkbackUploadPromise = null;
+                }
+            }
+
+            function maybeTriggerTalkback(kind) {
+                if (!canTalkback()) {
+                    renderTalkbackPanel();
+                    return;
+                }
+
+                if (
+                    talkbackGeneratePromise ||
+                    talkbackAudio ||
+                    Date.now() - lastTalkbackAt < TALKBACK_COOLDOWN_MS
+                ) {
+                    return;
+                }
+
+                const chance = TALKBACK_P[kind] || TALKBACK_P.random || 0.1;
+
+                if (Math.random() >= chance) {
+                    return;
+                }
+
+                const phrases = getTalkbackPhrases();
+                const prompt =
+                    phrases[Math.floor(Math.random() * phrases.length)];
+                queueTalkbackPrompt(prompt);
+            }
+
+            function queueTalkbackPrompt(prompt) {
+                if (!prompt || talkbackQueue.length > 2) {
+                    return;
+                }
+
+                talkbackQueue.push(prompt);
+                runTalkbackQueue();
+            }
+
+            async function runTalkbackQueue() {
+                if (talkbackGeneratePromise || talkbackAudio) {
+                    return;
+                }
+
+                const prompt = talkbackQueue.shift();
+
+                if (!prompt) {
+                    renderTalkbackPanel();
+                    return;
+                }
+
+                talkbackGeneratePromise = generateTalkback(prompt);
+
+                try {
+                    await talkbackGeneratePromise;
+                } finally {
+                    talkbackGeneratePromise = null;
+                    renderTalkbackPanel();
+                }
+            }
+
+            async function generateTalkback(prompt) {
+                const sessionId = talkbackSessionId;
+
+                try {
+                    const ref = await ensureTalkbackRef();
+
+                    if (!ref || sessionId !== talkbackSessionId) {
+                        return;
+                    }
+
+                    setTalkbackStatus(talkbackLastStatus, "generating", "warn");
+                    renderTalkbackPanel();
+
+                    const response = await fetchWithTimeout(
+                        talkbackUrl("/api/generate"),
+                        {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({
+                                model_id: TALKBACK_MODEL_ID,
+                                prompt,
+                                ref_id: ref.ref_id,
+                            }),
+                        },
+                        TALKBACK_GENERATE_TIMEOUT_MS,
+                    );
+
+                    if (!response.ok) {
+                        const detail = await response.text();
+                        throw new Error(
+                            `generate ${response.status}: ${detail}`,
+                        );
+                    }
+
+                    const record = await response.json();
+
+                    if (sessionId !== talkbackSessionId) {
+                        return;
+                    }
+
+                    await playTalkbackAudio(record.audio_url, prompt);
+                } catch (error) {
+                    if (sessionId !== talkbackSessionId) {
+                        return;
+                    }
+
+                    setTalkbackStatus(
+                        talkbackLastStatus,
+                        error.name === "AbortError"
+                            ? "generation timeout"
+                            : "generation failed",
+                        "bad",
+                    );
+                } finally {
+                    lastTalkbackAt = Date.now();
+                }
+            }
+
+            function absolutizeTalkbackAudioUrl(audioUrl) {
+                if (/^https?:\/\//i.test(audioUrl)) {
+                    return audioUrl;
+                }
+
+                return `${getTalkbackEndpoint()}${audioUrl}`;
+            }
+
+            function playTalkbackAudio(audioUrl, prompt) {
+                return new Promise((resolve) => {
+                    talkbackAudio = new Audio(
+                        absolutizeTalkbackAudioUrl(audioUrl),
+                    );
+                    talkbackAudio.onplay = () => {
+                        setTalkbackStatus(talkbackLastStatus, prompt, "ok");
+                        renderTalkbackPanel();
+                    };
+                    talkbackAudio.onended = () => {
+                        talkbackAudio = null;
+                        resolve();
+                        runTalkbackQueue();
+                    };
+                    talkbackAudio.onerror = () => {
+                        setTalkbackStatus(
+                            talkbackLastStatus,
+                            "playback failed",
+                            "bad",
+                        );
+                        talkbackAudio = null;
+                        resolve();
+                    };
+                    talkbackAudio.play().catch(() => {
+                        setTalkbackStatus(
+                            talkbackLastStatus,
+                            "playback blocked",
+                            "bad",
+                        );
+                        talkbackAudio = null;
+                        resolve();
+                    });
+                });
+            }
 
             function echoEnabled() {
                 return echoModeInput.value !== "off";
@@ -1566,6 +3097,7 @@ guitar</textarea
                         }
 
                         maybeTriggerEcho("random");
+                        maybeTriggerTalkback("random");
                         renderEchoPanel();
                     }, 5000);
                 }
@@ -1784,8 +3316,7 @@ guitar</textarea
             function computePeaks(buffer) {
                 const data = buffer.getChannelData(0);
                 const peaks = [];
-                const step =
-                    Math.floor(data.length / ECHO_WAVE_BUCKETS) || 1;
+                const step = Math.floor(data.length / ECHO_WAVE_BUCKETS) || 1;
 
                 for (let b = 0; b < ECHO_WAVE_BUCKETS; b += 1) {
                     let max = 0;
@@ -1894,9 +3425,7 @@ guitar</textarea
 
             function buildReverbImpulse() {
                 const sampleRate = audioContext.sampleRate;
-                const length = Math.round(
-                    sampleRate * ECHO_REVERB_SECONDS,
-                );
+                const length = Math.round(sampleRate * ECHO_REVERB_SECONDS);
                 const impulse = audioContext.createBuffer(
                     2,
                     length,
@@ -2014,8 +3543,7 @@ guitar</textarea
 
                 const chance = Math.min(
                     1,
-                    (ECHO_P[kind] || 0) *
-                        (1 + ECHO_PROGRESS_BOOST * progress),
+                    (ECHO_P[kind] || 0) * (1 + ECHO_PROGRESS_BOOST * progress),
                 );
 
                 if (Math.random() >= chance) {
@@ -2040,8 +3568,7 @@ guitar</textarea
                 // prototype limitation (AEC suppresses most of it).
                 const safe = currentWord
                     ? idle.filter(
-                          (snippet) =>
-                              !textHasWord(snippet.label, currentWord),
+                          (snippet) => !textHasWord(snippet.label, currentWord),
                       )
                     : idle;
                 const pool = safe.length ? safe : idle;
@@ -2154,11 +3681,7 @@ guitar</textarea
             });
 
             secondsInput.addEventListener("input", () => {
-                if (
-                    isSequenceMode() &&
-                    deadline &&
-                    !sequenceFailed
-                ) {
+                if (isSequenceMode() && deadline && !sequenceFailed) {
                     startSequenceTimer();
                 }
                 renderSequenceStatus();
@@ -2182,6 +3705,23 @@ guitar</textarea
                 renderWordList();
             });
 
+            sentenceFuzzyMatchInput.addEventListener("input", () => {
+                resetSequence();
+
+                if (modeInput.value === "catch") {
+                    rebuildCatchWordsFromSource();
+                } else {
+                    processTranscriptText(getSelectedTranscriptText());
+                }
+
+                renderTranscript();
+                renderWordList();
+            });
+
+            continuePhraseInput.addEventListener("input", () => {
+                renderGameOverScreen();
+            });
+
             echoModeInput.addEventListener("change", () => {
                 if (!echoEnabled()) {
                     stopEchoSystem();
@@ -2191,6 +3731,40 @@ guitar</textarea
                 if (micStream && !echoRecorder) {
                     startEchoSystem();
                 }
+            });
+
+            talkbackEnabledInput.addEventListener("change", () => {
+                if (!talkbackEnabled()) {
+                    stopTalkbackCaptureSystem();
+                } else if (micStream) {
+                    startTalkbackCaptureSystem();
+                }
+
+                checkTalkbackHealth();
+                renderTalkbackPanel();
+            });
+
+            talkbackEndpointInput.addEventListener("change", () => {
+                talkbackSessionId += 1;
+                talkbackReady = false;
+                talkbackRef = null;
+                talkbackRefSignature = "";
+                checkTalkbackHealth();
+            });
+
+            talkbackEndpointInput.addEventListener("input", () => {
+                talkbackReady = false;
+                talkbackHealthDetail = "checking";
+                renderTalkbackPanel();
+            });
+
+            talkbackThresholdInput.addEventListener("input", () => {
+                renderTalkbackPanel();
+                maybeTriggerTalkback("random");
+            });
+
+            talkbackPhrasesInput.addEventListener("input", () => {
+                renderTalkbackPanel();
             });
 
             resetSequenceButton.addEventListener("click", () => {
@@ -2207,6 +3781,8 @@ guitar</textarea
 
             renderWordList();
             renderSequenceStatus();
+            renderTalkbackPanel();
+            startTalkbackHealthChecks();
             drawIdleVisualizer();
 
             if (!SpeechRecognition) {
@@ -2242,6 +3818,7 @@ guitar</textarea
                     interimText.textContent = "";
                     stopRoadAnimation();
                     stopEchoSystem();
+                    stopTalkbackCaptureSystem();
                     stopVisualizer();
                 };
 
@@ -2250,64 +3827,90 @@ guitar</textarea
                 };
 
                 recognition.onresult = (event) => {
+                    handlingRecognitionResult = true;
+                    transcriptWipedDuringResult = false;
                     const liveResults = [];
                     const newFinals = [];
 
-                    for (
-                        let i = event.resultIndex;
-                        i < event.results.length;
-                        i += 1
-                    ) {
-                        const text = event.results[i][0].transcript;
+                    try {
+                        for (
+                            let i = event.resultIndex;
+                            i < event.results.length;
+                            i += 1
+                        ) {
+                            const text = event.results[i][0].transcript;
 
-                        if (event.results[i].isFinal) {
-                            const chunk = text.trim();
-                            finalChunks.push(chunk);
-                            newFinals.push(chunk);
+                            if (event.results[i].isFinal) {
+                                const chunk = text.trim();
+                                finalChunks.push(chunk);
+                                newFinals.push(chunk);
 
-                            if (transcriptSourceInput.value === "final") {
-                                processTranscriptText(chunk);
+                                if (transcriptSourceInput.value === "final") {
+                                    processTranscriptText(chunk);
+                                }
+                            }
+
+                            if (transcriptWipedDuringResult) {
+                                newFinals.length = 0;
+                                break;
                             }
                         }
-                    }
 
-                    // A final result marks a natural pause: cut the running
-                    // recording there into a labeled echo snippet.
-                    if (newFinals.length) {
-                        cutEchoSnippet(newFinals.join(" "));
-                    }
-
-                    for (const result of event.results) {
-                        const text = result[0].transcript.trim();
-
-                        if (text) {
-                            liveResults.push(text);
+                        // A final result marks a natural pause: cut the running
+                        // recording there into a labeled echo snippet.
+                        if (newFinals.length) {
+                            const finalLabel = newFinals.join(" ");
+                            cutEchoSnippet(finalLabel);
+                            cutTalkbackSegment(finalLabel);
                         }
-                    }
 
-                    interimTranscript = liveResults.join(" ");
+                        if (!transcriptWipedDuringResult) {
+                            const liveStart = transcriptWasWiped
+                                ? event.resultIndex
+                                : 0;
 
-                    if (transcriptSourceInput.value === "interim") {
-                        if (modeInput.value === "catch") {
-                            rebuildCatchWordsFromSource();
-                        } else {
-                            processTranscriptText(interimTranscript);
+                            for (
+                                let i = liveStart;
+                                i < event.results.length;
+                                i += 1
+                            ) {
+                                const text =
+                                    event.results[i][0].transcript.trim();
+
+                                if (text) {
+                                    liveResults.push(text);
+                                }
+                            }
+
+                            interimTranscript = liveResults.join(" ");
+
+                            if (transcriptSourceInput.value === "interim") {
+                                if (modeInput.value === "catch") {
+                                    rebuildCatchWordsFromSource();
+                                } else {
+                                    processTranscriptText(interimTranscript);
+                                }
+                            }
                         }
-                    }
 
-                    renderTranscript();
-                    renderWordList();
+                        renderTranscript();
+                        renderWordList();
+                    } finally {
+                        handlingRecognitionResult = false;
+                    }
                 };
 
                 startButton.addEventListener("click", async () => {
                     try {
                         await startVisualizer();
                         startEchoSystem();
+                        startTalkbackCaptureSystem();
                         recognition.start();
                     } catch (error) {
                         status.textContent =
                             "Microphone access was blocked or unavailable.";
                         stopEchoSystem();
+                        stopTalkbackCaptureSystem();
                         stopVisualizer();
                     }
                 });
@@ -2315,11 +3918,19 @@ guitar</textarea
             }
 
             clearButton.addEventListener("click", () => {
-                finalChunks.length = 0;
-                interimTranscript = "";
-                finalText.textContent = "";
-                interimText.textContent = "";
+                talkbackSessionId += 1;
+                clearTranscript();
                 clearEchoSnippets();
+                talkbackSegments.length = 0;
+                talkbackQueue.length = 0;
+                talkbackRef = null;
+                talkbackRefSignature = "";
+                if (talkbackAudio) {
+                    talkbackAudio.pause();
+                    talkbackAudio = null;
+                }
+                setTalkbackStatus(talkbackLastStatus, "cleared");
+                renderTalkbackPanel();
                 resetSequence();
                 restartSequenceIfListening();
             });
