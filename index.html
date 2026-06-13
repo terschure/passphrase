@@ -230,6 +230,99 @@
                 opacity: 0.35;
             }
 
+            #onboarding-screen {
+                position: fixed;
+                inset: 0;
+                z-index: 6;
+                display: grid;
+                place-items: center;
+                background:
+                    radial-gradient(
+                        circle at 50% 50%,
+                        rgba(250, 204, 21, 0.08),
+                        transparent 34%
+                    ),
+                    rgba(10, 10, 10, 0.86);
+                text-align: center;
+            }
+
+            #onboarding-screen.hidden {
+                display: none;
+            }
+
+            .onboarding-card {
+                width: min(520px, calc(100vw - 40px));
+                padding: 28px 24px;
+                border: 1px solid rgba(250, 204, 21, 0.28);
+                border-radius: 8px;
+                background: rgba(13, 13, 13, 0.9);
+                box-shadow:
+                    0 0 0 1px rgba(0, 0, 0, 0.7),
+                    0 18px 54px rgba(0, 0, 0, 0.48);
+                opacity: 1;
+                transform: translateY(0);
+                transition:
+                    opacity 160ms ease,
+                    transform 160ms ease;
+            }
+
+            .onboarding-card.switching {
+                opacity: 0;
+                transform: translateY(8px);
+            }
+
+            .onboarding-title {
+                margin: 0;
+                color: #facc15;
+                font-size: clamp(1.7rem, 5vw, 3rem);
+                line-height: 1.05;
+                letter-spacing: 0.08em;
+                text-transform: uppercase;
+                text-shadow:
+                    0 0 8px rgba(250, 204, 21, 0.42),
+                    0 0 28px rgba(239, 68, 68, 0.24),
+                    0 4px 18px #000000;
+            }
+
+            .onboarding-copy {
+                max-width: 420px;
+                margin: 16px auto 0;
+                color: #d4d4d4;
+                font-size: 1rem;
+            }
+
+            .onboarding-copy p {
+                margin: 0 0 8px;
+            }
+
+            .onboarding-small {
+                color: #888888;
+                font-size: 0.86rem;
+            }
+
+            .onboarding-final {
+                margin-top: 18px;
+                color: #ffffff;
+                font-weight: 700;
+            }
+
+            .onboarding-fallback {
+                margin-top: 10px;
+                color: #777777;
+                font-size: 0.78rem;
+            }
+
+            #onboarding-action {
+                min-width: 148px;
+                margin-top: 24px;
+                padding: 10px 22px;
+                border: 1px solid rgba(250, 204, 21, 0.7);
+                background: #facc15;
+                box-shadow:
+                    0 0 0 1px rgba(0, 0, 0, 0.8),
+                    0 0 24px rgba(250, 204, 21, 0.28);
+            }
+
             #status {
                 position: fixed;
                 top: 96px;
@@ -709,6 +802,62 @@
                 color: #f472b6;
             }
 
+            .wall-body {
+                color: #d8d8d8;
+                font-weight: 700;
+                text-shadow:
+                    0 0 3px rgba(255, 255, 255, 0.28),
+                    0 0 10px rgba(255, 255, 255, 0.12);
+            }
+
+            .wall-border {
+                color: #ffffff;
+                font-weight: 800;
+                text-shadow:
+                    0 0 5px rgba(255, 255, 255, 0.64),
+                    0 0 12px rgba(250, 204, 21, 0.22);
+            }
+
+            .wall-fire-top {
+                color: #f97316;
+                font-weight: 800;
+                animation: fire-flicker 720ms steps(2, end) infinite;
+                text-shadow:
+                    0 0 5px rgba(249, 115, 22, 0.95),
+                    0 0 16px rgba(239, 68, 68, 0.72),
+                    0 0 24px rgba(250, 204, 21, 0.34);
+            }
+
+            .wall-fire-spot {
+                color: #facc15;
+                font-weight: 800;
+                text-shadow:
+                    0 0 5px rgba(250, 204, 21, 0.9),
+                    0 0 14px rgba(239, 68, 68, 0.68);
+            }
+
+            .wall-word {
+                color: #ffffff;
+                font-size: 1.22em;
+                font-weight: 800;
+                letter-spacing: 0.08em;
+                text-shadow:
+                    0 1px 0 #000000,
+                    0 0 4px rgba(0, 0, 0, 0.95),
+                    0 0 12px rgba(250, 204, 21, 0.28);
+            }
+
+            @keyframes fire-flicker {
+                0%,
+                100% {
+                    filter: brightness(1);
+                }
+
+                50% {
+                    filter: brightness(1.28);
+                }
+            }
+
             .ok {
                 color: #22c55e;
             }
@@ -741,6 +890,28 @@
     </head>
     <body>
         <div id="game">
+            <div
+                id="onboarding-screen"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="onboarding-title"
+            >
+                <div id="onboarding-card" class="onboarding-card">
+                    <h2 id="onboarding-title" class="onboarding-title">
+                        Passphrase
+                    </h2>
+                    <div id="onboarding-copy" class="onboarding-copy">
+                        <p>Your voice has entered the system.</p>
+                        <p class="onboarding-small">
+                            Speak carefully. The system is listening.
+                        </p>
+                    </div>
+                    <button id="onboarding-action" type="button">Continue</button>
+                    <div class="onboarding-fallback">
+                        You can also press Enter.
+                    </div>
+                </div>
+            </div>
             <h1>&#9650; PASSPHRASE &#9650;</h1>
             <main>
                 <section>
@@ -989,6 +1160,13 @@ I'll be back
             const SpeechRecognition =
                 window.SpeechRecognition || window.webkitSpeechRecognition;
             const startButton = document.querySelector("#start");
+            const onboardingScreen =
+                document.querySelector("#onboarding-screen");
+            const onboardingCard = document.querySelector("#onboarding-card");
+            const onboardingTitle = document.querySelector("#onboarding-title");
+            const onboardingCopy = document.querySelector("#onboarding-copy");
+            const onboardingAction =
+                document.querySelector("#onboarding-action");
             const stopButton = document.querySelector("#stop");
             const clearButton = document.querySelector("#clear");
             const openSettingsButton = document.querySelector("#open-settings");
@@ -1108,6 +1286,467 @@ I'll be back
             let visualizerFrame;
             let roadAnimationFrame;
             let lastRoadRender = 0;
+            let onboardingStep = 1;
+            let gameStarted = false;
+            let activeRecognition = null;
+            let recognitionStarting = false;
+            let recognitionListening = false;
+            let onboardingVoiceBlocked = false;
+            let lastMusicDegradationLevel = 0;
+
+            const AudioManager = (() => {
+                const MUSIC_VOLUME = 0.45;
+                const MUSIC_DUCKED_VOLUME = 0.12;
+                const SFX_VOLUME = 0.8;
+                const DUCK_FADE_MS = 120;
+                const DUCK_HOLD_MS = 400;
+                const SFX_COOLDOWN_MS = 120;
+                const lastSfxAt = new Map();
+                let unlocked = false;
+                let warningShown = false;
+                let mainThemePlayPromise = null;
+                let musicFadeFrame = null;
+                let restoreTimer = null;
+                let musicContext = null;
+                let musicSource = null;
+                let musicInputGain = null;
+                let distortionNode = null;
+                let bitcrusherNode = null;
+                let lowpassNode = null;
+                let musicEffectsReady = false;
+                let currentMusicLevel = 0;
+                let degradationAmount = 0;
+                let currentDistortionAmount = 0;
+                let currentBitcrusherAmount = 0;
+                let effectTransitionFrame = null;
+
+                const mainTheme = new Audio();
+                mainTheme.loop = true;
+                mainTheme.preload = "auto";
+                mainTheme.volume = MUSIC_VOLUME;
+
+                const oggSource = document.createElement("source");
+                oggSource.src = "assets/audio/main_sound_theme.ogg";
+                oggSource.type = "audio/ogg";
+                const mp3Source = document.createElement("source");
+                mp3Source.src = "assets/audio/main_sound_theme.mp3";
+                mp3Source.type = "audio/mpeg";
+                mainTheme.append(oggSource, mp3Source);
+
+                const sfx = {
+                    levelFailed: createSfx(
+                        "assets/audio/game_fx_level_failed.wav",
+                    ),
+                    respawn: createSfx("assets/audio/game_fx_respawn.wav"),
+                    wallPass: createSfx("assets/audio/game_fx_wall_pass.wav"),
+                };
+
+                function createSfx(src) {
+                    const audio = new Audio(src);
+                    audio.preload = "auto";
+                    audio.volume = SFX_VOLUME;
+                    return audio;
+                }
+
+                function warn(message, error = null) {
+                    if (!warningShown) {
+                        console.warn("[audio] " + message, error || "");
+                        warningShown = true;
+                    } else if (error) {
+                        console.warn("[audio] " + message, error);
+                    }
+                }
+
+                function preloadAll() {
+                    mainTheme.load();
+
+                    for (const audio of Object.values(sfx)) {
+                        audio.load();
+                    }
+                }
+
+                function unlockAudio() {
+                    unlocked = true;
+                }
+
+                function makeDistortionCurve(amount) {
+                    const samples = 44100;
+                    const curve = new Float32Array(samples);
+                    const k = amount * 600;
+                    const deg = Math.PI / 180;
+
+                    for (let i = 0; i < samples; i += 1) {
+                        const x = (i * 2) / samples - 1;
+                        curve[i] =
+                            ((3 + k) * x * 20 * deg) /
+                            (Math.PI + k * Math.abs(x));
+                    }
+
+                    return curve;
+                }
+
+                function createBitcrusher(context) {
+                    const node = context.createScriptProcessor(2048, 1, 1);
+                    node.bits = 16;
+                    node.normfreq = 1;
+                    node.phaser = 0;
+                    node.last = 0;
+
+                    node.onaudioprocess = (event) => {
+                        const input = event.inputBuffer.getChannelData(0);
+                        const output = event.outputBuffer.getChannelData(0);
+                        const step = Math.pow(0.5, node.bits);
+
+                        for (let i = 0; i < input.length; i += 1) {
+                            node.phaser += node.normfreq;
+
+                            if (node.phaser >= 1) {
+                                node.phaser -= 1;
+                                node.last =
+                                    step *
+                                    Math.floor(input[i] / step + 0.5);
+                            }
+
+                            output[i] = node.last;
+                        }
+                    };
+
+                    return node;
+                }
+
+                function ensureMusicGraph() {
+                    if (musicEffectsReady) {
+                        return true;
+                    }
+
+                    const Context =
+                        window.AudioContext || window.webkitAudioContext;
+
+                    if (!Context) {
+                        warn("Web Audio is unavailable; music effects disabled.");
+                        return false;
+                    }
+
+                    try {
+                        musicContext = musicContext || new Context();
+                        console.log("[audio] music audio context started");
+
+                        musicSource =
+                            musicSource ||
+                            musicContext.createMediaElementSource(mainTheme);
+                        musicInputGain = musicContext.createGain();
+                        distortionNode = musicContext.createWaveShaper();
+                        bitcrusherNode = createBitcrusher(musicContext);
+                        lowpassNode = musicContext.createBiquadFilter();
+
+                        lowpassNode.type = "lowpass";
+                        lowpassNode.frequency.value = 16000;
+                        lowpassNode.Q.value = 0.65;
+                        musicInputGain.gain.value = 1;
+                        distortionNode.curve = makeDistortionCurve(0);
+                        distortionNode.oversample = "2x";
+
+                        musicSource
+                            .connect(musicInputGain)
+                            .connect(distortionNode)
+                            .connect(bitcrusherNode)
+                            .connect(lowpassNode)
+                            .connect(musicContext.destination);
+
+                        musicEffectsReady = true;
+                        return true;
+                    } catch (error) {
+                        warn(
+                            "Music effects could not initialize; playing clean theme.",
+                            error,
+                        );
+                        return false;
+                    }
+                }
+
+                async function startMainTheme() {
+                    unlockAudio();
+
+                    try {
+                        if (ensureMusicGraph() && musicContext) {
+                            await musicContext.resume();
+                            updateMusicDegradation(currentMusicLevel || 1);
+                        }
+
+                        if (!mainTheme.paused) {
+                            return;
+                        }
+
+                        if (!mainThemePlayPromise) {
+                            mainThemePlayPromise = mainTheme.play().finally(
+                                () => {
+                                    mainThemePlayPromise = null;
+                                },
+                            );
+                        }
+
+                        await mainThemePlayPromise;
+                    } catch (error) {
+                        warn(
+                            "Main theme could not play. It may need a user click or a supported audio codec.",
+                            error,
+                        );
+                    }
+                }
+
+                function stopMainTheme() {
+                    if (restoreTimer) {
+                        clearTimeout(restoreTimer);
+                        restoreTimer = null;
+                    }
+
+                    if (musicFadeFrame) {
+                        cancelAnimationFrame(musicFadeFrame);
+                        musicFadeFrame = null;
+                    }
+
+                    if (effectTransitionFrame) {
+                        cancelAnimationFrame(effectTransitionFrame);
+                        effectTransitionFrame = null;
+                    }
+
+                    mainTheme.pause();
+                    mainTheme.currentTime = 0;
+                }
+
+                function fadeMusicVolume(targetVolume, durationMs) {
+                    if (musicFadeFrame) {
+                        cancelAnimationFrame(musicFadeFrame);
+                        musicFadeFrame = null;
+                    }
+
+                    const fromVolume = mainTheme.volume;
+                    const startedAt = performance.now();
+                    const duration = Math.max(1, durationMs);
+
+                    function step(timestamp) {
+                        const progress = Math.min(
+                            1,
+                            (timestamp - startedAt) / duration,
+                        );
+                        mainTheme.volume =
+                            fromVolume +
+                            (targetVolume - fromVolume) * progress;
+
+                        if (progress < 1) {
+                            musicFadeFrame = requestAnimationFrame(step);
+                        } else {
+                            musicFadeFrame = null;
+                        }
+                    }
+
+                    musicFadeFrame = requestAnimationFrame(step);
+                }
+
+                function smoothSetAudioParam(param, targetValue, timeMs) {
+                    if (!musicContext || !param) {
+                        return;
+                    }
+
+                    const now = musicContext.currentTime;
+                    param.cancelScheduledValues(now);
+                    param.setValueAtTime(param.value, now);
+                    param.linearRampToValueAtTime(
+                        targetValue,
+                        now + Math.max(0.01, timeMs / 1000),
+                    );
+                }
+
+                function setDistortionAmount(amount) {
+                    if (!distortionNode) {
+                        return;
+                    }
+
+                    currentDistortionAmount = amount;
+                    distortionNode.curve = makeDistortionCurve(amount);
+                }
+
+                function setBitcrusherAmount(amount) {
+                    if (!bitcrusherNode) {
+                        return;
+                    }
+
+                    currentBitcrusherAmount = amount;
+                    bitcrusherNode.bits = Math.max(
+                        5,
+                        Math.round(16 - amount * 10),
+                    );
+                    bitcrusherNode.normfreq = Math.max(0.16, 1 - amount * 0.82);
+                }
+
+                function smoothSetEffectAmounts(
+                    targetDistortionAmount,
+                    targetBitcrusherAmount,
+                    timeMs,
+                ) {
+                    if (effectTransitionFrame) {
+                        cancelAnimationFrame(effectTransitionFrame);
+                        effectTransitionFrame = null;
+                    }
+
+                    const fromDistortionAmount = currentDistortionAmount;
+                    const fromBitcrusherAmount = currentBitcrusherAmount;
+                    const startedAt = performance.now();
+                    const duration = Math.max(1, timeMs);
+
+                    function step(timestamp) {
+                        const progress = Math.min(
+                            1,
+                            (timestamp - startedAt) / duration,
+                        );
+                        const distortionAmount =
+                            fromDistortionAmount +
+                            (targetDistortionAmount - fromDistortionAmount) *
+                                progress;
+                        const bitcrusherAmount =
+                            fromBitcrusherAmount +
+                            (targetBitcrusherAmount - fromBitcrusherAmount) *
+                                progress;
+
+                        setDistortionAmount(distortionAmount);
+                        setBitcrusherAmount(bitcrusherAmount);
+
+                        if (progress < 1) {
+                            effectTransitionFrame =
+                                requestAnimationFrame(step);
+                        } else {
+                            effectTransitionFrame = null;
+                        }
+                    }
+
+                    effectTransitionFrame = requestAnimationFrame(step);
+                }
+
+                function updateMusicDegradation(level) {
+                    currentMusicLevel = Math.max(1, Number(level) || 1);
+                    const maxDegradationLevel = 5;
+                    const amount = Math.min(
+                        Math.max((currentMusicLevel - 1) / (maxDegradationLevel - 1), 0),
+                        1,
+                    );
+                    degradationAmount = amount;
+                    const distortionAmount = amount;
+                    const bitcrusherAmount = Math.max(
+                        0,
+                        (amount - 0.35) / 0.65,
+                    );
+                    const lowpassFrequency = 16000 - amount * 11500;
+
+                    if (!unlocked) {
+                        console.log("[audio] music degradation queued", {
+                            level: currentMusicLevel,
+                            amount: degradationAmount,
+                            distortionAmount,
+                            bitcrusherAmount,
+                            lowpassFrequency,
+                        });
+                        return;
+                    }
+
+                    if (!ensureMusicGraph()) {
+                        return;
+                    }
+
+                    smoothSetEffectAmounts(
+                        distortionAmount,
+                        bitcrusherAmount,
+                        900,
+                    );
+                    smoothSetAudioParam(lowpassNode.frequency, lowpassFrequency, 900);
+
+                    console.log("[audio] music degradation updated", {
+                        level: currentMusicLevel,
+                        amount: degradationAmount,
+                        distortionAmount,
+                        bitcrusherAmount,
+                        bitcrusherBits: bitcrusherNode
+                            ? bitcrusherNode.bits
+                            : "clean",
+                        lowpassFrequency,
+                    });
+                }
+
+                function restoreMusic() {
+                    restoreTimer = null;
+                    fadeMusicVolume(MUSIC_VOLUME, DUCK_FADE_MS);
+                }
+
+                function duckMusic(durationMs = DUCK_HOLD_MS) {
+                    if (restoreTimer) {
+                        clearTimeout(restoreTimer);
+                    }
+
+                    fadeMusicVolume(MUSIC_DUCKED_VOLUME, DUCK_FADE_MS);
+                    restoreTimer = setTimeout(
+                        restoreMusic,
+                        Math.max(DUCK_HOLD_MS, durationMs),
+                    );
+                }
+
+                function playSfx(name) {
+                    if (!unlocked) {
+                        return;
+                    }
+
+                    const audio = sfx[name];
+
+                    if (!audio) {
+                        return;
+                    }
+
+                    const now = Date.now();
+                    const previous = lastSfxAt.get(name) || 0;
+
+                    if (now - previous < SFX_COOLDOWN_MS) {
+                        return;
+                    }
+
+                    lastSfxAt.set(name, now);
+
+                    try {
+                        const instance = audio.cloneNode(true);
+                        instance.volume = SFX_VOLUME;
+                        const durationMs = Number.isFinite(audio.duration)
+                            ? audio.duration * 1000
+                            : DUCK_HOLD_MS;
+                        duckMusic(durationMs);
+                        instance.play().catch((error) => {
+                            warn("Sound effect " + name + " could not play.", error);
+                        });
+                    } catch (error) {
+                        warn("Sound effect " + name + " could not start.", error);
+                    }
+                }
+
+                return {
+                    preloadAll,
+                    startMainTheme,
+                    stopMainTheme,
+                    duckMusic,
+                    restoreMusic,
+                    fadeMusicVolume,
+                    updateMusicDegradation,
+                    setDistortionAmount,
+                    setBitcrusherAmount,
+                    playLevelFailedSound: () => playSfx("levelFailed"),
+                    playRespawnSound: () => playSfx("respawn"),
+                    playWallPassSound: () => playSfx("wallPass"),
+                };
+            })();
+
+            const startMainTheme = AudioManager.startMainTheme;
+            const stopMainTheme = AudioManager.stopMainTheme;
+            const playLevelFailedSound = AudioManager.playLevelFailedSound;
+            const playRespawnSound = AudioManager.playRespawnSound;
+            const playWallPassSound = AudioManager.playWallPassSound;
+            const updateMusicDegradation =
+                AudioManager.updateMusicDegradation;
+
             function getRoadMetrics() {
                 const styles = getComputedStyle(timeline);
                 const fontSize = parseFloat(styles.fontSize) || 14;
@@ -1132,8 +1771,8 @@ I'll be back
                 );
                 const center = Math.floor(width / 2);
                 const laneHalfWidth = Math.max(
-                    9,
-                    Math.min(18, Math.floor(width * 0.16)),
+                    14,
+                    Math.min(30, Math.floor(width * 0.24)),
                 );
 
                 return {
@@ -1156,6 +1795,46 @@ I'll be back
                 settingsBackdrop.classList.remove("open");
                 settingsPanel.classList.remove("open");
                 settingsPanel.setAttribute("aria-hidden", "true");
+            }
+
+            function showOnboardingStep(step) {
+                onboardingStep = step;
+                onboardingCard.classList.add("switching");
+
+                setTimeout(() => {
+                    if (step === 1) {
+                        onboardingTitle.textContent = "Passphrase";
+                        onboardingCopy.innerHTML = [
+                            "<p>Your voice has entered the system.</p>",
+                            '<p class="onboarding-small">Speak carefully. The system is listening.</p>',
+                        ].join("");
+                        onboardingAction.textContent = "Continue";
+                    } else {
+                        onboardingTitle.textContent = "How to play";
+                        const finalInstruction = SpeechRecognition
+                            ? "Say START or press Start to begin."
+                            : "Press Start to begin.";
+                        onboardingCopy.innerHTML = [
+                            "<p>Say the word on the wall to pass through.</p>",
+                            "<p>Each level tests how your voice is heard, judged, and accepted.</p>",
+                            `<p class="onboarding-small">${finalInstruction}</p>`,
+                        ].join("");
+                        onboardingAction.textContent = "Start";
+                    }
+
+                    onboardingCard.classList.remove("switching");
+                    onboardingAction.focus();
+                }, 160);
+            }
+
+            function goToInstructions() {
+                showOnboardingStep(2);
+                startOnboardingVoiceRecognition();
+            }
+
+            function hideOnboarding() {
+                onboardingScreen.classList.add("hidden");
+                onboardingScreen.setAttribute("aria-hidden", "true");
             }
 
             function startRoadAnimation() {
@@ -1282,6 +1961,18 @@ I'll be back
 
                 currentLevelTitle.textContent = entry.levelTitle;
                 currentSequenceTitle.textContent = entry.sequenceTitle;
+            }
+
+            function syncMusicDegradationToLevel(entries = getTargetEntries()) {
+                const entry = getCurrentTargetEntry(entries);
+                const level = entry ? entry.levelIndex + 1 : 1;
+
+                if (level === lastMusicDegradationLevel) {
+                    return;
+                }
+
+                lastMusicDegradationLevel = level;
+                updateMusicDegradation(level);
             }
 
             function renderWordList() {
@@ -1673,6 +2364,7 @@ I'll be back
                 sequenceFailed = true;
                 failReason = reason || "timeout";
                 deadline = null;
+                playLevelFailedSound();
                 stopSequenceTimer();
                 renderSequenceStatus();
                 renderWordList();
@@ -1711,6 +2403,7 @@ I'll be back
                     wordCaughtThisBeat = false;
                     gateOpenedAt = 0;
                     wallEchoFiredThisBeat = false;
+                    playRespawnSound();
                     renderGameOverScreen();
 
                     if (sequenceIndex < getTargetWords().length) {
@@ -1748,6 +2441,7 @@ I'll be back
                     wordCaughtThisBeat = false;
                     gateOpenedAt = 0;
                     refillLivesAndRetries();
+                    playWallPassSound();
 
                     if (sequenceIndex >= getTargetWords().length) {
                         completeSequence();
@@ -1827,6 +2521,7 @@ I'll be back
                 const entries = getTargetEntries();
                 const words = entries.map((entry) => entry.text);
                 renderLevelStatus(entries);
+                syncMusicDegradationToLevel(entries);
                 renderTimeline(words);
 
                 if (!isSequenceMode()) {
@@ -1889,6 +2584,32 @@ I'll be back
 
             const PLANT_CHARS = [".", ",", "'", '"', "*", "v", "w"];
             const SPARKLE_CHARS = ["*", "+", "'", ".", "o"];
+            const WALL_FIRE_FRAMES = [
+                [
+                    "   ^    ' /\\   W    ^^    ' /\\   ",
+                    "  /|\\    /V \\  |   /||\\    /M \\  ",
+                    " //|\\\\  / /\\ \\ |  //||\\\\  / /\\ \\ ",
+                    "/\\/ \\/\\/ /  \\ \\|/\\/ /||\\ \\/\\/~ \\",
+                ],
+                [
+                    "  /\\   '   ^^    M   /\\     ^    ",
+                    " /||\\     /  \\   |  /|\\    /|\\   ",
+                    "/ || \\   //\\  \\  V / | \\  //|\\\\  ",
+                    "\\/  \\/\\/ /  \\/\\/\\/  |  \\/\\/~| \\",
+                ],
+                [
+                    "   ^^    W  /\\   '   ^    M  /\\   ",
+                    "  /  \\   | /||\\     /|\\   | /||\\  ",
+                    " / /\\ \\  V// ||\\   //|\\\\  V// ||\\ ",
+                    "/ /  \\ \\/\\/  || \\/\\/ | \\/\\/  ||~\\",
+                ],
+            ];
+            const WALL_FIRE_SPOT_CHARS = ["*", "+", "o"];
+            const WALL_FIRE_HEIGHT = 4;
+            const WALL_HEIGHT = 15;
+            const WALL_MIN_WIDTH = 48;
+            const WALL_WORD_PADDING = 22;
+            const WALL_WORD_ROW = 10;
             const GATE_ANIM_MS = 900;
 
             function groundProp(worldRow, col) {
@@ -1920,23 +2641,151 @@ I'll be back
 
                 rows.forEach((row, r) => {
                     const mid = row.slice(laneLeft - 1, laneRight + 2);
-                    const isGateRow =
+                    const isFirewallRow =
                         word &&
+                        r >= wallRow &&
+                        r < wallRow + WALL_HEIGHT;
+                    const isGateRow =
+                        isFirewallRow &&
                         gateProgress !== null &&
                         r >= wallRow &&
-                        r <= wallRow + 2;
+                        r < wallRow + WALL_HEIGHT;
 
                     fragment.append(
                         colorSpan("ground", row.slice(0, laneLeft - 1)),
                         isGateRow
                             ? colorSpan(`gate-${(tick + r) % 4}`, mid)
-                            : document.createTextNode(mid),
+                            : isFirewallRow
+                              ? renderBurningWall(row, r, word, wallRow)
+                              : document.createTextNode(mid),
                         colorSpan("ground", row.slice(laneRight + 2)),
                         document.createTextNode("\n"),
                     );
                 });
 
                 timeline.replaceChildren(fragment);
+            }
+
+            function getWallBounds(word, laneLeft, laneRight) {
+                const laneWidth = laneRight - laneLeft + 1;
+                const wallWidth = Math.min(
+                    laneWidth,
+                    Math.max(WALL_MIN_WIDTH, word.length + WALL_WORD_PADDING),
+                );
+                const center = Math.floor((laneLeft + laneRight) / 2);
+                const wallLeft = Math.max(
+                    laneLeft,
+                    center - Math.floor(wallWidth / 2),
+                );
+
+                return {
+                    wallLeft,
+                    wallRight: Math.min(laneRight, wallLeft + wallWidth - 1),
+                };
+            }
+
+            function createScaryFireFrames(width) {
+                return WALL_FIRE_FRAMES.map((frame) =>
+                    frame.map((line, rowIndex) => {
+                        let expanded = line;
+
+                        while (expanded.length < width + line.length) {
+                            expanded += line;
+                        }
+
+                        const sway =
+                            (rowIndex * 5 + Math.floor(Date.now() / 180)) %
+                            line.length;
+                        return expanded.slice(sway, sway + width);
+                    }),
+                );
+            }
+
+            function getCurrentFireFrame(width) {
+                const frames = createScaryFireFrames(width);
+                const index =
+                    Math.floor(Date.now() / 160) % frames.length;
+                return frames[index];
+            }
+
+            function getWallCharClass(char, rowOffset, col, bounds) {
+                if (char === " ") {
+                    return "";
+                }
+
+                if (rowOffset === WALL_WORD_ROW && /[A-Z0-9' ]/.test(char)) {
+                    return "wall-word";
+                }
+
+                if (
+                    rowOffset < WALL_FIRE_HEIGHT ||
+                    char === "^" ||
+                    char === "/" ||
+                    char === "\\" ||
+                    char === "|" ||
+                    char === "v" ||
+                    char === "W" ||
+                    char === "M"
+                ) {
+                    return "wall-fire-top";
+                }
+
+                if (char === "*" || char === "+" || char === "o") {
+                    return "wall-fire-spot";
+                }
+
+                if (col === bounds.wallLeft || col === bounds.wallRight) {
+                    return "wall-border";
+                }
+
+                if (
+                    rowOffset === WALL_FIRE_HEIGHT ||
+                    rowOffset === WALL_HEIGHT - 1
+                ) {
+                    return "wall-border";
+                }
+
+                return "wall-body";
+            }
+
+            function renderBurningWall(row, rowIndex, word, wallRow) {
+                const { laneLeft, laneRight } = getRoadMetrics();
+                const bounds = getWallBounds(word, laneLeft, laneRight);
+                const rowOffset = rowIndex - wallRow;
+                const fragment = document.createDocumentFragment();
+                let currentClass = null;
+                let buffer = "";
+
+                function flush() {
+                    if (!buffer) {
+                        return;
+                    }
+
+                    fragment.append(
+                        currentClass
+                            ? colorSpan(currentClass, buffer)
+                            : document.createTextNode(buffer),
+                    );
+                    buffer = "";
+                }
+
+                for (let col = laneLeft - 1; col <= laneRight + 1; col += 1) {
+                    const char = row[col] || " ";
+                    const className =
+                        col >= bounds.wallLeft && col <= bounds.wallRight
+                            ? getWallCharClass(char, rowOffset, col, bounds)
+                            : "";
+
+                    if (className !== currentClass) {
+                        flush();
+                        currentClass = className;
+                    }
+
+                    buffer += char;
+                }
+
+                flush();
+                return fragment;
             }
 
             function renderLivesDisplay() {
@@ -1970,6 +2819,15 @@ I'll be back
                     getRoadMetrics();
                 const rows = [];
                 const scroll = Math.floor(Date.now() / 400);
+                const wallBounds = word
+                    ? getWallBounds(word.toUpperCase(), laneLeft, laneRight)
+                    : null;
+                const labelRow = wallRow + WALL_WORD_ROW;
+                const fireFrame = wallBounds
+                    ? getCurrentFireFrame(
+                          wallBounds.wallRight - wallBounds.wallLeft + 1,
+                      )
+                    : null;
 
                 for (let r = 0; r < height; r += 1) {
                     const row = Array(width).fill(" ");
@@ -1990,37 +2848,85 @@ I'll be back
                         row[Math.floor((laneLeft + laneRight) / 2)] = ":";
                     }
 
-                    if (word && r === wallRow) {
-                        for (let c = laneLeft; c <= laneRight; c += 1) {
-                            row[c] = "#";
+                    if (
+                        word &&
+                        r >= wallRow &&
+                        r < wallRow + WALL_HEIGHT &&
+                        wallBounds
+                    ) {
+                        const rowOffset = r - wallRow;
+
+                        for (
+                            let c = wallBounds.wallLeft;
+                            c <= wallBounds.wallRight;
+                            c += 1
+                        ) {
+                            const h = hashCell(r + c * 17, scroll);
+                            const fireCol = c - wallBounds.wallLeft;
+                            const isBorder =
+                                c === wallBounds.wallLeft ||
+                                c === wallBounds.wallRight ||
+                                rowOffset === WALL_FIRE_HEIGHT ||
+                                rowOffset === WALL_HEIGHT - 1;
+                            const isFireSpot =
+                                rowOffset === WALL_FIRE_HEIGHT + 1 &&
+                                h % 23 === 0;
+
+                            if (rowOffset < WALL_FIRE_HEIGHT) {
+                                row[c] = fireFrame[rowOffset][fireCol] || " ";
+                            } else if (isFireSpot) {
+                                row[c] =
+                                    WALL_FIRE_SPOT_CHARS[
+                                        (h >>> 9) %
+                                            WALL_FIRE_SPOT_CHARS.length
+                                    ];
+                            } else if (isBorder) {
+                                row[c] = "#";
+                            } else {
+                                row[c] = " ";
+                            }
                         }
                     }
 
-                    if (word && r === wallRow + 1) {
-                        const label = word.toUpperCase();
-                        const start = Math.max(
-                            laneLeft,
-                            Math.floor(
-                                (laneLeft + laneRight - label.length) / 2,
+                    if (word && r === labelRow && wallBounds) {
+                        const rawLabel = word.toUpperCase();
+                        const spacedLabel = rawLabel.split("").join(" ");
+                        const label =
+                            spacedLabel.length <=
+                            wallBounds.wallRight - wallBounds.wallLeft - 3
+                                ? spacedLabel
+                                : rawLabel;
+                        const start = Math.min(
+                            wallBounds.wallRight - label.length - 1,
+                            Math.max(
+                                wallBounds.wallLeft + 1,
+                                Math.floor(
+                                    (wallBounds.wallLeft +
+                                        wallBounds.wallRight -
+                                        label.length) /
+                                        2,
+                                ),
                             ),
                         );
 
-                        for (let c = laneLeft; c <= laneRight; c += 1) {
-                            row[c] = "=";
+                        for (
+                            let c = wallBounds.wallLeft;
+                            c <= wallBounds.wallRight;
+                            c += 1
+                        ) {
+                            row[c] =
+                                c === wallBounds.wallLeft ||
+                                c === wallBounds.wallRight
+                                    ? "#"
+                                    : " ";
                         }
 
                         for (
                             let i = 0;
-                            i < label.length && start + i <= laneRight;
+                            i < label.length && start + i <= wallBounds.wallRight;
                             i += 1
                         ) {
                             row[start + i] = label[i];
-                        }
-                    }
-
-                    if (word && r === wallRow + 2) {
-                        for (let c = laneLeft; c <= laneRight; c += 1) {
-                            row[c] = "#";
                         }
                     }
 
@@ -2030,15 +2936,26 @@ I'll be back
                         word &&
                         gateProgress !== null &&
                         r >= wallRow &&
-                        r <= wallRow + 2
+                        r < wallRow + WALL_HEIGHT &&
+                        wallBounds
                     ) {
-                        const center = Math.floor((laneLeft + laneRight) / 2);
+                        const center = Math.floor(
+                            (wallBounds.wallLeft + wallBounds.wallRight) / 2,
+                        );
                         const gap = Math.ceil(
-                            (gateProgress * (laneRight - laneLeft + 2)) / 2,
+                            (gateProgress *
+                                (wallBounds.wallRight -
+                                    wallBounds.wallLeft +
+                                    2)) /
+                                2,
                         );
                         const tick = Math.floor(Date.now() / 120);
 
-                        for (let c = laneLeft; c <= laneRight; c += 1) {
+                        for (
+                            let c = wallBounds.wallLeft;
+                            c <= wallBounds.wallRight;
+                            c += 1
+                        ) {
                             if (Math.abs(c - center) >= gap) {
                                 continue;
                             }
@@ -2194,6 +3111,7 @@ I'll be back
                     caughtWords.add(words[sequenceIndex].toLowerCase());
                     sequenceIndex += 1;
                     refillLivesAndRetries();
+                    playWallPassSound();
                     maybeTriggerTalkback("beat");
                     changed = true;
 
@@ -3779,11 +4697,130 @@ I'll be back
                 renderSequenceStatus();
             });
 
+            function startMainThemeFromGameStart() {
+                startMainTheme().catch((error) => {
+                    console.warn(
+                        "[audio] Main theme could not start.",
+                        error,
+                    );
+                });
+            }
+
+            function startOnboardingVoiceRecognition() {
+                if (
+                    !activeRecognition ||
+                    recognitionListening ||
+                    gameStarted ||
+                    onboardingStep !== 2
+                ) {
+                    return;
+                }
+
+                try {
+                    recognitionStarting = true;
+                    console.log("[voice] starting onboarding recognition");
+                    activeRecognition.start();
+                } catch (error) {
+                    recognitionStarting = false;
+                    console.warn(
+                        "[voice] onboarding recognition could not start",
+                        error,
+                    );
+                }
+            }
+
+            async function startGame() {
+                if (!activeRecognition) {
+                    status.textContent =
+                        "Speech recognition is not supported in this browser. Try Chrome or Edge.";
+                    return;
+                }
+
+                if (gameStarted && !stopButton.disabled) {
+                    return;
+                }
+
+                gameStarted = true;
+                hideOnboarding();
+                startMainThemeFromGameStart();
+
+                try {
+                    await startVisualizer();
+                    startEchoSystem();
+                    startTalkbackCaptureSystem();
+                    if (!recognitionListening && !recognitionStarting) {
+                        recognitionStarting = true;
+                        activeRecognition.start();
+                    } else if (recognitionListening) {
+                        startRoadAnimation();
+
+                        if (
+                            isSequenceMode() &&
+                            getTargetWords().length &&
+                            !deadline &&
+                            !sequenceFailed
+                        ) {
+                            startSequenceTimer();
+                        }
+                    }
+                } catch (error) {
+                    status.textContent =
+                        "Microphone access was blocked or unavailable.";
+                    stopEchoSystem();
+                    stopTalkbackCaptureSystem();
+                    stopVisualizer();
+                }
+            }
+
+            function startGameFromOnboarding() {
+                if (onboardingStep === 1) {
+                    goToInstructions();
+                    return;
+                }
+
+                startGame();
+            }
+
+            function startGameFromVoice() {
+                if (gameStarted || onboardingStep !== 2) {
+                    return;
+                }
+
+                console.log("[voice] START command triggered game start");
+                startGameFromOnboarding();
+            }
+
+            function normalizeVoiceCommand(text) {
+                return text.toLowerCase().trim().replace(/[.,!?]/g, "");
+            }
+
+            function isStartCommand(text) {
+                const command = normalizeVoiceCommand(text);
+                return command === "start" || command.includes("start game");
+            }
+
+            onboardingAction.addEventListener("click", () => {
+                startGameFromOnboarding();
+            });
+
+            document.addEventListener("keydown", (event) => {
+                if (
+                    event.key === "Enter" &&
+                    !gameStarted &&
+                    !onboardingScreen.classList.contains("hidden")
+                ) {
+                    event.preventDefault();
+                    startGameFromOnboarding();
+                }
+            });
+
             renderWordList();
             renderSequenceStatus();
             renderTalkbackPanel();
             startTalkbackHealthChecks();
+            AudioManager.preloadAll();
             drawIdleVisualizer();
+            onboardingAction.focus();
 
             if (!SpeechRecognition) {
                 status.textContent =
@@ -3791,11 +4828,21 @@ I'll be back
                 startButton.disabled = true;
             } else {
                 const recognition = new SpeechRecognition();
+                activeRecognition = recognition;
                 recognition.continuous = true;
                 recognition.interimResults = true;
                 recognition.lang = navigator.language || "en-US";
 
                 recognition.onstart = () => {
+                    recognitionStarting = false;
+                    recognitionListening = true;
+                    console.log("[voice] recognition started");
+
+                    if (!gameStarted) {
+                        status.textContent = "Listening for START...";
+                        return;
+                    }
+
                     status.textContent = "Listening...";
                     startButton.disabled = true;
                     stopButton.disabled = false;
@@ -3812,6 +4859,20 @@ I'll be back
                 };
 
                 recognition.onend = () => {
+                    recognitionStarting = false;
+                    recognitionListening = false;
+
+                    if (!gameStarted) {
+                        status.textContent = "Voice start idle";
+                        if (
+                            onboardingStep === 2 &&
+                            !onboardingVoiceBlocked
+                        ) {
+                            setTimeout(startOnboardingVoiceRecognition, 600);
+                        }
+                        return;
+                    }
+
                     status.textContent = "Stopped";
                     startButton.disabled = false;
                     stopButton.disabled = true;
@@ -3823,7 +4884,14 @@ I'll be back
                 };
 
                 recognition.onerror = (event) => {
+                    recognitionStarting = false;
                     status.textContent = `Error: ${event.error}`;
+                    if (
+                        event.error === "not-allowed" ||
+                        event.error === "service-not-allowed"
+                    ) {
+                        onboardingVoiceBlocked = true;
+                    }
                 };
 
                 recognition.onresult = (event) => {
@@ -3844,8 +4912,20 @@ I'll be back
                                 const chunk = text.trim();
                                 finalChunks.push(chunk);
                                 newFinals.push(chunk);
+                                console.log("[voice] transcript:", chunk);
 
-                                if (transcriptSourceInput.value === "final") {
+                                if (
+                                    !gameStarted &&
+                                    onboardingStep === 2 &&
+                                    isStartCommand(chunk)
+                                ) {
+                                    startGameFromVoice();
+                                }
+
+                                if (
+                                    gameStarted &&
+                                    transcriptSourceInput.value === "final"
+                                ) {
                                     processTranscriptText(chunk);
                                 }
                             }
@@ -3883,8 +4963,25 @@ I'll be back
                             }
 
                             interimTranscript = liveResults.join(" ");
+                            if (interimTranscript) {
+                                console.log(
+                                    "[voice] transcript:",
+                                    interimTranscript,
+                                );
+                            }
 
-                            if (transcriptSourceInput.value === "interim") {
+                            if (
+                                !gameStarted &&
+                                onboardingStep === 2 &&
+                                isStartCommand(interimTranscript)
+                            ) {
+                                startGameFromVoice();
+                            }
+
+                            if (
+                                gameStarted &&
+                                transcriptSourceInput.value === "interim"
+                            ) {
                                 if (modeInput.value === "catch") {
                                     rebuildCatchWordsFromSource();
                                 } else {
@@ -3900,20 +4997,7 @@ I'll be back
                     }
                 };
 
-                startButton.addEventListener("click", async () => {
-                    try {
-                        await startVisualizer();
-                        startEchoSystem();
-                        startTalkbackCaptureSystem();
-                        recognition.start();
-                    } catch (error) {
-                        status.textContent =
-                            "Microphone access was blocked or unavailable.";
-                        stopEchoSystem();
-                        stopTalkbackCaptureSystem();
-                        stopVisualizer();
-                    }
-                });
+                startButton.addEventListener("click", startGame);
                 stopButton.addEventListener("click", () => recognition.stop());
             }
 
