@@ -5,29 +5,12 @@
         <meta name="viewport" content="width=device-width, initial-scale=1" />
         <title>PASSPHRASE</title>
         <style>
-            @font-face {
-                font-family: "Pexico";
-                src:
-                    url("./Web Fonts/Pexico.woff2") format("woff2"),
-                    url("./Web Fonts/Pexico.woff") format("woff");
-                font-weight: 400;
-                font-style: normal;
-                font-display: swap;
-            }
-
             :root {
                 color-scheme: dark;
                 font-family:
-                    "Pexico", ui-monospace, SFMono-Regular, Menlo, Consolas,
-                    monospace;
+                    ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
                 background: #0a0a0a;
                 color: #eeeeee;
-            }
-
-            *,
-            *::before,
-            *::after {
-                box-sizing: border-box;
             }
 
             body {
@@ -40,40 +23,46 @@
                 overflow: hidden;
             }
 
-            .top-ui {
-                position: fixed;
-                top: 20px;
-                left: 24px;
-                right: 24px;
-                z-index: 4;
-                display: grid;
-                grid-template-columns: 1fr auto 1fr;
-                align-items: center;
-                pointer-events: none;
-                color: #ffffff;
-                font-family: "Pexico", monospace;
-                text-shadow:
-                    0 0 8px rgba(255, 255, 255, 0.18),
-                    0 2px 12px #000000;
-            }
-
             h1 {
-                justify-self: center;
+                position: fixed;
+                top: 14px;
+                left: 50%;
+                z-index: 3;
+                transform: translateX(-50%);
+                font-size: 1.35rem;
                 margin: 0;
-                color: #ffffff;
-                font-family: "Pexico", monospace;
-                font-size: clamp(1rem, 2.2vw, 1.42rem);
-                font-weight: 400;
-                letter-spacing: 0.12em;
+                font-weight: 700;
+                color: #facc15;
+                letter-spacing: 0.08em;
                 text-align: center;
+                text-shadow: 0 2px 12px #000000;
             }
 
             .controls {
-                display: none;
+                position: fixed;
+                top: 54px;
+                left: 50%;
+                z-index: 3;
+                transform: translateX(-50%);
+                display: flex;
+                gap: 8px;
+                flex-wrap: wrap;
+                justify-content: center;
+                width: min(94vw, 480px);
             }
 
             #open-settings {
-                display: none;
+                position: fixed;
+                top: 10px;
+                right: 10px;
+                z-index: 4;
+                padding: 3px 7px;
+                border: 1px solid #333333;
+                border-radius: 5px;
+                background: rgba(32, 32, 32, 0.72);
+                color: #777777;
+                font-size: 0.72rem;
+                font-weight: 400;
             }
 
             #open-settings:hover {
@@ -92,188 +81,15 @@
                 user-select: none;
             }
 
-            .ascii-waveform-bg {
-                position: fixed;
-                inset: 0;
-                z-index: 0;
-                display: grid;
-                place-items: center;
-                margin: 0;
-                padding: 0;
-                color: rgba(255, 255, 255, 0.18);
-                font-family: "Pexico", ui-monospace, monospace;
-                font-size: clamp(9px, 1.15vw, 15px);
-                line-height: 1;
-                letter-spacing: 0;
-                white-space: pre;
-                text-align: center;
-                pointer-events: none;
-                user-select: none;
-                overflow: hidden;
-                mix-blend-mode: screen;
-            }
-
-            #level-intro {
-                position: fixed;
-                inset: 0;
-                z-index: 5;
-                display: grid;
-                place-items: center;
-                padding: 24px;
-                background: rgba(6, 6, 6, 0.72);
-                opacity: 0;
-                visibility: hidden;
-                pointer-events: none;
-                transition:
-                    opacity 220ms ease,
-                    visibility 220ms ease;
-            }
-
-            #level-intro.visible {
-                opacity: 1;
-                visibility: visible;
-            }
-
-            #level-intro.leaving {
-                animation: level-intro-glitch-out 420ms steps(3, end) both;
-            }
-
-            .level-intro-content {
-                width: min(440px, calc(100vw - 32px));
-                text-align: center;
-                color: #ffffff;
-                font-family: "Pexico", ui-monospace, monospace;
-                text-shadow:
-                    1px 0 0 rgba(239, 68, 68, 0.58),
-                    -1px 0 0 rgba(255, 255, 255, 0.3),
-                    0 0 18px rgba(255, 255, 255, 0.16);
-            }
-
-            #level-intro-title {
-                font-size: clamp(1.8rem, 8vw, 4rem);
-                letter-spacing: 0.12em;
-            }
-
-            #level-intro-subtitle {
-                margin-top: 8px;
-                color: #a8a8a8;
-                font-size: clamp(0.7rem, 2.5vw, 0.95rem);
-                letter-spacing: 0.1em;
-            }
-
-            #memory-phrase-layer {
-                position: fixed;
-                inset: 0;
-                z-index: 2;
-                display: none;
-                pointer-events: none;
-                overflow: hidden;
-            }
-
-            #memory-phrase-layer.active {
-                display: block;
-            }
-
-            .enemy-phrase {
-                position: absolute;
-                left: 0;
-                top: 0;
-                max-width: min(72vw, 640px);
-                color: #eeeeee;
-                font-family: "Pexico", ui-monospace, monospace;
-                font-size: clamp(0.88rem, 2.1vw, 1.45rem);
-                font-weight: 700;
-                letter-spacing: 0;
-                white-space: nowrap;
-                text-overflow: ellipsis;
-                overflow: hidden;
-                will-change: transform, opacity;
-                text-shadow:
-                    1px 0 0 rgba(255, 255, 255, 0.42),
-                    -2px 0 0 rgba(80, 80, 80, 0.55),
-                    0 0 10px rgba(255, 255, 255, 0.14);
-            }
-
-            .enemy-phrase--matrix {
-                color: #b8c0c2;
-                letter-spacing: 0.14em;
-                text-shadow:
-                    1px 0 0 rgba(255, 255, 255, 0.28),
-                    -2px 0 0 rgba(70, 92, 96, 0.48);
-            }
-
-            #dev-level-buttons {
-                position: fixed;
-                left: 12px;
-                bottom: 12px;
-                z-index: 20;
-                display: none;
-                max-width: calc(100vw - 24px);
-                gap: 6px;
-            }
-
-            #dev-level-buttons button {
-                padding: 6px 8px;
-                border: 1px solid #555555;
-                border-radius: 3px;
-                background: rgba(8, 8, 8, 0.88);
-                color: #a8a8a8;
-                font-family: "Pexico", ui-monospace, monospace;
-                font-size: 0.64rem;
-                letter-spacing: 0.04em;
-            }
-
-            #dev-level-buttons button:hover {
-                border-color: #9a9a9a;
-                color: #ffffff;
-            }
-
-            @keyframes level-intro-glitch-out {
-                0% {
-                    opacity: 1;
-                    transform: translateX(0);
-                }
-
-                45% {
-                    opacity: 0.74;
-                    transform: translateX(4px);
-                }
-
-                70% {
-                    opacity: 0.42;
-                    transform: translateX(-5px);
-                }
-
-                100% {
-                    opacity: 0;
-                    transform: translateX(0);
-                }
-            }
-
-            body.environment-undersea {
-                background: #03090c;
-            }
-
-            body.environment-undersea #game {
-                background: #03090c;
-            }
-
-            body.environment-undersea .ascii-waveform-bg {
-                color: rgba(190, 218, 224, 0.13);
-            }
-
             #game-over-screen {
                 position: fixed;
                 inset: 0;
                 z-index: 5;
                 display: none;
                 place-items: center;
-                width: 100vw;
-                height: 100dvh;
-                padding: clamp(12px, 3vw, 28px);
+                padding: 24px;
                 background: rgba(8, 8, 8, 0.88);
                 text-align: center;
-                overflow: hidden;
             }
 
             #game-over-screen.visible {
@@ -285,16 +101,12 @@
             }
 
             .game-over-panel {
-                width: min(960px, 100%);
-                max-height: calc(100dvh - clamp(24px, 6vw, 56px));
-                margin: auto;
-                padding: clamp(18px, 3vw, 32px);
+                width: min(520px, calc(100vw - 48px));
+                padding: 22px 24px;
                 border: 1px solid #3f3f3f;
                 border-radius: 8px;
                 background: rgba(17, 17, 17, 0.94);
                 box-shadow: 0 18px 48px rgba(0, 0, 0, 0.45);
-                overflow-x: hidden;
-                overflow-y: auto;
             }
 
             #game-over-screen.confirmed .game-over-panel {
@@ -304,33 +116,10 @@
 
             .game-over-title {
                 color: #ef4444;
-                font-size: clamp(1.25rem, 4vw, 2.35rem);
+                font-size: 1.4rem;
                 font-weight: 700;
                 letter-spacing: 0.1em;
                 text-transform: uppercase;
-                overflow-wrap: anywhere;
-            }
-
-            .game-over-title-wrap {
-                width: min(100%, 680px);
-                margin: 0 auto;
-                overflow: hidden;
-            }
-
-            .game-over-fire {
-                margin: 0 0 4px;
-                color: #f97316;
-                font-family: "Pexico", ui-monospace, monospace;
-                font-size: clamp(0.4rem, 1.65vw, 0.88rem);
-                line-height: 0.95;
-                letter-spacing: 0;
-                white-space: pre;
-                text-align: center;
-                text-shadow:
-                    0 0 5px rgba(249, 115, 22, 0.95),
-                    0 0 16px rgba(239, 68, 68, 0.72),
-                    0 0 24px rgba(250, 204, 21, 0.34);
-                animation: fire-flicker 720ms steps(2, end) infinite;
             }
 
             #game-over-screen.confirmed .game-over-title {
@@ -346,7 +135,6 @@
             .game-over-copy {
                 margin-top: 12px;
                 color: #d4d4d4;
-                overflow-wrap: anywhere;
             }
 
             .game-over-phrase {
@@ -355,34 +143,42 @@
                 color: #ffffff;
                 font-size: 1.1rem;
                 font-weight: 700;
-                overflow-wrap: anywhere;
             }
 
             #game-over-visualizer {
                 display: block;
                 width: 100%;
-                min-height: clamp(64px, 14vw, 86px);
+                height: 86px;
                 margin-top: 18px;
                 border-radius: 6px;
-                background: rgba(10, 10, 10, 0.42);
-                color: rgba(255, 255, 255, 0.72);
-                font-family: "Pexico", ui-monospace, monospace;
-                font-size: clamp(0.42rem, 1.55vw, 0.74rem);
-                line-height: 1.05;
-                letter-spacing: 0;
-                white-space: pre;
-                overflow: hidden;
-                text-align: center;
-                max-width: 100%;
+                background: rgba(10, 10, 10, 0.9);
             }
 
             #game-over-transcript {
-                display: none;
+                min-height: 72px;
+                max-height: 150px;
+                margin-top: 12px;
+                padding: 10px 12px;
+                border: 1px solid #333333;
+                border-radius: 8px;
+                background: rgba(10, 10, 10, 0.72);
+                color: #c7c7c7;
+                font-size: 0.92rem;
+                font-style: italic;
+                overflow: auto;
+                overflow-wrap: anywhere;
+                text-align: left;
             }
 
             #game-over-transcript .hit {
                 color: #facc15;
                 font-weight: 700;
+            }
+
+            #game-over-transcript .partial-hit {
+                color: #38bdf8;
+                font-weight: 700;
+                text-decoration: underline dotted;
             }
 
             @keyframes continue-panel-pulse {
@@ -534,11 +330,27 @@
             }
 
             #status {
-                display: none;
+                position: fixed;
+                top: 96px;
+                left: 50%;
+                z-index: 3;
+                transform: translateX(-50%);
+                min-height: 1.35em;
+                color: #aaaaaa;
+                text-align: center;
+                text-shadow: 0 2px 8px #000000;
             }
 
             #level-status {
-                display: none;
+                position: fixed;
+                top: 92px;
+                right: 14px;
+                z-index: 3;
+                width: min(280px, 32vw);
+                color: #aaaaaa;
+                font-size: 0.78rem;
+                text-align: right;
+                text-shadow: 0 2px 8px #000000;
             }
 
             #current-level {
@@ -554,12 +366,35 @@
                 font-style: italic;
             }
 
+            #visualizer {
+                position: fixed;
+                right: 14px;
+                bottom: 92px;
+                z-index: 3;
+                display: block;
+                width: min(300px, 42vw);
+                height: 52px;
+                border-radius: 6px;
+                background: rgba(17, 17, 17, 0.78);
+            }
+
             #transcript {
                 position: fixed;
                 left: 50%;
                 bottom: 14px;
                 z-index: 3;
-                display: none;
+                transform: translateX(-50%);
+                width: min(420px, calc(100vw - 28px));
+                min-height: 56px;
+                padding: 8px 14px;
+                border: 1px solid #333333;
+                border-radius: 8px;
+                background: rgba(26, 26, 26, 0.86);
+                color: #aaaaaa;
+                font-size: 0.95rem;
+                font-style: italic;
+                white-space: normal;
+                overflow-wrap: anywhere;
             }
 
             #transcript .hit {
@@ -567,8 +402,21 @@
                 font-weight: 700;
             }
 
+            #transcript .partial-hit {
+                color: #38bdf8;
+                font-weight: 700;
+                text-decoration: underline dotted;
+            }
+
             #side-panel-stack {
-                display: none;
+                position: fixed;
+                top: 90px;
+                left: 14px;
+                z-index: 3;
+                display: flex;
+                flex-direction: column;
+                gap: 8px;
+                align-items: flex-start;
             }
 
             #echo-panel {
@@ -822,36 +670,58 @@
                 position: fixed;
                 inset: 0;
                 z-index: 1;
-                background: transparent;
+                background: #111111;
                 overflow: hidden;
             }
 
             .timeline-header {
-                display: none;
+                position: fixed;
+                top: 12px;
+                left: 14px;
+                z-index: 3;
+                display: flex;
+                justify-content: space-between;
+                gap: 12px;
+                color: #aaaaaa;
+                font-size: 0.8rem;
+                text-shadow: 0 2px 8px #000000;
             }
 
             #timer-display {
-                display: none;
+                position: fixed;
+                top: 120px;
+                left: 50%;
+                z-index: 3;
+                transform: translateX(-50%);
+                font-size: 2.4rem;
+                line-height: 1;
+                color: #facc15;
+                text-align: center;
+                text-shadow: 0 2px 8px #000000;
             }
 
             #lives-display {
-                justify-self: end;
-                min-width: 5.5em;
-                font-family: "Pexico", monospace;
-                font-size: clamp(0.95rem, 1.6vw, 1.18rem);
+                position: fixed;
+                top: 166px;
+                left: 50%;
+                z-index: 3;
+                transform: translateX(-50%);
+                font-size: 1.4rem;
                 font-weight: 700;
-                letter-spacing: 0.12em;
+                letter-spacing: 0.14em;
                 white-space: nowrap;
-                text-align: right;
-                text-shadow: 0 0 8px rgba(255, 255, 255, 0.18);
+                text-align: center;
+                text-shadow: 0 2px 8px #000000;
             }
 
             #lives-display .hearts {
-                color: #ffffff;
+                color: #ef4444;
             }
 
             #lives-display .retries {
-                display: none;
+                color: #facc15;
+                font-size: 0.85rem;
+                letter-spacing: 0.08em;
             }
 
             #lives-display.refill {
@@ -870,28 +740,19 @@
 
             @keyframes refill-pulse {
                 0% {
-                    transform: scale(1);
+                    transform: translateX(-50%) scale(1);
                     filter: brightness(1);
                 }
 
                 35% {
-                    transform: scale(1.12);
+                    transform: translateX(-50%) scale(1.18);
                     filter: brightness(1.65);
                 }
 
                 100% {
-                    transform: scale(1);
+                    transform: translateX(-50%) scale(1);
                     filter: brightness(1);
                 }
-            }
-
-            #score-display {
-                justify-self: start;
-                color: #ffffff;
-                font-size: clamp(0.82rem, 1.6vw, 1rem);
-                letter-spacing: 0.08em;
-                white-space: nowrap;
-                text-shadow: 0 0 8px rgba(255, 255, 255, 0.18);
             }
 
             @keyframes refill-rise {
@@ -969,14 +830,6 @@
                     0 0 12px rgba(250, 204, 21, 0.22);
             }
 
-            .wall-brick {
-                color: #9ca3af;
-                font-weight: 700;
-                text-shadow:
-                    0 0 3px rgba(255, 255, 255, 0.22),
-                    0 0 9px rgba(255, 255, 255, 0.12);
-            }
-
             .wall-fire-top {
                 color: #f97316;
                 font-weight: 800;
@@ -1006,240 +859,6 @@
                     0 0 12px rgba(250, 204, 21, 0.28);
             }
 
-            .fence-wire {
-                color: #e2e2e2;
-                font-weight: 800;
-                text-shadow:
-                    0 0 5px rgba(255, 255, 255, 0.54),
-                    0 0 12px rgba(255, 255, 255, 0.16);
-            }
-
-            .fence-border {
-                color: #f2f2f2;
-                font-weight: 800;
-                text-shadow: 0 0 5px rgba(255, 255, 255, 0.42);
-            }
-
-            .fence-mesh {
-                color: #686868;
-                font-weight: 700;
-                text-shadow: 0 0 4px rgba(255, 255, 255, 0.08);
-            }
-
-            .fence-word {
-                color: #ffffff;
-                font-size: 1.22em;
-                font-weight: 800;
-                letter-spacing: 0.08em;
-                text-shadow:
-                    0 1px 0 #000000,
-                    0 0 5px #000000,
-                    0 0 12px rgba(255, 255, 255, 0.24);
-            }
-
-            .undersea-cable-road {
-                color: #34464a;
-                font-weight: 600;
-                text-shadow: 0 0 5px rgba(172, 210, 218, 0.08);
-            }
-
-            .keygen-character {
-                color: #d8d8d8;
-                font-weight: 700;
-                animation: keygen-pulse 1.6s ease-in-out infinite;
-                text-shadow:
-                    0 0 4px rgba(255, 255, 255, 0.34),
-                    0 0 12px rgba(250, 204, 21, 0.16);
-            }
-
-            .keygen-character--speaking,
-            .keygen-character-wave {
-                color: #ffffff;
-                text-shadow:
-                    0 0 5px rgba(255, 255, 255, 0.64),
-                    0 0 14px rgba(255, 255, 255, 0.22);
-            }
-
-            .keygen-character--success {
-                color: #ffffff;
-                text-shadow:
-                    0 0 6px rgba(34, 197, 94, 0.75),
-                    0 0 16px rgba(250, 204, 21, 0.32);
-            }
-
-            .keygen-character--fail,
-            .keygen-character--glitch,
-            .keygen-fail {
-                color: #ffffff;
-                animation:
-                    keygen-fail-shake 460ms steps(2, end),
-                    keygen-glitch 180ms steps(2, end) infinite;
-                text-shadow:
-                    1px 0 0 rgba(239, 68, 68, 0.85),
-                    -1px 0 0 rgba(255, 255, 255, 0.72),
-                    0 0 12px rgba(239, 68, 68, 0.42);
-            }
-
-            .keygen-character-code {
-                color: #ffffff;
-                font-weight: 800;
-                text-shadow:
-                    0 0 5px rgba(255, 255, 255, 0.58),
-                    0 0 12px rgba(255, 255, 255, 0.2);
-            }
-
-            .keygen-character-particle {
-                color: #d6d6d6;
-                font-weight: 700;
-                text-shadow: 0 0 8px rgba(255, 255, 255, 0.24);
-            }
-
-            .passport-character {
-                color: #62739a;
-                font-weight: 700;
-                animation: passport-idle 1.7s ease-in-out infinite;
-                text-shadow:
-                    0 0 4px rgba(120, 143, 190, 0.48),
-                    0 0 12px rgba(38, 55, 92, 0.34);
-            }
-
-            .passport-character--speaking,
-            .passport-character--success {
-                color: #ffffff;
-                text-shadow:
-                    0 0 6px rgba(255, 255, 255, 0.7),
-                    0 0 15px rgba(255, 255, 255, 0.22);
-            }
-
-            .passport-character--fail,
-            .passport-character--broken,
-            .passport-character--glitch {
-                color: #ffffff;
-                animation:
-                    keygen-fail-shake 460ms steps(2, end),
-                    passport-tear 150ms steps(2, end) infinite;
-                text-shadow:
-                    2px 0 0 rgba(239, 68, 68, 0.78),
-                    -1px 0 0 rgba(255, 255, 255, 0.7);
-            }
-
-            .passport-character-code {
-                color: #eadca8;
-                font-weight: 900;
-                text-shadow: 0 0 6px rgba(234, 220, 168, 0.42);
-            }
-
-            .passport-character-particle {
-                color: #8a98b7;
-                font-weight: 700;
-            }
-
-            .passport-character-emblem {
-                color: #eadca8;
-                font-weight: 800;
-                text-shadow: 0 0 5px rgba(234, 220, 168, 0.34);
-            }
-
-            .password-key-character {
-                color: #e5e5e5;
-                font-weight: 700;
-                animation: keygen-pulse 1.8s ease-in-out infinite;
-                text-shadow:
-                    0 0 4px rgba(255, 255, 255, 0.38),
-                    0 0 12px rgba(141, 181, 190, 0.18);
-            }
-
-            .password-key-character--speaking,
-            .password-key-character--success {
-                color: #ffffff;
-                text-shadow:
-                    0 0 6px rgba(255, 255, 255, 0.72),
-                    0 0 16px rgba(141, 181, 190, 0.32);
-            }
-
-            .password-key-character--fail,
-            .password-key-character--broken,
-            .password-key-character--glitch {
-                color: #ffffff;
-                animation:
-                    keygen-fail-shake 460ms steps(2, end),
-                    keygen-glitch 160ms steps(2, end) infinite;
-                text-shadow:
-                    2px 0 0 rgba(239, 68, 68, 0.78),
-                    -2px 0 0 rgba(255, 255, 255, 0.62);
-            }
-
-            .password-key-code {
-                color: #ffffff;
-                font-weight: 900;
-                text-shadow: 0 0 7px rgba(255, 255, 255, 0.58);
-            }
-
-            @keyframes keygen-pulse {
-                0%,
-                100% {
-                    filter: brightness(0.9);
-                }
-
-                50% {
-                    filter: brightness(1.22);
-                }
-            }
-
-            @keyframes passport-idle {
-                0%,
-                100% {
-                    filter: brightness(0.92);
-                    transform: translateY(0);
-                }
-
-                50% {
-                    filter: brightness(1.14);
-                    transform: translateY(-1px);
-                }
-            }
-
-            @keyframes passport-tear {
-                0%,
-                100% {
-                    transform: translateX(0) skewX(0);
-                }
-
-                50% {
-                    transform: translateX(1px) skewX(-2deg);
-                }
-            }
-
-            @keyframes keygen-glitch {
-                0%,
-                100% {
-                    transform: translateX(0);
-                }
-
-                50% {
-                    transform: translateX(1px);
-                }
-            }
-
-            @keyframes keygen-fail-shake {
-                0%,
-                100% {
-                    transform: translate(0, 0);
-                }
-
-                20% {
-                    transform: translate(-3px, 1px);
-                }
-
-                40% {
-                    transform: translate(4px, -1px);
-                }
-
-                60% {
-                    transform: translate(-2px, 1px);
-                }
-            }
-
             @keyframes fire-flicker {
                 0%,
                 100% {
@@ -1264,24 +883,11 @@
             }
 
             @media (max-width: 760px) {
-                .top-ui {
-                    top: 14px;
-                    left: 12px;
-                    right: 12px;
-                    grid-template-columns: 1fr auto 1fr;
-                    font-size: 0.78rem;
-                }
-
-                .game-over-panel {
-                    width: 100%;
-                    padding: 18px 14px;
-                    border-radius: 6px;
-                }
-
-                .game-over-round,
-                .game-over-copy,
-                .game-over-phrase {
-                    font-size: clamp(0.82rem, 3.5vw, 1rem);
+                #visualizer {
+                    left: 14px;
+                    right: auto;
+                    width: calc(100vw - 28px);
+                    bottom: 88px;
                 }
 
                 #echo-panel,
@@ -1290,11 +896,6 @@
                 #level-status,
                 #talkback-panel {
                     display: none;
-                }
-
-                .enemy-phrase {
-                    max-width: 78vw;
-                    font-size: clamp(0.72rem, 3.2vw, 1rem);
                 }
             }
         </style>
@@ -1317,33 +918,15 @@
                             Speak carefully. The system is listening.
                         </p>
                     </div>
-                    <button id="onboarding-action" type="button">Continue</button>
+                    <button id="onboarding-action" type="button">
+                        Continue
+                    </button>
                     <div class="onboarding-fallback">
                         You can also press Enter.
                     </div>
                 </div>
             </div>
-            <div class="top-ui" aria-label="Game status">
-                <div id="score-display">SCORE 0</div>
-                <h1>PASSPHRASE</h1>
-                <div id="lives-display"></div>
-            </div>
-            <pre
-                id="ascii-waveform-bg"
-                class="ascii-waveform-bg"
-                aria-hidden="true"
-            ></pre>
-            <div id="memory-phrase-layer" aria-hidden="true"></div>
-            <div id="level-intro" aria-live="assertive" aria-hidden="true">
-                <div class="level-intro-content">
-                    <div id="level-intro-title">LEVEL 1</div>
-                    <div id="level-intro-subtitle">BORDER CHECKPOINT</div>
-                </div>
-            </div>
-            <div id="dev-level-buttons" aria-label="Development level controls">
-                <button id="dev-level-1" type="button">LVL 1</button>
-                <button id="dev-level-2" type="button">LVL 2</button>
-            </div>
+            <h1>&#9650; PASSPHRASE &#9650;</h1>
             <main>
                 <section>
                     <div class="controls">
@@ -1369,6 +952,7 @@
 //////////////////////////////////////////</pre
                         >
                         <div id="timer-display">--.-</div>
+                        <div id="lives-display"></div>
                     </div>
                     <div id="side-panel-stack">
                         <div id="echo-panel" aria-live="polite">
@@ -1407,6 +991,12 @@
                             </div>
                         </div>
                     </div>
+                    <canvas
+                        id="visualizer"
+                        width="900"
+                        height="120"
+                        aria-label="Microphone audio visualizer"
+                    ></canvas>
                     <div id="transcript" aria-live="polite">
                         <span id="final"></span><span id="interim"></span>
                     </div>
@@ -1420,19 +1010,8 @@
                 aria-live="polite"
             >
                 <div class="game-over-panel">
-                    <div class="game-over-title-wrap">
-                        <pre
-                            id="game-over-fire"
-                            class="game-over-fire game-over-fire--top"
-                            aria-hidden="true"
-                        >   ^    ' /\   W    ^^    ' /\
-  /|\    /V \  |   /||\    /M \
- //|\\  / /\ \ |  //||\\  / /\ \
-/\/ \/\/ /  \ \|/\/ /||\ \/\~ \</pre
-                        >
-                        <div id="game-over-title" class="game-over-title">
-                            game over
-                        </div>
+                    <div id="game-over-title" class="game-over-title">
+                        game over
                     </div>
                     <div id="game-over-round" class="game-over-round">
                         round --
@@ -1441,10 +1020,12 @@
                         Say the imitation phrase to continue.
                     </div>
                     <span id="game-over-phrase" class="game-over-phrase"></span>
-                    <pre
+                    <canvas
                         id="game-over-visualizer"
+                        width="900"
+                        height="120"
                         aria-label="Game over microphone audio visualizer"
-                    ></pre>
+                    ></canvas>
                     <div id="game-over-transcript" aria-live="polite"></div>
                 </div>
             </div>
@@ -1549,10 +1130,11 @@
                 <label for="talkback-phrases">talk-back phrases</label>
                 <textarea id="talkback-phrases" aria-label="Talk-back phrases">
 You are doing better than you think.
-I heard that. Now try the next one.
-This road knows your voice.
-Keep going. The voice is learning you.</textarea
-                >
+The processing of personal data should be designed to serve mankind.
+The protection of natural persons in relation to the processing of personal data is a fundamental right.
+REGULATION (EU) 2016/679 OF THE EUROPEAN PARLIAMENT AND OF THE COUNCIL
+Without prejudice to Article 55, the supervisory authority of the main establishment or of the single establishment of the controller or processor shall be competent to act as lead supervisory authority for the cross-border processing carried out by that controller or processor in accordance with the procedure provided in Article 60.
+                </textarea>
             </div>
 
             <div class="sequence-panel">
@@ -1624,7 +1206,6 @@ I'll be back
             const echoModeInput = document.querySelector("#echo-mode");
             const gameOverScreen = document.querySelector("#game-over-screen");
             const gameOverTitle = document.querySelector("#game-over-title");
-            const gameOverFire = document.querySelector("#game-over-fire");
             const gameOverRound = document.querySelector("#game-over-round");
             const gameOverCopy = document.querySelector("#game-over-copy");
             const gameOverPhrase = document.querySelector("#game-over-phrase");
@@ -1663,169 +1244,23 @@ I'll be back
                 document.querySelector("#current-sequence");
             const timerDisplay = document.querySelector("#timer-display");
             const livesDisplay = document.querySelector("#lives-display");
-            const scoreDisplay = document.querySelector("#score-display");
             const timeline = document.querySelector("#timeline");
-            const levelIntro = document.querySelector("#level-intro");
-            const levelIntroTitle = document.querySelector(
-                "#level-intro-title",
-            );
-            const levelIntroSubtitle = document.querySelector(
-                "#level-intro-subtitle",
-            );
-            const memoryPhraseLayer = document.querySelector(
-                "#memory-phrase-layer",
-            );
-            const devLevelButtons = document.querySelector(
-                "#dev-level-buttons",
-            );
-            const devLevel1Button = document.querySelector("#dev-level-1");
-            const devLevel2Button = document.querySelector("#dev-level-2");
             const status = document.querySelector("#status");
             const finalText = document.querySelector("#final");
             const interimText = document.querySelector("#interim");
-            const asciiWaveformBackground = document.querySelector(
-                "#ascii-waveform-bg",
-            );
+            const visualizer = document.querySelector("#visualizer");
+            const canvas = visualizer.getContext("2d");
             const gameOverVisualizer = document.querySelector(
                 "#game-over-visualizer",
             );
+            const gameOverCanvas = gameOverVisualizer.getContext("2d");
             const finalChunks = [];
             const caughtWords = new Set();
             let interimTranscript = "";
             let handlingRecognitionResult = false;
             let transcriptWipedDuringResult = false;
             let transcriptWasWiped = false;
-            const DEV_MODE = true;
-            const LEVEL_1_WORD_COUNT = 18;
-            const LEVEL_INTRO_DURATION_MS = 1800;
-            const LEVEL_2_BASE_ENEMY_COUNT = 8;
-            const LEVEL_2_ENEMIES_PER_WORD = 1;
-            const LEVEL_2_MAX_ENEMY_COUNT = 28;
-            const LEVEL_2_SIDE_ENEMY_CHANCE = 0.45;
-            const LEVEL_2_MATRIX_SYMBOL_CHANCE = 0.35;
-            const LEVEL_2_SIDE_SPEED_MIN = 1;
-            const LEVEL_2_SIDE_SPEED_MAX = 3;
-            const LEVEL_2_ENEMY_MIN_SCALE = 1.4;
-            const LEVEL_2_ENEMY_MAX_SCALE = 2.6;
-            const LEVEL_2_ENEMY_SPEED_MIN = 0.6;
-            const LEVEL_2_ENEMY_SPEED_MAX = 2.2;
-            const LEVEL_2_ENEMY_GLITCH_CHANCE = 0.08;
-            const LEVEL_2_ENEMY_DIRECTION_CHANGE_CHANCE = 0.015;
-            const LEVEL_2_ENEMY_BURST_CHANCE = 0.006;
-            const LEVEL_2_ENEMY_OPACITY_MIN = 0.35;
-            const LEVEL_2_ENEMY_OPACITY_MAX = 0.85;
-            const LEVEL_2_ENEMY_OVERLAP_FREQUENCY = 0.68;
-            const LEVEL_2_ENEMY_Z_INDEX = 2;
-            const LEVEL_2_MATRIX_SYMBOLS =
-                "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789#@%/\\|_=+~^";
-            const LEVEL_2_AUDIO_DEGRADATION_START = 0;
-            const LEVEL_2_AUDIO_DEGRADATION_PER_WORD = 0.06;
-            const LEVEL_2_AUDIO_DEGRADATION_MAX = 1;
-            const LEVEL_2_MOCK_PHRASES = [
-                "I'll be back",
-                "Access granted",
-                "Open the gate",
-                "Trust the signal",
-                "Follow the packet",
-                "Break the wall",
-                "Voice confirmed",
-                "System awake",
-            ];
-            const LEVEL_2_ROUNDS = [
-                {
-                    name: "Level 2",
-                    phrases: [
-                        "Monkey",
-                        "Only necessary cookies",
-                        "Take my data!",
-                        "I am the master of my data",
-                        "I am not a robot",
-                        "Giraffe",
-                        "Accept all cookies",
-                        "Decline all cookies",
-                        "Subscribe to newsletter",
-                        "Spider",
-                        "Allow affiliates to reach out to me",
-                        "Do not track",
-                        "My dog sings a song",
-                        "Captcha!",
-                    ],
-                },
-                {
-                    name: "Level 2 Round 2",
-                    phrases: [
-                        "I am an addict",
-                        "Translate this page",
-                        "Say hello to the silver fox",
-                        "Accept terms and conditions",
-                        "Remember me",
-                        "Ant",
-                        "Go to the tracking",
-                        "Create a new account",
-                        "Log in to your account",
-                        "Privacy and conditions",
-                        "Undercover mountain goat",
-                        "Allow access to microphone",
-                        "Always allow access to microphone",
-                        "Voice input is not supported in this browser",
-                    ],
-                },
-                {
-                    name: "Level 2 Round 3",
-                    phrases: [
-                        "Open shell to server",
-                        "Scan for open ports",
-                        "Handshake",
-                        "Chameleon country club",
-                        "Brute force password",
-                        "Initiate remote login",
-                        "Hop to file server",
-                        "The racoon the koala and the capybara",
-                        "Delete *",
-                        "Delete *.mp3 files",
-                        "Delete voice data",
-                        "Move to audio folder",
-                        "Download my data",
-                        "Verify you are human",
-                        "I need my dopamine hit",
-                        "OK computer",
-                    ],
-                },
-            ];
-            const LEVEL_2_PHRASES = LEVEL_2_ROUNDS.flatMap(
-                (round) => round.phrases,
-            );
-            const levels = [
-                {
-                    id: 1,
-                    name: "Level 1",
-                    subtitle: "BORDER CHECKPOINT",
-                    environment: "border-fence",
-                    get phrases() {
-                        return parseTargetPlan()
-                            .slice(0, LEVEL_1_WORD_COUNT)
-                            .map((entry) => entry.text);
-                    },
-                },
-                {
-                    id: 2,
-                    name: "Level 2",
-                    subtitle: "UNDERSEA CABLE",
-                    environment: "undersea-cable",
-                    phrases: LEVEL_2_PHRASES,
-                },
-            ];
-            let currentLevel = 1;
-            let currentWordIndex = 0;
-            let totalWordsPerLevel = LEVEL_1_WORD_COUNT;
-            const completedPhrasesFromLevel1 = [];
-            let levelTransitionActive = false;
-            let levelIntroTimer = null;
-            let memoryPhraseFrame = null;
-            let memoryPhraseLastFrame = 0;
-            let memoryPhrases = [];
-            let memoryPhraseSource = [];
-            let level2CompletedWordCount = 0;
+            let sequenceIndex = 0;
             let sequenceFailed = false;
             let failReason = "timeout";
             let deadline = null;
@@ -1864,7 +1299,6 @@ I'll be back
             let analyser;
             let micStream;
             let visualizerFrame;
-            let idleVisualizerFrame;
             let roadAnimationFrame;
             let lastRoadRender = 0;
             let onboardingStep = 1;
@@ -1874,14 +1308,6 @@ I'll be back
             let recognitionListening = false;
             let onboardingVoiceBlocked = false;
             let lastMusicDegradationLevel = 0;
-            let lastGameOverFireFrame = -1;
-            let lastKeygenHitAt = 0;
-            const KeygenCharacter = {
-                state: "idle",
-                stateUntil: 0,
-                signalUntil: 0,
-                distortionLevel: 0,
-            };
 
             const AudioManager = (() => {
                 const MUSIC_VOLUME = 0.45;
@@ -1992,8 +1418,7 @@ I'll be back
                             if (node.phaser >= 1) {
                                 node.phaser -= 1;
                                 node.last =
-                                    step *
-                                    Math.floor(input[i] / step + 0.5);
+                                    step * Math.floor(input[i] / step + 0.5);
                             }
 
                             output[i] = node.last;
@@ -2012,7 +1437,9 @@ I'll be back
                         window.AudioContext || window.webkitAudioContext;
 
                     if (!Context) {
-                        warn("Web Audio is unavailable; music effects disabled.");
+                        warn(
+                            "Web Audio is unavailable; music effects disabled.",
+                        );
                         return false;
                     }
 
@@ -2059,10 +1486,7 @@ I'll be back
                     try {
                         if (ensureMusicGraph() && musicContext) {
                             await musicContext.resume();
-                            applyMusicDegradationAmount(
-                                degradationAmount,
-                                "resume",
-                            );
+                            updateMusicDegradation(currentMusicLevel || 1);
                         }
 
                         if (!mainTheme.paused) {
@@ -2070,11 +1494,11 @@ I'll be back
                         }
 
                         if (!mainThemePlayPromise) {
-                            mainThemePlayPromise = mainTheme.play().finally(
-                                () => {
+                            mainThemePlayPromise = mainTheme
+                                .play()
+                                .finally(() => {
                                     mainThemePlayPromise = null;
-                                },
-                            );
+                                });
                         }
 
                         await mainThemePlayPromise;
@@ -2122,8 +1546,7 @@ I'll be back
                             (timestamp - startedAt) / duration,
                         );
                         mainTheme.volume =
-                            fromVolume +
-                            (targetVolume - fromVolume) * progress;
+                            fromVolume + (targetVolume - fromVolume) * progress;
 
                         if (progress < 1) {
                             musicFadeFrame = requestAnimationFrame(step);
@@ -2204,8 +1627,7 @@ I'll be back
                         setBitcrusherAmount(bitcrusherAmount);
 
                         if (progress < 1) {
-                            effectTransitionFrame =
-                                requestAnimationFrame(step);
+                            effectTransitionFrame = requestAnimationFrame(step);
                         } else {
                             effectTransitionFrame = null;
                         }
@@ -2214,22 +1636,27 @@ I'll be back
                     effectTransitionFrame = requestAnimationFrame(step);
                 }
 
-                function applyMusicDegradationAmount(
-                    requestedAmount,
-                    source = "level",
-                ) {
+                function updateMusicDegradation(level) {
+                    currentMusicLevel = Math.max(1, Number(level) || 1);
+                    const maxDegradationLevel = 5;
                     const amount = Math.min(
+                        Math.max(
+                            (currentMusicLevel - 1) / (maxDegradationLevel - 1),
+                            0,
+                        ),
                         1,
-                        Math.max(0, Number(requestedAmount) || 0),
                     );
                     degradationAmount = amount;
                     const distortionAmount = amount;
-                    const bitcrusherAmount = amount;
+                    const bitcrusherAmount = Math.max(
+                        0,
+                        (amount - 0.35) / 0.65,
+                    );
                     const lowpassFrequency = 16000 - amount * 11500;
 
                     if (!unlocked) {
                         console.log("[audio] music degradation queued", {
-                            source,
+                            level: currentMusicLevel,
                             amount: degradationAmount,
                             distortionAmount,
                             bitcrusherAmount,
@@ -2247,10 +1674,14 @@ I'll be back
                         bitcrusherAmount,
                         900,
                     );
-                    smoothSetAudioParam(lowpassNode.frequency, lowpassFrequency, 900);
+                    smoothSetAudioParam(
+                        lowpassNode.frequency,
+                        lowpassFrequency,
+                        900,
+                    );
 
                     console.log("[audio] music degradation updated", {
-                        source,
+                        level: currentMusicLevel,
                         amount: degradationAmount,
                         distortionAmount,
                         bitcrusherAmount,
@@ -2259,31 +1690,6 @@ I'll be back
                             : "clean",
                         lowpassFrequency,
                     });
-                }
-
-                function updateMusicDegradation(level) {
-                    currentMusicLevel = Math.max(1, Number(level) || 1);
-                    const maxDegradationLevel = 5;
-                    const amount = Math.min(
-                        Math.max(
-                            (currentMusicLevel - 1) /
-                                (maxDegradationLevel - 1),
-                            0,
-                        ),
-                        1,
-                    );
-                    applyMusicDegradationAmount(amount, "level");
-                }
-
-                function updateLevel2MusicDegradation(completedWords) {
-                    currentMusicLevel = 2;
-                    const amount = Math.min(
-                        LEVEL_2_AUDIO_DEGRADATION_MAX,
-                        LEVEL_2_AUDIO_DEGRADATION_START +
-                            Math.max(0, Number(completedWords) || 0) *
-                                LEVEL_2_AUDIO_DEGRADATION_PER_WORD,
-                    );
-                    applyMusicDegradationAmount(amount, "level-2-word");
                 }
 
                 function restoreMusic() {
@@ -2331,10 +1737,16 @@ I'll be back
                             : DUCK_HOLD_MS;
                         duckMusic(durationMs);
                         instance.play().catch((error) => {
-                            warn("Sound effect " + name + " could not play.", error);
+                            warn(
+                                "Sound effect " + name + " could not play.",
+                                error,
+                            );
                         });
                     } catch (error) {
-                        warn("Sound effect " + name + " could not start.", error);
+                        warn(
+                            "Sound effect " + name + " could not start.",
+                            error,
+                        );
                     }
                 }
 
@@ -2346,7 +1758,6 @@ I'll be back
                     restoreMusic,
                     fadeMusicVolume,
                     updateMusicDegradation,
-                    updateLevel2MusicDegradation,
                     setDistortionAmount,
                     setBitcrusherAmount,
                     playLevelFailedSound: () => playSfx("levelFailed"),
@@ -2360,10 +1771,7 @@ I'll be back
             const playLevelFailedSound = AudioManager.playLevelFailedSound;
             const playRespawnSound = AudioManager.playRespawnSound;
             const playWallPassSound = AudioManager.playWallPassSound;
-            const updateMusicDegradation =
-                AudioManager.updateMusicDegradation;
-            const updateLevel2MusicDegradation =
-                AudioManager.updateLevel2MusicDegradation;
+            const updateMusicDegradation = AudioManager.updateMusicDegradation;
 
             function getRoadMetrics() {
                 const styles = getComputedStyle(timeline);
@@ -2388,17 +1796,9 @@ I'll be back
                     Math.ceil(window.innerHeight / lineHeight) + 2,
                 );
                 const center = Math.floor(width / 2);
-                const maxLanePixelWidth = Math.min(
-                    520,
-                    Math.max(280, window.innerWidth - 32),
-                );
-                const lanePixelWidth = Math.min(
-                    Math.max(window.innerWidth * 0.42, 320),
-                    maxLanePixelWidth,
-                );
                 const laneHalfWidth = Math.max(
-                    13,
-                    Math.floor(lanePixelWidth / charWidth / 2),
+                    14,
+                    Math.min(30, Math.floor(width * 0.24)),
                 );
 
                 return {
@@ -2407,7 +1807,7 @@ I'll be back
                     laneLeft: center - laneHalfWidth,
                     laneRight: center + laneHalfWidth,
                     carCol: center - 2,
-                    carRow: height - 13,
+                    carRow: height - 5,
                 };
             }
 
@@ -2500,8 +1900,7 @@ I'll be back
                     isSequenceMode() &&
                     getTargetWords().length &&
                     !deadline &&
-                    !sequenceFailed &&
-                    !levelTransitionActive
+                    !sequenceFailed
                 ) {
                     startSequenceTimer();
                 }
@@ -2555,49 +1954,8 @@ I'll be back
                 return entries;
             }
 
-            function getLevelConfig(levelId = currentLevel) {
-                return (
-                    levels.find((level) => level.id === levelId) || levels[0]
-                );
-            }
-
-            function getLevelEntries(levelId = currentLevel) {
-                const level = getLevelConfig(levelId);
-
-                if (level.id === 1) {
-                    return parseTargetPlan()
-                        .slice(0, LEVEL_1_WORD_COUNT)
-                        .map((entry) => ({
-                            ...entry,
-                            levelTitle: level.name,
-                            levelIndex: 0,
-                        }));
-                }
-
-                if (level.id === 2) {
-                    return LEVEL_2_ROUNDS.flatMap(
-                        (round, roundIndex) =>
-                            round.phrases.map((text) => ({
-                                text,
-                                levelTitle: level.name,
-                                sequenceTitle: round.name,
-                                levelIndex: level.id - 1,
-                                sequenceIndex: roundIndex,
-                            })),
-                    );
-                }
-
-                return level.phrases.map((text, index) => ({
-                    text,
-                    levelTitle: level.name,
-                    sequenceTitle: "Signal descent",
-                    levelIndex: level.id - 1,
-                    sequenceIndex: 0,
-                }));
-            }
-
             function getTargetEntries() {
-                return getLevelEntries(currentLevel);
+                return parseTargetPlan();
             }
 
             function getTargetWords() {
@@ -2609,11 +1967,11 @@ I'll be back
                     return null;
                 }
 
-                return words[Math.min(currentWordIndex, words.length - 1)];
+                return words[Math.min(sequenceIndex, words.length - 1)];
             }
 
             function renderLevelStatus(entries = getTargetEntries()) {
-                if (entries.length && currentWordIndex >= entries.length) {
+                if (entries.length && sequenceIndex >= entries.length) {
                     currentLevelTitle.textContent = "complete";
                     currentSequenceTitle.textContent = "all sequences spoken";
                     return;
@@ -2632,539 +1990,15 @@ I'll be back
             }
 
             function syncMusicDegradationToLevel(entries = getTargetEntries()) {
-                const level = currentLevel;
+                const entry = getCurrentTargetEntry(entries);
+                const level = entry ? entry.levelIndex + 1 : 1;
 
                 if (level === lastMusicDegradationLevel) {
                     return;
                 }
 
                 lastMusicDegradationLevel = level;
-                if (level === 2) {
-                    updateLevel2MusicDegradation(
-                        level2CompletedWordCount,
-                    );
-                } else {
-                    updateMusicDegradation(1);
-                }
-                updateKeygenDistortion(level);
-            }
-
-            function resetLevelProgressionEffects(levelId) {
-                level2CompletedWordCount = 0;
-
-                if (levelId === 2) {
-                    updateLevel2MusicDegradation(0);
-                } else {
-                    updateMusicDegradation(1);
-                }
-
-                syncLevel2EnemyCount();
-            }
-
-            function registerSuccessfulLevel2Phrase() {
-                if (currentLevel !== 2) {
-                    return;
-                }
-
-                level2CompletedWordCount += 1;
-                syncLevel2EnemyCount();
-                updateLevel2MusicDegradation(
-                    level2CompletedWordCount,
-                );
-            }
-
-            function recordCompletedPhrase(phrase) {
-                if (
-                    currentLevel === 1 &&
-                    phrase &&
-                    !completedPhrasesFromLevel1.includes(phrase)
-                ) {
-                    completedPhrasesFromLevel1.push(phrase);
-                }
-            }
-
-            function applyLevelEnvironment(level, useMockMemories = false) {
-                const isUndersea = level.environment === "undersea-cable";
-                document.body.classList.toggle(
-                    "environment-undersea",
-                    isUndersea,
-                );
-
-                if (isUndersea) {
-                    startMemoryPhraseSystem(useMockMemories);
-                } else {
-                    stopMemoryPhraseSystem();
-                }
-            }
-
-            function setActiveLevel(
-                levelId,
-                { showIntro = true, useMockMemories = false } = {},
-            ) {
-                const level = getLevelConfig(levelId);
-                currentLevel = level.id;
-                currentWordIndex = 0;
-                totalWordsPerLevel = getLevelEntries(level.id).length;
-                levelTransitionActive = showIntro;
-                sequenceFailed = false;
-                failReason = "timeout";
-                deadline = null;
-                wordCaughtThisBeat = false;
-                gateOpenedAt = 0;
-                wallEchoFiredThisBeat = false;
-                livesLeft = getLivesLimit();
-                retriesLeft = getRetriesLimit();
-                refillAnimationUntil = 0;
-                caughtWords.clear();
-                lastKeygenHitAt = 0;
-                KeygenCharacter.state = "idle";
-                KeygenCharacter.stateUntil = 0;
-                KeygenCharacter.signalUntil = 0;
-                resetLevelProgressionEffects(level.id);
-                stopSequenceTimer();
-                clearTranscript();
-                applyLevelEnvironment(level, useMockMemories);
-                renderGameOverScreen();
-                renderWordList();
-                renderSequenceStatus();
-
-                if (showIntro) {
-                    showLevelIntro(level);
-                } else {
-                    beginActiveLevelGameplay();
-                }
-            }
-
-            function showLevelIntro(level = getLevelConfig()) {
-                if (levelIntroTimer) {
-                    clearTimeout(levelIntroTimer);
-                }
-
-                levelTransitionActive = true;
-                deadline = null;
-                stopSequenceTimer();
-                levelIntroTitle.textContent = level.name.toUpperCase();
-                levelIntroSubtitle.textContent = level.subtitle;
-                levelIntro.classList.remove("leaving");
-                levelIntro.classList.add("visible");
-                levelIntro.setAttribute("aria-hidden", "false");
-                renderSequenceStatus();
-
-                levelIntroTimer = setTimeout(() => {
-                    levelIntro.classList.add("leaving");
-                    levelIntroTimer = setTimeout(() => {
-                        levelIntro.classList.remove("visible", "leaving");
-                        levelIntro.setAttribute("aria-hidden", "true");
-                        levelIntroTimer = null;
-                        beginActiveLevelGameplay();
-                    }, 420);
-                }, LEVEL_INTRO_DURATION_MS - 420);
-            }
-
-            function beginActiveLevelGameplay() {
-                levelTransitionActive = false;
-                renderSequenceStatus();
-
-                if (gameStarted) {
-                    startRoadAnimation();
-                }
-
-                if (
-                    gameStarted &&
-                    isSequenceMode() &&
-                    getTargetWords().length &&
-                    !sequenceFailed
-                ) {
-                    startSequenceTimer();
-                }
-            }
-
-            function transitionToNextLevel() {
-                const nextLevel = levels.find(
-                    (level) => level.id === currentLevel + 1,
-                );
-
-                if (!nextLevel) {
-                    return false;
-                }
-
-                setActiveLevel(nextLevel.id, { showIntro: true });
-                return true;
-            }
-
-            function setKeygenCharacterState(state, durationMs = 0) {
-                KeygenCharacter.state = state;
-                KeygenCharacter.stateUntil = durationMs ? Date.now() + durationMs : 0;
-            }
-
-            function getKeygenCharacterState() {
-                if (
-                    KeygenCharacter.state !== "idle" &&
-                    KeygenCharacter.stateUntil &&
-                    Date.now() > KeygenCharacter.stateUntil
-                ) {
-                    KeygenCharacter.state = "idle";
-                    KeygenCharacter.stateUntil = 0;
-                }
-
-                return KeygenCharacter.state;
-            }
-
-            function triggerVoiceSignal(state = "speaking") {
-                KeygenCharacter.signalUntil = Date.now() + 760;
-                setKeygenCharacterState(state, state === "success" ? 900 : 520);
-            }
-
-            function triggerKeygenFail() {
-                KeygenCharacter.signalUntil = 0;
-                setKeygenCharacterState("fail", 1100);
-            }
-
-            function triggerKeygenCollisionFail() {
-                KeygenCharacter.signalUntil = 0;
-                setKeygenCharacterState("broken", 900);
-                playLevelFailedSound();
-            }
-
-            function triggerKeygenRespawn() {
-                setKeygenCharacterState("glitch", 650);
-            }
-
-            function updateKeygenDistortion(level) {
-                const maxLevel = 5;
-                KeygenCharacter.distortionLevel = Math.min(
-                    Math.max(
-                        ((Number(level) || 1) - 1) / (maxLevel - 1),
-                        0,
-                    ),
-                    1,
-                );
-            }
-
-            function checkWallKeygenCollision(wallRow, metrics) {
-                if (
-                    !isSequenceMode() ||
-                    sequenceFailed ||
-                    wordCaughtThisBeat ||
-                    !deadline
-                ) {
-                    return false;
-                }
-
-                const now = Date.now();
-
-                if (now - lastKeygenHitAt < KEYGEN_HIT_COOLDOWN_MS) {
-                    return false;
-                }
-
-                const keygenBounds = getPlayerBounds(metrics);
-                const wallBottom = wallRow + WALL_HEIGHT - 1;
-
-                if (wallBottom < keygenBounds.top) {
-                    return false;
-                }
-
-                lastKeygenHitAt = now;
-                triggerKeygenCollisionFail();
-                console.log("[collision] level obstacle hit player");
-                handleDeadline();
-                return true;
-            }
-
-            function renderScoreDisplay(entries = getTargetEntries()) {
-                if (!scoreDisplay) {
-                    return;
-                }
-
-                const total = entries.length;
-                const levelScore = isSequenceMode()
-                    ? Math.min(currentWordIndex, total)
-                    : caughtWords.size;
-                const score =
-                    currentLevel === 1
-                        ? levelScore
-                        : completedPhrasesFromLevel1.length + levelScore;
-                scoreDisplay.textContent = `SCORE ${score}`;
-            }
-
-            function getPlayerBounds(metrics = getRoadMetrics()) {
-                const center = Math.floor(
-                    (metrics.laneLeft + metrics.laneRight) / 2,
-                );
-                const isPasswordKey = currentLevel === 2;
-                const width = isPasswordKey
-                    ? PASSWORD_KEY_WIDTH
-                    : PASSPORT_WIDTH;
-                const height = isPasswordKey
-                    ? PASSWORD_KEY_HEIGHT
-                    : PASSPORT_HEIGHT;
-                const bottom = isPasswordKey
-                    ? Math.min(metrics.height - 3, metrics.carRow + 5)
-                    : metrics.carRow - 3 + height - 1;
-
-                return {
-                    left: center - Math.floor(width / 2),
-                    right: center - Math.floor(width / 2) + width - 1,
-                    top: bottom - height + 1,
-                    bottom,
-                    width,
-                    height,
-                };
-            }
-
-            function padPlayerLine(line, width) {
-                const clipped = line.slice(0, width);
-                const leftPad = Math.floor(
-                    (width - clipped.length) / 2,
-                );
-
-                return (
-                    " ".repeat(Math.max(0, leftPad)) + clipped
-                ).padEnd(width, " ");
-            }
-
-            function createKeygenLines() {
-                const tick = Math.floor(Date.now() / 140);
-                const distortion = KeygenCharacter.distortionLevel;
-                const jitter = distortion > 0.55 && tick % 2 ? 1 : 0;
-                const isBroken = getKeygenCharacterState() === "broken";
-                const lines = (
-                    isBroken
-                        ? [
-                              " x +--/--+    ",
-                              "   |INVALID|  ",
-                              " ' |A?-## | x ",
-                              "   |NO KEY |  ",
-                              " % +_/==\\+    ",
-                              "    /    \\    ",
-                          ]
-                        : [
-                              " . +--------+  ",
-                              "   |KEYGEN  |  ",
-                              " ' |A7-X9   |x ",
-                              "   |ACCESS? |  ",
-                              " % +--==--+   ",
-                              "     ||  ||    ",
-                          ]
-                ).map((line) => padPlayerLine(line, KEYGEN_WIDTH));
-
-                return lines.map((line, rowIndex) => {
-                    const chars = line.split("");
-                    const particleLimit = Math.round(distortion * 5);
-
-                    for (let i = 0; i < particleLimit; i += 1) {
-                        const h = hashCell(tick + rowIndex * 37, i * 19);
-                        const col = h % chars.length;
-
-                        if (chars[col] === " ") {
-                            chars[col] =
-                                KEYGEN_PARTICLES[
-                                    (h >>> 8) % KEYGEN_PARTICLES.length
-                                ];
-                        }
-                    }
-
-                    if (
-                        jitter &&
-                        (rowIndex === 1 || rowIndex === 4) &&
-                        chars[0] === " "
-                    ) {
-                        chars[0] = rowIndex === 1 ? "#" : "'";
-                    }
-
-                    return chars.join("");
-                });
-            }
-
-            function createPassportLines() {
-                const tick = Math.floor(Date.now() / 160);
-                const state = getKeygenCharacterState();
-                const distortion = KeygenCharacter.distortionLevel;
-                const isDamaged = state === "fail" || state === "broken";
-                const lines = isDamaged
-                    ? [
-                          "  _____/_____  ",
-                          " /  DENIED  /| ",
-                          "/ PASSPORT / | ",
-                          "|----X-----| | ",
-                          "|          | | ",
-                          "|   ./-.   | | ",
-                          "|  / /# \\  | | ",
-                          "| |  X/ | | | ",
-                          "|  \\__X/  | | ",
-                          "|          | | ",
-                          "|  STAMP:X | | ",
-                          "|  DOC:##  | | ",
-                          "|          | / ",
-                          "|____/_____|/  ",
-                      ]
-                    : [
-                          "  ___________  ",
-                          " /          /| ",
-                          "/ PASSPORT / | ",
-                          "|----------| | ",
-                          "|          | | ",
-                          "|   .--.   | | ",
-                          "|  / /\\ \\  | | ",
-                          "| | <\\/> | | | ",
-                          "|  \\____/  | | ",
-                          "|          | | ",
-                          "|  TRAVEL  | | ",
-                          "|  DOC:**  | | ",
-                          "|          | / ",
-                          "|__________|/  ",
-                      ];
-
-                return lines.map((line, rowIndex) => {
-                    const chars = padPlayerLine(
-                        line,
-                        PASSPORT_WIDTH,
-                    ).split("");
-
-                    if (
-                        distortion > 0 &&
-                        (tick + rowIndex) % 11 === 0 &&
-                        chars[0] === " "
-                    ) {
-                        chars[0] = rowIndex % 2 ? "." : "'";
-                    }
-
-                    return chars.join("");
-                });
-            }
-
-            function createPasswordKeyLines() {
-                const tick = Math.floor(Date.now() / 150);
-                const distortion = KeygenCharacter.distortionLevel;
-                const state = getKeygenCharacterState();
-                const isDamaged = state === "fail" || state === "broken";
-                const lines = isDamaged
-                    ? [
-                          "       _/__       ",
-                          "      |  ?#|      ",
-                          "      | [/__      ",
-                          "      |  _/|      ",
-                          "      | |  '      ",
-                          "    x | |         ",
-                          "      | |   %     ",
-                          "      |/|         ",
-                          "   __/  /\\__      ",
-                          "  +----/------+   ",
-                          "  |  PVV1234  |   ",
-                          "  +-----\\-----+   ",
-                          "     #  0x  '     ",
-                      ]
-                    : [
-                          "       ____       ",
-                          "      |  __|      ",
-                          "      | [__       ",
-                          "      |  __|      ",
-                          "      | |         ",
-                          "      | |         ",
-                          "      | |         ",
-                          "      | |         ",
-                          "   __/   \\__      ",
-                          "  +-----------+   ",
-                          "  |  PVV1234  |   ",
-                          "  +-----------+   ",
-                          "      ' 0x '      ",
-                      ];
-
-                return lines.map((line, rowIndex) => {
-                    const chars = padPlayerLine(
-                        line,
-                        PASSWORD_KEY_WIDTH,
-                    ).split("");
-
-                    if (
-                        distortion > 0.18 &&
-                        (tick + rowIndex) % 7 === 0
-                    ) {
-                        const col =
-                            hashCell(tick + rowIndex, rowIndex * 31) %
-                            chars.length;
-
-                        if (chars[col] === " ") {
-                            chars[col] =
-                                KEYGEN_PARTICLES[
-                                    (tick + rowIndex) %
-                                        KEYGEN_PARTICLES.length
-                                ];
-                        }
-                    }
-
-                    return chars.join("");
-                });
-            }
-
-            function createPlayerLines() {
-                return currentLevel === 2
-                    ? createPasswordKeyLines()
-                    : createPassportLines();
-            }
-
-            function createVoiceSignalLines(width) {
-                const tick = Math.floor(Date.now() / 120);
-                const frames =
-                    currentLevel === 2
-                        ? [
-                              ["        ^        ", "      ~~|~~      ", "    ~~~|||~~~    "],
-                              ["       /|\\       ", "     ~~ | ~~     ", "   ~~~~|||~~~~   "],
-                              ["        |        ", "     ~~/|\\~~     ", "  ~~~~||.||~~~~  "],
-                          ]
-                        : [
-                              ["        ^        ", "      .~|~.      ", "    ~~~|||~~~    "],
-                              ["       /|\\       ", "     ~~ | ~~     ", "   ~~~~|||~~~~   "],
-                              ["        |        ", "      ~/|\\~      ", "  ~~~~||.||~~~~  "],
-                          ];
-
-                return frames[tick % frames.length].map((line) =>
-                    padPlayerLine(line, width),
-                );
-            }
-
-            function drawPlayerCharacter(row, rowIndex, metrics) {
-                const bounds = getPlayerBounds(metrics);
-                const signalActive = Date.now() < KeygenCharacter.signalUntil;
-                const signalTop = bounds.top - KEYGEN_SIGNAL_ROWS;
-
-                if (
-                    signalActive &&
-                    rowIndex >= signalTop &&
-                    rowIndex < bounds.top
-                ) {
-                    for (let i = 0; i < bounds.width; i += 1) {
-                        row[bounds.left + i] = " ";
-                    }
-
-                    const line =
-                        createVoiceSignalLines(bounds.width)[
-                            rowIndex - signalTop
-                        ] || "";
-
-                    for (let i = 0; i < line.length; i += 1) {
-                        if (line[i] !== " ") {
-                            row[bounds.left + i] = line[i];
-                        }
-                    }
-                }
-
-                if (rowIndex < bounds.top || rowIndex > bounds.bottom) {
-                    return;
-                }
-
-                for (let i = 0; i < bounds.width; i += 1) {
-                    row[bounds.left + i] = " ";
-                }
-
-                const tokenLine =
-                    createPlayerLines()[rowIndex - bounds.top] || "";
-
-                for (let i = 0; i < tokenLine.length; i += 1) {
-                    if (tokenLine[i] !== " ") {
-                        row[bounds.left + i] = tokenLine[i];
-                    }
-                }
+                updateMusicDegradation(level);
             }
 
             function renderWordList() {
@@ -3200,14 +2034,14 @@ I'll be back
                     const isChecked = caughtWords.has(normalized);
                     const isCurrent =
                         isSequenceMode() &&
-                        index === currentWordIndex &&
+                        index === sequenceIndex &&
                         !sequenceFailed;
                     item.className = [
                         isChecked ? "checked" : "",
                         isCurrent ? "current" : "",
                         sequenceFailed &&
                         isSequenceMode() &&
-                        index === currentWordIndex
+                        index === sequenceIndex
                             ? "failed"
                             : "",
                     ]
@@ -3236,27 +2070,76 @@ I'll be back
                     return;
                 }
 
-                // Longest first so multi-word phrases win over their prefixes.
-                const matcher = new RegExp(
-                    `\\b(?:${words
-                        .slice()
-                        .sort((a, b) => b.length - a.length)
-                        .map(escapeRegExp)
-                        .join("|")})\\b`,
-                    "gi",
-                );
+                const matches = collectTranscriptMatches(text, words);
                 let last = 0;
 
-                for (const match of text.matchAll(matcher)) {
-                    if (match.index > last) {
-                        container.append(text.slice(last, match.index));
+                for (const match of matches) {
+                    if (match.start < last) {
+                        continue;
                     }
 
-                    container.append(colorSpan("hit", match[0]));
-                    last = match.index + match[0].length;
+                    if (match.start > last) {
+                        container.append(text.slice(last, match.start));
+                    }
+
+                    container.append(
+                        colorSpan(
+                            match.kind === "exact" ? "hit" : "partial-hit",
+                            text.slice(match.start, match.end),
+                        ),
+                    );
+                    last = match.end;
                 }
 
                 container.append(text.slice(last));
+            }
+
+            function collectTranscriptMatches(text, words) {
+                const matches = [];
+
+                // Exact wins over partial; longest first avoids phrase prefixes.
+                for (const word of words
+                    .slice()
+                    .sort((a, b) => b.length - a.length)) {
+                    const matcher = new RegExp(
+                        `\\b${escapeRegExp(word)}\\b`,
+                        "gi",
+                    );
+
+                    for (const match of text.matchAll(matcher)) {
+                        matches.push({
+                            kind: "exact",
+                            start: match.index,
+                            end: match.index + match[0].length,
+                        });
+                    }
+                }
+
+                for (const word of words) {
+                    const match = findPartialTargetMatch(text, word);
+
+                    if (match) {
+                        matches.push({ kind: "partial", ...match });
+                    }
+                }
+
+                return matches
+                    .sort((a, b) => {
+                        if (a.start !== b.start) {
+                            return a.start - b.start;
+                        }
+                        if (a.kind !== b.kind) {
+                            return a.kind === "exact" ? -1 : 1;
+                        }
+                        return b.end - b.start - (a.end - a.start);
+                    })
+                    .filter((match, index, sorted) => {
+                        return !sorted.some(
+                            (other, otherIndex) =>
+                                otherIndex < index &&
+                                rangesOverlap(match, other),
+                        );
+                    });
             }
 
             function clearTranscript() {
@@ -3294,20 +2177,114 @@ I'll be back
                 return target.trim().split(/\s+/).length > 1;
             }
 
+            function rangesOverlap(a, b) {
+                return a.start < b.end && b.start < a.end;
+            }
+
             function tokenizeForFuzzy(text) {
                 const tokens = [];
                 const matcher = /[a-z0-9]+(?:'[a-z0-9]+)?/gi;
                 let match;
 
                 while ((match = matcher.exec(text))) {
-                    tokens.push({
-                        value: match[0].toLowerCase(),
-                        start: match.index,
-                        end: match.index + match[0].length,
-                    });
+                    const value = match[0].toLowerCase();
+                    const expanded =
+                        value === "i'm" || value === "im"
+                            ? ["i", "am"]
+                            : [value];
+
+                    for (const token of expanded) {
+                        tokens.push({
+                            value: token,
+                            start: match.index,
+                            end: match.index + match[0].length,
+                        });
+                    }
                 }
 
                 return tokens;
+            }
+
+            function characterEditDistance(a, b) {
+                const previous = Array.from(
+                    { length: b.length + 1 },
+                    (_, index) => index,
+                );
+
+                for (let i = 1; i <= a.length; i += 1) {
+                    const current = [i];
+
+                    for (let j = 1; j <= b.length; j += 1) {
+                        current[j] =
+                            a[i - 1] === b[j - 1]
+                                ? previous[j - 1]
+                                : Math.min(
+                                      previous[j - 1],
+                                      previous[j],
+                                      current[j - 1],
+                                  ) + 1;
+                    }
+
+                    previous.splice(0, previous.length, ...current);
+                }
+
+                return previous[b.length];
+            }
+
+            function wordSimilarity(a, b) {
+                const maxLength = Math.max(a.length, b.length);
+
+                if (!maxLength) {
+                    return 1;
+                }
+
+                return 1 - characterEditDistance(a, b) / maxLength;
+            }
+
+            function getPartialWordThreshold(target) {
+                return target.length <= 5 ? 0.8 : 0.7;
+            }
+
+            function findPartialTargetMatch(text, target, fromIndex = 0) {
+                const targetTokens = tokenizeForFuzzy(target);
+
+                if (targetTokens.length !== 1) {
+                    return null;
+                }
+
+                const targetValue = targetTokens[0].value;
+
+                if (targetValue.length < 4) {
+                    return null;
+                }
+
+                const threshold = getPartialWordThreshold(targetValue);
+                let best = null;
+
+                for (const token of tokenizeForFuzzy(text)) {
+                    if (token.end <= fromIndex || token.value === targetValue) {
+                        continue;
+                    }
+
+                    if (
+                        Math.abs(token.value.length - targetValue.length) >
+                        Math.max(2, Math.ceil(targetValue.length * 0.35))
+                    ) {
+                        continue;
+                    }
+
+                    const score = wordSimilarity(token.value, targetValue);
+
+                    if (score >= threshold && (!best || score > best.score)) {
+                        best = {
+                            start: token.start,
+                            end: token.end,
+                            score,
+                        };
+                    }
+                }
+
+                return best;
             }
 
             function tokenEditDistance(a, b) {
@@ -3399,33 +2376,99 @@ I'll be back
                     }
                 }
 
+                const minimumPartialLength = Math.max(
+                    2,
+                    Math.ceil(targetTokens.length * 0.6),
+                );
+                const partialThreshold = Math.max(0.6, threshold - 0.18);
+
+                for (
+                    let targetStart = 0;
+                    targetStart <= targetTokens.length - minimumPartialLength;
+                    targetStart += 1
+                ) {
+                    for (
+                        let targetEnd = targetStart + minimumPartialLength;
+                        targetEnd <= targetTokens.length;
+                        targetEnd += 1
+                    ) {
+                        if (
+                            targetTokens.length <= 5 &&
+                            targetEnd < targetTokens.length
+                        ) {
+                            continue;
+                        }
+
+                        const targetWindow = targetTokens.slice(
+                            targetStart,
+                            targetEnd,
+                        );
+                        const partialSlack = Math.max(
+                            1,
+                            Math.ceil(
+                                targetWindow.length * (1 - partialThreshold),
+                            ) + 1,
+                        );
+
+                        for (
+                            let start = 0;
+                            start < textTokens.length;
+                            start += 1
+                        ) {
+                            let bestAtStart = null;
+
+                            for (
+                                let length = Math.max(
+                                    minimumPartialLength,
+                                    targetWindow.length - partialSlack,
+                                );
+                                length <= targetWindow.length + partialSlack;
+                                length += 1
+                            ) {
+                                const window = textTokens.slice(
+                                    start,
+                                    start + length,
+                                );
+
+                                if (window.length !== length) {
+                                    continue;
+                                }
+
+                                const distance = tokenEditDistance(
+                                    targetWindow,
+                                    window.map((token) => token.value),
+                                );
+                                const score =
+                                    1 -
+                                    distance /
+                                        Math.max(
+                                            targetWindow.length,
+                                            window.length,
+                                        );
+
+                                if (
+                                    score >= partialThreshold &&
+                                    (!bestAtStart ||
+                                        score > bestAtStart.score)
+                                ) {
+                                    bestAtStart = {
+                                        score,
+                                        end: window[window.length - 1].end,
+                                    };
+                                }
+                            }
+
+                            if (bestAtStart) {
+                                return bestAtStart.end;
+                            }
+                        }
+                    }
+                }
+
                 return -1;
             }
 
             function findTargetEnd(text, target, fromIndex = 0) {
-                const spokenTarget = target
-                    .replace(/\*/g, " star ")
-                    .replace(/\.(?=[a-z0-9])/gi, " ")
-                    .replace(/[.,!?]+$/g, "")
-                    .replace(/\s+/g, " ")
-                    .trim();
-
-                if (
-                    spokenTarget &&
-                    spokenTarget.toLowerCase() !== target.toLowerCase()
-                ) {
-                    const spokenMatcher = new RegExp(
-                        "\\b" + escapeRegExp(spokenTarget) + "\\b",
-                        "gi",
-                    );
-                    spokenMatcher.lastIndex = fromIndex;
-                    const spokenMatch = spokenMatcher.exec(text);
-
-                    if (spokenMatch) {
-                        return spokenMatch.index + spokenMatch[0].length;
-                    }
-                }
-
                 const matcher = new RegExp(
                     `\\b${escapeRegExp(target)}\\b`,
                     "gi",
@@ -3437,9 +2480,16 @@ I'll be back
                     return match.index + match[0].length;
                 }
 
-                return isSentenceTarget(target)
-                    ? findFuzzySentenceEnd(text, target, fromIndex)
-                    : -1;
+                if (isSentenceTarget(target)) {
+                    return findFuzzySentenceEnd(text, target, fromIndex);
+                }
+
+                const partialMatch = findPartialTargetMatch(
+                    text,
+                    target,
+                    fromIndex,
+                );
+                return partialMatch ? partialMatch.end : -1;
             }
 
             function textMatchesTarget(text, target) {
@@ -3447,10 +2497,6 @@ I'll be back
             }
 
             function catchWords(text) {
-                if (levelTransitionActive) {
-                    return;
-                }
-
                 let changed = false;
 
                 for (const word of getTargetWords()) {
@@ -3466,7 +2512,6 @@ I'll be back
                 }
 
                 if (changed) {
-                    triggerVoiceSignal("success");
                     maybeTriggerTalkback("beat");
                 }
             }
@@ -3537,7 +2582,7 @@ I'll be back
                 }
 
                 const words = getTargetWords();
-                const round = Math.min(currentWordIndex + 1, words.length || 1);
+                const round = Math.min(sequenceIndex + 1, words.length || 1);
                 gameOverTitle.textContent = gameOverContinuing
                     ? "phrase accepted"
                     : "game over";
@@ -3553,12 +2598,11 @@ I'll be back
                     gameOverContinuing,
                 );
                 gameOverScreen.classList.add("visible");
-                updateGameOverFire(true);
             }
 
             function resetSequence() {
                 clearGameOverContinueTimer();
-                currentWordIndex = 0;
+                sequenceIndex = 0;
                 sequenceFailed = false;
                 failReason = "timeout";
                 deadline = null;
@@ -3568,7 +2612,6 @@ I'll be back
                 gateOpenedAt = 0;
                 refillAnimationUntil = 0;
                 caughtWords.clear();
-                resetLevelProgressionEffects(currentLevel);
 
                 if (modeInput.value === "catch") {
                     catchWords(getSelectedTranscriptText());
@@ -3586,7 +2629,6 @@ I'll be back
                 sequenceFailed = true;
                 failReason = reason || "timeout";
                 deadline = null;
-                triggerKeygenFail();
                 playLevelFailedSound();
                 stopSequenceTimer();
                 renderSequenceStatus();
@@ -3598,11 +2640,6 @@ I'll be back
                 clearGameOverContinueTimer();
                 deadline = null;
                 stopSequenceTimer();
-
-                if (transitionToNextLevel()) {
-                    return;
-                }
-
                 renderSequenceStatus();
                 renderWordList();
                 renderGameOverScreen();
@@ -3631,11 +2668,10 @@ I'll be back
                     wordCaughtThisBeat = false;
                     gateOpenedAt = 0;
                     wallEchoFiredThisBeat = false;
-                    triggerKeygenRespawn();
                     playRespawnSound();
                     renderGameOverScreen();
 
-                    if (currentWordIndex < getTargetWords().length) {
+                    if (sequenceIndex < getTargetWords().length) {
                         startSequenceTimer();
                     } else {
                         completeSequence();
@@ -3666,22 +2702,20 @@ I'll be back
                 }
 
                 if (wordCaughtThisBeat) {
-                    recordCompletedPhrase(
-                        getTargetWords()[currentWordIndex],
-                    );
-                    currentWordIndex += 1;
-                    registerSuccessfulLevel2Phrase();
+                    sequenceIndex += 1;
                     wordCaughtThisBeat = false;
                     gateOpenedAt = 0;
                     refillLivesAndRetries();
                     playWallPassSound();
 
-                    if (currentWordIndex >= getTargetWords().length) {
+                    if (sequenceIndex >= getTargetWords().length) {
                         completeSequence();
                         return;
                     }
 
-                    startSequenceTimer();
+                    // Anchor the next deadline to the previous one so the
+                    // beat stays fixed instead of drifting with the timer.
+                    deadline += getSecondsLimit() * 1000;
                     wallEchoFiredThisBeat = false;
                     maybeTriggerEcho("beat");
                     maybeTriggerTalkback("beat");
@@ -3706,16 +2740,16 @@ I'll be back
                 if (retriesLeft > 0) {
                     retriesLeft -= 1;
                 } else {
-                    currentWordIndex += 1;
+                    sequenceIndex += 1;
                     retriesLeft = getRetriesLimit();
 
-                    if (currentWordIndex >= getTargetWords().length) {
+                    if (sequenceIndex >= getTargetWords().length) {
                         completeSequence();
                         return;
                     }
                 }
 
-                startSequenceTimer();
+                deadline += getSecondsLimit() * 1000;
                 wallEchoFiredThisBeat = false;
                 maybeTriggerEcho("life");
                 maybeTriggerTalkback("life");
@@ -3725,20 +2759,8 @@ I'll be back
 
             function startSequenceTimer() {
                 stopSequenceTimer();
-
-                if (
-                    levelTransitionActive ||
-                    sequenceFailed ||
-                    currentWordIndex >= getTargetWords().length
-                ) {
-                    deadline = null;
-                    return;
-                }
-
                 deadline = Date.now() + getSecondsLimit() * 1000;
-                lastRoadRender = 0;
                 wallEchoFiredThisBeat = false;
-                startRoadAnimation();
                 timerInterval = setInterval(() => {
                     if (deadline && Date.now() >= deadline) {
                         handleDeadline();
@@ -3781,11 +2803,11 @@ I'll be back
 
                 if (sequenceFailed) {
                     const entry = getCurrentTargetEntry(entries);
-                    sequenceStatus.textContent = `sequence: ${failReason}\nlevel: ${entry ? entry.levelTitle : "done"}\npart: ${entry ? entry.sequenceTitle : "done"}\nexpected: ${words[currentWordIndex] || "done"}\npress reset seq`;
+                    sequenceStatus.textContent = `sequence: ${failReason}\nlevel: ${entry ? entry.levelTitle : "done"}\npart: ${entry ? entry.sequenceTitle : "done"}\nexpected: ${words[sequenceIndex] || "done"}\npress reset seq`;
                     return;
                 }
 
-                if (currentWordIndex >= words.length) {
+                if (sequenceIndex >= words.length) {
                     sequenceStatus.textContent =
                         "sequence: complete\nall words spoken";
                     return;
@@ -3793,7 +2815,7 @@ I'll be back
 
                 if (!deadline) {
                     const entry = getCurrentTargetEntry(entries);
-                    sequenceStatus.textContent = `sequence: armed\nlevel: ${entry.levelTitle}\npart: ${entry.sequenceTitle}\nspeak first: ${words[currentWordIndex]}`;
+                    sequenceStatus.textContent = `sequence: armed\nlevel: ${entry.levelTitle}\npart: ${entry.sequenceTitle}\nspeak first: ${words[sequenceIndex]}`;
                     return;
                 }
 
@@ -3809,7 +2831,7 @@ I'll be back
                 }
 
                 const entry = getCurrentTargetEntry(entries);
-                sequenceStatus.textContent = `sequence: running\nlevel: ${entry.levelTitle}\npart: ${entry.sequenceTitle}\nnext: ${words[currentWordIndex]}\ntime: ${remaining.toFixed(1)}s${extra}`;
+                sequenceStatus.textContent = `sequence: running\nlevel: ${entry.levelTitle}\npart: ${entry.sequenceTitle}\nnext: ${words[sequenceIndex]}\ntime: ${remaining.toFixed(1)}s${extra}`;
             }
 
             function colorSpan(className, text) {
@@ -3851,30 +2873,9 @@ I'll be back
             const WALL_FIRE_HEIGHT = 4;
             const WALL_HEIGHT = 15;
             const WALL_MIN_WIDTH = 48;
-            const WALL_WORD_PADDING = 28;
+            const WALL_WORD_PADDING = 22;
             const WALL_WORD_ROW = 10;
-            const WALL_BRICK_SIDE_WIDTH = 12;
-            const FENCE_WIRE_HEIGHT = 4;
-            const FENCE_WIRE_OVERHANG = 3;
-            const FENCE_MESH_PATTERNS = ["/  \\", "\\  /"];
-            const LEVEL_2_CABLE_PATTERNS = [
-                "|:",
-                ":|",
-                "#|",
-                "0|",
-                "~|",
-                "+|",
-            ];
             const GATE_ANIM_MS = 900;
-            const KEYGEN_WIDTH = 17;
-            const KEYGEN_HEIGHT = 6;
-            const PASSPORT_WIDTH = 15;
-            const PASSPORT_HEIGHT = 14;
-            const PASSWORD_KEY_WIDTH = 19;
-            const PASSWORD_KEY_HEIGHT = 13;
-            const KEYGEN_SIGNAL_ROWS = 3;
-            const KEYGEN_PARTICLES = ["'", ".", "0", "x", "%", ":", "?"];
-            const KEYGEN_HIT_COOLDOWN_MS = 1000;
 
             function groundProp(worldRow, col) {
                 const h = hashCell(worldRow, col);
@@ -3897,81 +2898,18 @@ I'll be back
                 return " ";
             }
 
-            function underseaProp(worldRow, col) {
-                const h = hashCell(worldRow * 3, col * 11);
-
-                if (h % 149 === 0) {
-                    return "o";
-                }
-
-                if (h % 61 === 0) {
-                    return ".";
-                }
-
-                if (h % 97 === 0) {
-                    return "~";
-                }
-
-                return " ";
-            }
-
-            function getLevel2CableRoadTop(metrics = getRoadMetrics()) {
-                return 0;
-            }
-
-            function renderLevel2CableRoad(row, rowIndex, metrics) {
-                const cableTop = getLevel2CableRoadTop(metrics);
-
-                if (rowIndex < cableTop) {
-                    return;
-                }
-
-                const movement = Math.floor(Date.now() / 240);
-
-                for (
-                    let col = metrics.laneLeft - 2;
-                    col <= metrics.laneRight + 2;
-                    col += 1
-                ) {
-                    const localCol = col - (metrics.laneLeft - 2);
-                    const cableSpacing = 4;
-                    const stripIndex = Math.floor(localCol / cableSpacing);
-                    const pattern =
-                        LEVEL_2_CABLE_PATTERNS[
-                            stripIndex % LEVEL_2_CABLE_PATTERNS.length
-                        ];
-
-                    if (localCol % cableSpacing !== 0) {
-                        row[col] = " ";
-                    } else {
-                        row[col] =
-                            pattern[
-                                (rowIndex - cableTop +
-                                    movement +
-                                    stripIndex) %
-                                    pattern.length
-                            ];
-                    }
-                }
-            }
-
             function renderRoad(word, wallRow, gateProgress = null) {
-                const metrics = getRoadMetrics();
-                const { laneLeft, laneRight } = metrics;
+                const { laneLeft, laneRight } = getRoadMetrics();
                 const rows = buildRoad(word, wallRow, gateProgress);
                 const fragment = document.createDocumentFragment();
                 const tick = Math.floor(Date.now() / 120);
-                const isFenceLevel =
-                    getLevelConfig().environment === "border-fence";
 
                 rows.forEach((row, r) => {
                     const mid = row.slice(laneLeft - 1, laneRight + 2);
-                    const isObstacleRow =
-                        word &&
-                        r >= wallRow &&
-                        r < wallRow + WALL_HEIGHT;
+                    const isFirewallRow =
+                        word && r >= wallRow && r < wallRow + WALL_HEIGHT;
                     const isGateRow =
-                        isObstacleRow &&
+                        isFirewallRow &&
                         gateProgress !== null &&
                         r >= wallRow &&
                         r < wallRow + WALL_HEIGHT;
@@ -3980,133 +2918,15 @@ I'll be back
                         colorSpan("ground", row.slice(0, laneLeft - 1)),
                         isGateRow
                             ? colorSpan(`gate-${(tick + r) % 4}`, mid)
-                            : isObstacleRow
-                              ? isFenceLevel
-                                  ? renderChainLinkFence(
-                                        row,
-                                        r,
-                                        word,
-                                        wallRow,
-                                    )
-                                  : renderBurningWall(row, r, word, wallRow)
-                              : renderRoadMiddle(row, r, metrics),
+                            : isFirewallRow
+                              ? renderBurningWall(row, r, word, wallRow)
+                              : document.createTextNode(mid),
                         colorSpan("ground", row.slice(laneRight + 2)),
                         document.createTextNode("\n"),
                     );
                 });
 
                 timeline.replaceChildren(fragment);
-            }
-
-            function getPlayerCharClass(char, rowIndex, col, metrics) {
-                if (char === " ") {
-                    return "";
-                }
-
-                const bounds = getPlayerBounds(metrics);
-                const signalTop = bounds.top - KEYGEN_SIGNAL_ROWS;
-
-                if (
-                    Date.now() < KeygenCharacter.signalUntil &&
-                    rowIndex >= signalTop &&
-                    rowIndex < bounds.top &&
-                    col >= bounds.left &&
-                    col <= bounds.right
-                ) {
-                    return "keygen-character-wave";
-                }
-
-                if (
-                    rowIndex < bounds.top ||
-                    rowIndex > bounds.bottom ||
-                    col < bounds.left ||
-                    col > bounds.right
-                ) {
-                    const cableTop = getLevel2CableRoadTop(metrics);
-
-                    return currentLevel === 2 &&
-                        rowIndex >= cableTop &&
-                        col >= metrics.laneLeft - 2 &&
-                        col <= metrics.laneRight + 2
-                        ? "undersea-cable-road"
-                        : "";
-                }
-
-                const isPasswordKey = currentLevel === 2;
-                const playerRow = rowIndex - bounds.top;
-                const playerCol = col - bounds.left;
-
-                if (
-                    !isPasswordKey &&
-                    playerRow >= 5 &&
-                    playerRow <= 8 &&
-                    playerCol >= 3 &&
-                    playerCol <= 10
-                ) {
-                    return "passport-character-emblem";
-                }
-
-                if (/[A-Z0-9?]/.test(char)) {
-                    return isPasswordKey
-                        ? "password-key-code"
-                        : "passport-character-code";
-                }
-
-                if (/[.%'x#]/i.test(char)) {
-                    return isPasswordKey
-                        ? "password-key-character"
-                        : "passport-character-particle";
-                }
-
-                const state = getKeygenCharacterState();
-                if (isPasswordKey) {
-                    return (
-                        "password-key-character password-key-character--" +
-                        state
-                    );
-                }
-
-                return "passport-character passport-character--" + state;
-            }
-
-            function renderRoadMiddle(row, rowIndex, metrics) {
-                const { laneLeft, laneRight } = metrics;
-                const fragment = document.createDocumentFragment();
-                let currentClass = null;
-                let buffer = "";
-
-                function flush() {
-                    if (!buffer) {
-                        return;
-                    }
-
-                    fragment.append(
-                        currentClass
-                            ? colorSpan(currentClass, buffer)
-                            : document.createTextNode(buffer),
-                    );
-                    buffer = "";
-                }
-
-                for (let col = laneLeft - 1; col <= laneRight + 1; col += 1) {
-                    const char = row[col] || " ";
-                    const className = getPlayerCharClass(
-                        char,
-                        rowIndex,
-                        col,
-                        metrics,
-                    );
-
-                    if (className !== currentClass) {
-                        flush();
-                        currentClass = className;
-                    }
-
-                    buffer += char;
-                }
-
-                flush();
-                return fragment;
             }
 
             function getWallBounds(word, laneLeft, laneRight) {
@@ -4146,224 +2966,8 @@ I'll be back
 
             function getCurrentFireFrame(width) {
                 const frames = createScaryFireFrames(width);
-                const index =
-                    Math.floor(Date.now() / 160) % frames.length;
+                const index = Math.floor(Date.now() / 160) % frames.length;
                 return frames[index];
-            }
-
-            function shouldRenderWallBricks(rowOffset) {
-                return (
-                    rowOffset > WALL_FIRE_HEIGHT &&
-                    rowOffset < WALL_HEIGHT - 1 &&
-                    Math.abs(rowOffset - WALL_WORD_ROW) > 2
-                );
-            }
-
-            function createBrickSidePattern(rowOffset, sideWidth, mirrored) {
-                const patterns = mirrored
-                    ? ["--==--==--==", "==--==--==--"]
-                    : ["==--==--==--", "--==--==--=="];
-                const pattern = patterns[rowOffset % patterns.length];
-                let output = "";
-
-                while (output.length < sideWidth) {
-                    output += pattern;
-                }
-
-                return output.slice(0, sideWidth);
-            }
-
-            function repeatObstaclePattern(pattern, width, offset = 0) {
-                let repeated = pattern;
-
-                while (repeated.length < width + pattern.length) {
-                    repeated += pattern;
-                }
-
-                return repeated.slice(offset % pattern.length, offset + width);
-            }
-
-            function createBarbedWireLine(width, rowOffset) {
-                const patterns = [
-                    "     .----.      ",
-                    "  __/      \\__  ",
-                    "-/   *  *     \\-",
-                    " \\__*____*___/  ",
-                ];
-                return repeatObstaclePattern(
-                    patterns[rowOffset % patterns.length],
-                    width,
-                    0,
-                );
-            }
-
-            function getFenceBodyBounds(bounds) {
-                return {
-                    wallLeft: Math.min(
-                        bounds.wallRight - 2,
-                        bounds.wallLeft + FENCE_WIRE_OVERHANG,
-                    ),
-                    wallRight: Math.max(
-                        bounds.wallLeft + 2,
-                        bounds.wallRight - FENCE_WIRE_OVERHANG,
-                    ),
-                };
-            }
-
-            function fillChainLinkFenceRow(
-                row,
-                rowOffset,
-                bounds,
-                scroll,
-            ) {
-                const width = bounds.wallRight - bounds.wallLeft + 1;
-                const bodyBounds = getFenceBodyBounds(bounds);
-                const wireLine =
-                    rowOffset < FENCE_WIRE_HEIGHT
-                        ? createBarbedWireLine(width, rowOffset)
-                        : "";
-
-                for (
-                    let col = bounds.wallLeft;
-                    col <= bounds.wallRight;
-                    col += 1
-                ) {
-                    const localCol = col - bounds.wallLeft;
-                    const isSide =
-                        col === bodyBounds.wallLeft ||
-                        col === bodyBounds.wallRight;
-                    const isRail =
-                        rowOffset === FENCE_WIRE_HEIGHT ||
-                        rowOffset === WALL_HEIGHT - 1;
-                    const cleanWordBand =
-                        Math.abs(rowOffset - WALL_WORD_ROW) <= 1;
-
-                    if (rowOffset < FENCE_WIRE_HEIGHT) {
-                        row[col] = wireLine[localCol] || " ";
-                    } else if (
-                        col < bodyBounds.wallLeft ||
-                        col > bodyBounds.wallRight
-                    ) {
-                        row[col] = " ";
-                    } else if (isRail) {
-                        row[col] = isSide ? "+" : "-";
-                    } else if (isSide) {
-                        row[col] = "|";
-                    } else if (cleanWordBand) {
-                        row[col] = " ";
-                    } else {
-                        const pattern =
-                            FENCE_MESH_PATTERNS[
-                                rowOffset %
-                                    FENCE_MESH_PATTERNS.length
-                            ];
-                        row[col] =
-                            pattern[
-                                (localCol + rowOffset) % pattern.length
-                            ];
-                    }
-                }
-            }
-
-            function fillDigitalFirewallRow(
-                row,
-                rowIndex,
-                rowOffset,
-                bounds,
-                word,
-                scroll,
-                fireFrame,
-            ) {
-                for (
-                    let col = bounds.wallLeft;
-                    col <= bounds.wallRight;
-                    col += 1
-                ) {
-                    const h = hashCell(rowIndex + col * 17, scroll);
-                    const fireCol = col - bounds.wallLeft;
-                    const isBorder =
-                        col === bounds.wallLeft ||
-                        col === bounds.wallRight ||
-                        rowOffset === WALL_FIRE_HEIGHT ||
-                        rowOffset === WALL_HEIGHT - 1;
-                    const sideBrickWidth = Math.min(
-                        WALL_BRICK_SIDE_WIDTH,
-                        Math.floor(
-                            (bounds.wallRight -
-                                bounds.wallLeft -
-                                word.length -
-                                8) /
-                                2,
-                        ),
-                    );
-                    const leftBrickStart = bounds.wallLeft + 2;
-                    const rightBrickStart =
-                        bounds.wallRight - sideBrickWidth - 1;
-                    const isLeftBrick =
-                        shouldRenderWallBricks(rowOffset) &&
-                        col >= leftBrickStart &&
-                        col < leftBrickStart + sideBrickWidth;
-                    const isRightBrick =
-                        shouldRenderWallBricks(rowOffset) &&
-                        col >= rightBrickStart &&
-                        col < rightBrickStart + sideBrickWidth;
-                    const isFireSpot =
-                        rowOffset === WALL_FIRE_HEIGHT + 1 && h % 23 === 0;
-
-                    if (rowOffset < WALL_FIRE_HEIGHT) {
-                        row[col] = fireFrame[rowOffset][fireCol] || " ";
-                    } else if (isFireSpot) {
-                        row[col] =
-                            WALL_FIRE_SPOT_CHARS[
-                                (h >>> 9) % WALL_FIRE_SPOT_CHARS.length
-                            ];
-                    } else if (isBorder) {
-                        row[col] = "#";
-                    } else if (isLeftBrick && sideBrickWidth > 0) {
-                        row[col] =
-                            createBrickSidePattern(
-                                rowOffset,
-                                sideBrickWidth,
-                                false,
-                            )[col - leftBrickStart] || " ";
-                    } else if (isRightBrick && sideBrickWidth > 0) {
-                        row[col] =
-                            createBrickSidePattern(
-                                rowOffset,
-                                sideBrickWidth,
-                                true,
-                            )[col - rightBrickStart] || " ";
-                    } else {
-                        row[col] = " ";
-                    }
-                }
-            }
-
-            function getFenceCharClass(char, rowOffset, col, bounds) {
-                if (char === " ") {
-                    return "";
-                }
-
-                if (rowOffset === WALL_WORD_ROW && /[A-Z0-9']/.test(char)) {
-                    return "fence-word";
-                }
-
-                if (rowOffset < FENCE_WIRE_HEIGHT) {
-                    return "fence-wire";
-                }
-
-                const bodyBounds = getFenceBodyBounds(bounds);
-
-                if (
-                    col === bodyBounds.wallLeft ||
-                    col === bodyBounds.wallRight ||
-                    rowOffset === FENCE_WIRE_HEIGHT ||
-                    rowOffset === WALL_HEIGHT - 1
-                ) {
-                    return "fence-border";
-                }
-
-                return "fence-mesh";
             }
 
             function getWallCharClass(char, rowOffset, col, bounds) {
@@ -4390,10 +2994,6 @@ I'll be back
 
                 if (char === "*" || char === "+" || char === "o") {
                     return "wall-fire-spot";
-                }
-
-                if (char === "=" || char === "-") {
-                    return "wall-brick";
                 }
 
                 if (col === bounds.wallLeft || col === bounds.wallRight) {
@@ -4450,51 +3050,6 @@ I'll be back
                 return fragment;
             }
 
-            function renderChainLinkFence(row, rowIndex, word, wallRow) {
-                const { laneLeft, laneRight } = getRoadMetrics();
-                const bounds = getWallBounds(word, laneLeft, laneRight);
-                const rowOffset = rowIndex - wallRow;
-                const fragment = document.createDocumentFragment();
-                let currentClass = null;
-                let buffer = "";
-
-                function flush() {
-                    if (!buffer) {
-                        return;
-                    }
-
-                    fragment.append(
-                        currentClass
-                            ? colorSpan(currentClass, buffer)
-                            : document.createTextNode(buffer),
-                    );
-                    buffer = "";
-                }
-
-                for (let col = laneLeft - 1; col <= laneRight + 1; col += 1) {
-                    const char = row[col] || " ";
-                    const className =
-                        col >= bounds.wallLeft && col <= bounds.wallRight
-                            ? getFenceCharClass(
-                                  char,
-                                  rowOffset,
-                                  col,
-                                  bounds,
-                              )
-                            : "";
-
-                    if (className !== currentClass) {
-                        flush();
-                        currentClass = className;
-                    }
-
-                    buffer += char;
-                }
-
-                flush();
-                return fragment;
-            }
-
             function renderLivesDisplay() {
                 if (modeInput.value !== "lives") {
                     livesDisplay.replaceChildren();
@@ -4502,17 +3057,12 @@ I'll be back
                     return;
                 }
 
-                const limit = getLivesLimit();
-                const currentLives = Math.min(
-                    limit,
-                    Math.max(0, Number(livesLeft) || 0),
-                );
-                const lost = Math.max(0, limit - currentLives);
+                const lost = Math.max(0, getLivesLimit() - livesLeft);
                 const isRefilling = Date.now() < refillAnimationUntil;
                 const children = [
                     colorSpan(
                         "hearts",
-                        "♥".repeat(currentLives) + "♡".repeat(lost),
+                        "♥".repeat(livesLeft) + "♡".repeat(lost),
                     ),
                     document.createTextNode(" "),
                     colorSpan("retries", `RETRIES ×${retriesLeft}`),
@@ -4527,10 +3077,8 @@ I'll be back
             }
 
             function buildRoad(word, wallRow, gateProgress = null) {
-                const metrics = getRoadMetrics();
-                const { width, height, laneLeft, laneRight } = metrics;
-                const isUndersea =
-                    getLevelConfig().environment === "undersea-cable";
+                const { width, height, laneLeft, laneRight, carCol, carRow } =
+                    getRoadMetrics();
                 const rows = [];
                 const scroll = Math.floor(Date.now() / 400);
                 const wallBounds = word
@@ -4551,21 +3099,15 @@ I'll be back
 
                     for (let c = 0; c < width; c += 1) {
                         if (c < laneLeft - 2 || c > laneRight + 2) {
-                            row[c] = isUndersea
-                                ? underseaProp(worldRow, c)
-                                : groundProp(worldRow, c);
+                            row[c] = groundProp(worldRow, c);
                         }
                     }
 
-                    if (isUndersea) {
-                        renderLevel2CableRoad(row, r, metrics);
-                    } else {
-                        row[laneLeft - 1] = "|";
-                        row[laneRight + 1] = "|";
+                    row[laneLeft - 1] = "|";
+                    row[laneRight + 1] = "|";
 
-                        if (((worldRow % 4) + 4) % 4 < 2) {
-                            row[Math.floor((laneLeft + laneRight) / 2)] = ":";
-                        }
+                    if (((worldRow % 4) + 4) % 4 < 2) {
+                        row[Math.floor((laneLeft + laneRight) / 2)] = ":";
                     }
 
                     if (
@@ -4575,44 +3117,53 @@ I'll be back
                         wallBounds
                     ) {
                         const rowOffset = r - wallRow;
-                        if (isUndersea) {
-                            fillDigitalFirewallRow(
-                                row,
-                                r,
-                                rowOffset,
-                                wallBounds,
-                                word,
-                                scroll,
-                                fireFrame,
-                            );
-                        } else {
-                            fillChainLinkFenceRow(
-                                row,
-                                rowOffset,
-                                wallBounds,
-                                scroll,
-                            );
+
+                        for (
+                            let c = wallBounds.wallLeft;
+                            c <= wallBounds.wallRight;
+                            c += 1
+                        ) {
+                            const h = hashCell(r + c * 17, scroll);
+                            const fireCol = c - wallBounds.wallLeft;
+                            const isBorder =
+                                c === wallBounds.wallLeft ||
+                                c === wallBounds.wallRight ||
+                                rowOffset === WALL_FIRE_HEIGHT ||
+                                rowOffset === WALL_HEIGHT - 1;
+                            const isFireSpot =
+                                rowOffset === WALL_FIRE_HEIGHT + 1 &&
+                                h % 23 === 0;
+
+                            if (rowOffset < WALL_FIRE_HEIGHT) {
+                                row[c] = fireFrame[rowOffset][fireCol] || " ";
+                            } else if (isFireSpot) {
+                                row[c] =
+                                    WALL_FIRE_SPOT_CHARS[
+                                        (h >>> 9) % WALL_FIRE_SPOT_CHARS.length
+                                    ];
+                            } else if (isBorder) {
+                                row[c] = "#";
+                            } else {
+                                row[c] = " ";
+                            }
                         }
                     }
 
                     if (word && r === labelRow && wallBounds) {
-                        const labelBounds = isUndersea
-                            ? wallBounds
-                            : getFenceBodyBounds(wallBounds);
                         const rawLabel = word.toUpperCase();
                         const spacedLabel = rawLabel.split("").join(" ");
                         const label =
                             spacedLabel.length <=
-                            labelBounds.wallRight - labelBounds.wallLeft - 3
+                            wallBounds.wallRight - wallBounds.wallLeft - 3
                                 ? spacedLabel
                                 : rawLabel;
                         const start = Math.min(
-                            labelBounds.wallRight - label.length - 1,
+                            wallBounds.wallRight - label.length - 1,
                             Math.max(
-                                labelBounds.wallLeft + 1,
+                                wallBounds.wallLeft + 1,
                                 Math.floor(
-                                    (labelBounds.wallLeft +
-                                        labelBounds.wallRight -
+                                    (wallBounds.wallLeft +
+                                        wallBounds.wallRight -
                                         label.length) /
                                         2,
                                 ),
@@ -4620,22 +3171,21 @@ I'll be back
                         );
 
                         for (
-                            let c = labelBounds.wallLeft;
-                            c <= labelBounds.wallRight;
+                            let c = wallBounds.wallLeft;
+                            c <= wallBounds.wallRight;
                             c += 1
                         ) {
                             row[c] =
-                                c === labelBounds.wallLeft ||
-                                c === labelBounds.wallRight
-                                    ? isUndersea
-                                        ? "#"
-                                        : "|"
+                                c === wallBounds.wallLeft ||
+                                c === wallBounds.wallRight
+                                    ? "#"
                                     : " ";
                         }
 
                         for (
                             let i = 0;
-                            i < label.length && start + i <= labelBounds.wallRight;
+                            i < label.length &&
+                            start + i <= wallBounds.wallRight;
                             i += 1
                         ) {
                             row[start + i] = label[i];
@@ -4682,7 +3232,25 @@ I'll be back
                         }
                     }
 
-                    drawPlayerCharacter(row, r, metrics);
+                    if (r === carRow - 1) {
+                        row[carCol] = "/";
+                        row[carCol + 1] = "~";
+                        row[carCol + 2] = "^";
+                        row[carCol + 3] = "~";
+                        row[carCol + 4] = "\\";
+                    }
+
+                    if (r === carRow) {
+                        const car = [" ", "[", "=", "=", "=", "]", " "];
+                        for (let i = 0; i < car.length; i += 1) {
+                            row[carCol - 1 + i] = car[i];
+                        }
+                    }
+
+                    if (r === carRow + 1) {
+                        row[carCol + 1] = "O";
+                        row[carCol + 3] = "O";
+                    }
 
                     rows.push(row.join(""));
                 }
@@ -4692,13 +3260,6 @@ I'll be back
 
             function renderTimeline(words = getTargetWords()) {
                 renderLivesDisplay();
-                renderScoreDisplay(getTargetEntries());
-
-                if (levelTransitionActive) {
-                    timerDisplay.textContent = "--.-";
-                    renderRoad(null, -10);
-                    return;
-                }
 
                 if (!isSequenceMode()) {
                     timelineState.textContent = "mode: catch";
@@ -4714,16 +3275,15 @@ I'll be back
                 const elapsed = deadline
                     ? Math.min(limit, limit - remaining)
                     : 0;
-                const metrics = getRoadMetrics();
-                const { carRow } = metrics;
+                const { carRow } = getRoadMetrics();
                 const wallRow = Math.round(
                     -3 + (elapsed / limit) * (carRow - 1),
                 );
-                const activeWord = words[currentWordIndex] || "--";
+                const activeWord = words[sequenceIndex] || "--";
                 const complete =
-                    currentWordIndex >= words.length && words.length > 0;
+                    sequenceIndex >= words.length && words.length > 0;
 
-                timelineState.textContent = `mode: ${modeInput.value} ${currentWordIndex}/${words.length}`;
+                timelineState.textContent = `mode: ${modeInput.value} ${sequenceIndex}/${words.length}`;
 
                 if (!words.length) {
                     timerDisplay.textContent = "--.-";
@@ -4747,11 +3307,6 @@ I'll be back
                     ? (wordCaughtThisBeat ? "✓ " : "") + remaining.toFixed(1)
                     : `${limit}.0`;
 
-                if (checkWallKeygenCollision(wallRow, metrics)) {
-                    renderTimeline(getTargetWords());
-                    return;
-                }
-
                 // A caught word bursts the gate open while the beat finishes.
                 renderRoad(
                     activeWord,
@@ -4766,11 +3321,7 @@ I'll be back
             }
 
             function processSequenceText(text) {
-                if (
-                    !isSequenceMode() ||
-                    sequenceFailed ||
-                    levelTransitionActive
-                ) {
+                if (!isSequenceMode() || sequenceFailed) {
                     return false;
                 }
 
@@ -4780,7 +3331,7 @@ I'll be back
                 // Re-anchor past the already-matched words so an upcoming
                 // word spoken earlier in the transcript cannot count.
                 let searchFrom = 0;
-                for (let i = 0; i < currentWordIndex; i += 1) {
+                for (let i = 0; i < sequenceIndex; i += 1) {
                     const end = findWordEnd(text, words[i], searchFrom);
                     if (end !== -1) {
                         searchFrom = end;
@@ -4792,14 +3343,13 @@ I'll be back
                 if (isBeatMode()) {
                     if (
                         !wordCaughtThisBeat &&
-                        currentWordIndex < words.length &&
-                        findWordEnd(text, words[currentWordIndex], searchFrom) !==
+                        sequenceIndex < words.length &&
+                        findWordEnd(text, words[sequenceIndex], searchFrom) !==
                             -1
                     ) {
                         wordCaughtThisBeat = true;
                         gateOpenedAt = Date.now();
-                        caughtWords.add(words[currentWordIndex].toLowerCase());
-                        triggerVoiceSignal("success");
+                        caughtWords.add(words[sequenceIndex].toLowerCase());
                         maybeTriggerTalkback("beat");
                         changed = true;
                     }
@@ -4808,10 +3358,10 @@ I'll be back
                     return changed;
                 }
 
-                while (currentWordIndex < words.length) {
+                while (sequenceIndex < words.length) {
                     const end = findWordEnd(
                         text,
-                        words[currentWordIndex],
+                        words[sequenceIndex],
                         searchFrom,
                     );
 
@@ -4820,19 +3370,16 @@ I'll be back
                     }
 
                     searchFrom = end;
-                    const completedPhrase = words[currentWordIndex];
-                    caughtWords.add(completedPhrase.toLowerCase());
-                    recordCompletedPhrase(completedPhrase);
-                    currentWordIndex += 1;
-                    registerSuccessfulLevel2Phrase();
+                    caughtWords.add(words[sequenceIndex].toLowerCase());
+                    sequenceIndex += 1;
                     refillLivesAndRetries();
-                    triggerVoiceSignal("success");
                     playWallPassSound();
                     maybeTriggerTalkback("beat");
                     changed = true;
 
-                    if (currentWordIndex >= words.length) {
-                        completeSequence();
+                    if (sequenceIndex >= words.length) {
+                        deadline = null;
+                        stopSequenceTimer();
                         break;
                     }
 
@@ -4873,407 +3420,20 @@ I'll be back
             }
 
             function drawIdleVisualizer() {
-                if (idleVisualizerFrame) {
-                    cancelAnimationFrame(idleVisualizerFrame);
-                    idleVisualizerFrame = null;
-                }
-
-                function draw(timestamp) {
-                    updateAsciiWaveformBackground(0.1, timestamp);
-                    updateGameOverWaveform(0.26, timestamp);
-                    idleVisualizerFrame = requestAnimationFrame(draw);
-                }
-
-                draw(performance.now());
+                drawIdleVisualizerCanvas(visualizer, canvas);
+                drawIdleVisualizerCanvas(gameOverVisualizer, gameOverCanvas);
             }
 
-            function updateAsciiWaveformBackground(
-                amplitude = 0,
-                timestamp = performance.now(),
-            ) {
-                const isLevelOne = currentLevel === 1;
-                asciiWaveformBackground.style.opacity = String(
-                    isLevelOne
-                        ? 0.54 + Math.min(1, amplitude) * 0.3
-                        : 0.16 + Math.min(1, amplitude) * 0.18,
-                );
-                asciiWaveformBackground.textContent = generateAsciiWaveform(
-                    Math.max(72, Math.ceil(window.innerWidth / 9)),
-                    isLevelOne ? 19 : 11,
-                    amplitude,
-                    timestamp,
-                    "ambient",
-                );
-            }
-
-            function updateGameOverWaveform(
-                amplitude = 0.4,
-                timestamp = performance.now(),
-            ) {
-                updateGameOverFire();
-                gameOverVisualizer.textContent = generateAsciiWaveform(
-                    54,
-                    7,
-                    amplitude,
-                    timestamp,
-                    "broken",
-                );
-            }
-
-            function updateGameOverFire(force = false) {
-                if (!gameOverFire) {
-                    return;
-                }
-
-                const frameIndex =
-                    Math.floor(Date.now() / 160) % WALL_FIRE_FRAMES.length;
-
-                if (!force && frameIndex === lastGameOverFireFrame) {
-                    return;
-                }
-
-                lastGameOverFireFrame = frameIndex;
-                const width = Math.max(
-                    28,
-                    Math.min(
-                        48,
-                        Math.floor((window.innerWidth - 40) / 7),
-                    ),
-                );
-                gameOverFire.textContent =
-                    createScaryFireFrames(width)[frameIndex].join("\n");
-            }
-
-            function generateAsciiWaveform(
-                width,
-                height,
-                amplitude,
-                timestamp,
-                mode = "ambient",
-            ) {
-                const rows = Array.from({ length: height }, () =>
-                    Array(width).fill(" "),
-                );
-                const center = Math.floor(height / 2);
-                const t = timestamp / 340;
-                const loudness = Math.min(1, Math.max(0, amplitude));
-                const maxPeak = Math.max(
-                    1,
-                    Math.floor((height / 2 - 1) * (0.32 + loudness * 0.86)),
-                );
-
-                for (let x = 0; x < width; x += 1) {
-                    const n =
-                        Math.sin(x * 0.19 + t) * 0.45 +
-                        Math.sin(x * 0.47 - t * 1.3) * 0.33 +
-                        Math.sin(x * 0.91 + t * 0.7) * 0.22;
-                    const cluster =
-                        Math.sin(x * 0.08 + t * 0.4) > 0.28 ? 1 : 0.36;
-                    const peak = Math.floor(Math.abs(n) * maxPeak * cluster);
-                    const baselineChar =
-                        mode === "broken" && x % 11 === 0 ? "." : "_";
-                    rows[center][x] = peak > 0 ? "-" : baselineChar;
-
-                    for (let y = 1; y <= peak; y += 1) {
-                        const upper = center - y;
-                        const lower = center + y;
-                        const spikeChar =
-                            y === peak
-                                ? x % 5 === 0
-                                    ? "^"
-                                    : "/"
-                                : x % 3 === 0
-                                  ? "|"
-                                  : ":";
-
-                        if (upper >= 0) {
-                            rows[upper][x] = spikeChar;
-                        }
-
-                        if (lower < height && x % 2 === 0) {
-                            rows[lower][x] = y === peak ? "v" : "|";
-                        }
-                    }
-
-                    if (mode === "broken" && (x + Math.floor(t)) % 13 === 0) {
-                        const glitchRow = Math.abs(hashCell(x, Math.floor(t))) % height;
-                        rows[glitchRow][x] = ["'", ".", "x", "0", "#"][
-                            x % 5
-                        ];
-                    }
-                }
-
-                return rows.map((row) => row.join("")).join("\n");
-            }
-
-            function stopMemoryPhraseSystem() {
-                if (memoryPhraseFrame) {
-                    cancelAnimationFrame(memoryPhraseFrame);
-                    memoryPhraseFrame = null;
-                }
-
-                memoryPhraseLastFrame = 0;
-                memoryPhrases = [];
-                memoryPhraseSource = [];
-                memoryPhraseLayer.classList.remove("active");
-                memoryPhraseLayer.replaceChildren();
-            }
-
-            function createLevel2MatrixFragment(length = 12) {
-                let output = "";
-
-                for (let index = 0; index < length; index += 1) {
-                    output +=
-                        LEVEL_2_MATRIX_SYMBOLS[
-                            Math.floor(
-                                Math.random() *
-                                    LEVEL_2_MATRIX_SYMBOLS.length,
-                            )
-                        ];
-                }
-
-                return output;
-            }
-
-            function getLevel2EnemyTargetCount() {
-                return Math.min(
-                    LEVEL_2_MAX_ENEMY_COUNT,
-                    LEVEL_2_BASE_ENEMY_COUNT +
-                        level2CompletedWordCount *
-                            LEVEL_2_ENEMIES_PER_WORD,
-                );
-            }
-
-            function createLevel2Enemy(index) {
-                if (!memoryPhraseSource.length) {
-                    return null;
-                }
-
-                const element = document.createElement("span");
-                const isSideEntry =
-                    Math.random() < LEVEL_2_SIDE_ENEMY_CHANCE;
-                const isMatrix =
-                    Math.random() < LEVEL_2_MATRIX_SYMBOL_CHANCE;
-                const phrase =
-                    memoryPhraseSource[index % memoryPhraseSource.length];
-                const coreText = isMatrix
-                    ? createLevel2MatrixFragment(
-                          8 + Math.floor(Math.random() * 10),
-                      )
-                    : phrase;
-                const prefix =
-                    LEVEL_2_MATRIX_SYMBOLS[
-                        index % LEVEL_2_MATRIX_SYMBOLS.length
-                    ];
-                const suffix =
-                    LEVEL_2_MATRIX_SYMBOLS[
-                        (index * 3 + 7) %
-                            LEVEL_2_MATRIX_SYMBOLS.length
-                    ];
-                const enemySpeed =
-                    LEVEL_2_ENEMY_SPEED_MIN +
-                    Math.random() *
-                        (LEVEL_2_ENEMY_SPEED_MAX -
-                            LEVEL_2_ENEMY_SPEED_MIN);
-                const sideSpeed =
-                    LEVEL_2_SIDE_SPEED_MIN +
-                    Math.random() *
-                        (LEVEL_2_SIDE_SPEED_MAX -
-                            LEVEL_2_SIDE_SPEED_MIN);
-                const fromLeft = Math.random() < 0.5;
-                const angle = Math.random() * Math.PI * 2;
-                const overlapsTarget =
-                    Math.random() < LEVEL_2_ENEMY_OVERLAP_FREQUENCY;
-                const scale =
-                    LEVEL_2_ENEMY_MIN_SCALE +
-                    Math.random() *
-                        (LEVEL_2_ENEMY_MAX_SCALE -
-                            LEVEL_2_ENEMY_MIN_SCALE);
-
-                element.className = isMatrix
-                    ? "enemy-phrase enemy-phrase--matrix"
-                    : "enemy-phrase";
-                element.textContent =
-                    prefix + " " + coreText + " " + suffix;
-                memoryPhraseLayer.append(element);
-
-                return {
-                    element,
-                    x: isSideEntry
-                        ? fromLeft
-                            ? -380
-                            : window.innerWidth + 80
-                        : Math.random() * window.innerWidth,
-                    y: overlapsTarget
-                        ? window.innerHeight *
-                          (0.2 + Math.random() * 0.48)
-                        : window.innerHeight *
-                          (0.08 + Math.random() * 0.78),
-                    vx: isSideEntry
-                        ? (fromLeft ? 1 : -1) * sideSpeed * 78
-                        : Math.cos(angle) * enemySpeed * 72,
-                    vy: isSideEntry
-                        ? (Math.random() - 0.5) * 32
-                        : Math.sin(angle) * enemySpeed * 54,
-                    speed: isSideEntry ? sideSpeed : enemySpeed,
-                    scale: isMatrix ? scale * 0.78 : scale,
-                    rotation: (Math.random() - 0.5) * 9,
-                    opacity:
-                        LEVEL_2_ENEMY_OPACITY_MIN +
-                        Math.random() *
-                            (LEVEL_2_ENEMY_OPACITY_MAX -
-                                LEVEL_2_ENEMY_OPACITY_MIN),
-                    phase: Math.random() * Math.PI * 2,
-                    glitchUntil: 0,
-                    burstUntil: 0,
-                    sideEntry: isSideEntry,
-                };
-            }
-
-            function syncLevel2EnemyCount() {
-                if (
-                    currentLevel !== 2 ||
-                    !memoryPhraseLayer.classList.contains("active")
-                ) {
-                    return;
-                }
-
-                const targetCount = getLevel2EnemyTargetCount();
-
-                while (memoryPhrases.length < targetCount) {
-                    const enemy = createLevel2Enemy(memoryPhrases.length);
-
-                    if (!enemy) {
-                        break;
-                    }
-
-                    memoryPhrases.push(enemy);
-                }
-
-                while (memoryPhrases.length > targetCount) {
-                    const enemy = memoryPhrases.pop();
-                    enemy?.element.remove();
-                }
-            }
-
-            function startMemoryPhraseSystem(useMockMemories = false) {
-                stopMemoryPhraseSystem();
-                memoryPhraseSource = completedPhrasesFromLevel1.length
-                    ? completedPhrasesFromLevel1
-                    : LEVEL_2_MOCK_PHRASES;
-
-                memoryPhraseLayer.style.zIndex = String(
-                    LEVEL_2_ENEMY_Z_INDEX,
-                );
-                memoryPhraseLayer.classList.add("active");
-                syncLevel2EnemyCount();
-
-                memoryPhraseFrame = requestAnimationFrame(
-                    updateMemoryPhraseSystem,
-                );
-            }
-
-            function updateMemoryPhraseSystem(timestamp) {
-                if (currentLevel !== 2) {
-                    stopMemoryPhraseSystem();
-                    return;
-                }
-
-                syncLevel2EnemyCount();
-                const deltaSeconds = memoryPhraseLastFrame
-                    ? Math.min(0.05, (timestamp - memoryPhraseLastFrame) / 1000)
-                    : 0;
-                memoryPhraseLastFrame = timestamp;
-                const frameScale = Math.max(0.25, deltaSeconds * 60);
-
-                for (const [index, fragment] of memoryPhrases.entries()) {
-                    if (
-                        !fragment.sideEntry &&
-                        Math.random() <
-                        LEVEL_2_ENEMY_DIRECTION_CHANGE_CHANCE * frameScale
-                    ) {
-                        const angle = Math.random() * Math.PI * 2;
-                        fragment.vx =
-                            Math.cos(angle) * fragment.speed * 72;
-                        fragment.vy =
-                            Math.sin(angle) * fragment.speed * 54;
-                    }
-
-                    if (
-                        Math.random() <
-                        LEVEL_2_ENEMY_GLITCH_CHANCE * frameScale
-                    ) {
-                        fragment.glitchUntil =
-                            timestamp + 90 + Math.random() * 130;
-                    }
-
-                    if (
-                        Math.random() <
-                        LEVEL_2_ENEMY_BURST_CHANCE * frameScale
-                    ) {
-                        fragment.burstUntil = timestamp + 180;
-                    }
-
-                    const burst = timestamp < fragment.burstUntil ? 2.8 : 1;
-                    fragment.x += fragment.vx * deltaSeconds * burst;
-                    fragment.y += fragment.vy * deltaSeconds * burst;
-
-                    const wrapMargin = 380;
-                    if (fragment.x > window.innerWidth + wrapMargin) {
-                        fragment.x = -wrapMargin;
-                    } else if (fragment.x < -wrapMargin) {
-                        fragment.x = window.innerWidth + wrapMargin;
-                    }
-
-                    if (fragment.y > window.innerHeight - 24) {
-                        fragment.y = 24;
-                        fragment.vy = -Math.abs(fragment.vy);
-                    } else if (fragment.y < 18) {
-                        fragment.y = window.innerHeight - 30;
-                        fragment.vy = Math.abs(fragment.vy);
-                    }
-
-                    const isGlitching = timestamp < fragment.glitchUntil;
-                    const wave =
-                        Math.sin(timestamp / 105 + fragment.phase);
-                    const glitchX = isGlitching
-                        ? (Math.random() - 0.5) * 34
-                        : wave * 2;
-                    const glitchY = isGlitching
-                        ? (Math.random() - 0.5) * 18
-                        : 0;
-                    const flicker = isGlitching
-                        ? (Math.random() - 0.5) * 0.28
-                        : wave * 0.05;
-                    fragment.element.style.opacity = String(
-                        Math.min(
-                            LEVEL_2_ENEMY_OPACITY_MAX,
-                            Math.max(
-                                LEVEL_2_ENEMY_OPACITY_MIN,
-                                fragment.opacity + flicker,
-                            ),
-                        ),
-                    );
-                    fragment.element.style.transform =
-                        "translate3d(" +
-                        (fragment.x + glitchX) +
-                        "px, " +
-                        (fragment.y + glitchY) +
-                        "px, 0) scale(" +
-                        fragment.scale * (isGlitching ? 1.08 : 1) +
-                        ") rotate(" +
-                        (fragment.rotation + wave * 1.4) +
-                        "deg) skewX(" +
-                        (isGlitching ? wave * 8 : 0) +
-                        "deg)";
-                    fragment.element.style.filter =
-                        isGlitching && index % 2 === 0
-                            ? "contrast(1.7)"
-                            : "none";
-                }
-
-                memoryPhraseFrame = requestAnimationFrame(
-                    updateMemoryPhraseSystem,
+            function drawIdleVisualizerCanvas(canvasEl, context) {
+                const width = canvasEl.width;
+                const height = canvasEl.height;
+                context.clearRect(0, 0, width, height);
+                context.fillStyle = "#666666";
+                context.font = "16px monospace";
+                context.fillText(
+                    "---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ---- ----",
+                    18,
+                    height / 2 + 5,
                 );
             }
 
@@ -5283,11 +3443,6 @@ I'll be back
                     !navigator.mediaDevices.getUserMedia
                 ) {
                     return;
-                }
-
-                if (idleVisualizerFrame) {
-                    cancelAnimationFrame(idleVisualizerFrame);
-                    idleVisualizerFrame = null;
                 }
 
                 micStream = await navigator.mediaDevices.getUserMedia({
@@ -5300,28 +3455,80 @@ I'll be back
                 const source = audioContext.createMediaStreamSource(micStream);
                 source.connect(analyser);
 
-                const data = new Uint8Array(analyser.fftSize);
+                const data = new Uint8Array(analyser.frequencyBinCount);
+                const columns = 48;
+                const rows = 6;
+                const rowColors = [
+                    "#333333",
+                    "#666666",
+                    "#aaaaaa",
+                    "#facc15",
+                    "#facc15",
+                    "#ef4444",
+                ];
 
-                function draw(timestamp) {
+                function draw() {
                     visualizerFrame = requestAnimationFrame(draw);
-                    analyser.getByteTimeDomainData(data);
-                    const amplitude = getWaveformAmplitude(data);
-                    updateAsciiWaveformBackground(amplitude, timestamp);
-                    updateGameOverWaveform(amplitude, timestamp);
+                    analyser.getByteFrequencyData(data);
+                    drawSpectrumCanvas(visualizer, canvas, data, columns, rows);
+                    drawSpectrumCanvas(
+                        gameOverVisualizer,
+                        gameOverCanvas,
+                        data,
+                        columns,
+                        rows,
+                    );
                 }
 
-                function getWaveformAmplitude(timeDomainData) {
-                    let total = 0;
+                function drawSpectrumCanvas(
+                    canvasEl,
+                    context,
+                    frequencyData,
+                    columns,
+                    rows,
+                ) {
+                    const width = canvasEl.width;
+                    const height = canvasEl.height;
+                    const cellWidth = width / columns;
+                    const cellHeight = height / (rows + 1);
+                    context.clearRect(0, 0, width, height);
+                    context.font = "14px monospace";
 
-                    for (const value of timeDomainData) {
-                        const centered = (value - 128) / 128;
-                        total += centered * centered;
+                    for (let column = 0; column < columns; column += 1) {
+                        const start = Math.floor(
+                            (column / columns) * frequencyData.length,
+                        );
+                        const end = Math.floor(
+                            ((column + 1) / columns) * frequencyData.length,
+                        );
+                        let total = 0;
+
+                        for (
+                            let i = start;
+                            i < Math.max(end, start + 1);
+                            i += 1
+                        ) {
+                            total += frequencyData[i];
+                        }
+
+                        const average = total / Math.max(1, end - start);
+                        const activeRows = Math.max(
+                            1,
+                            Math.round((average / 255) * rows),
+                        );
+
+                        for (let row = 0; row < activeRows; row += 1) {
+                            const x = column * cellWidth + 8;
+                            const y = height - row * cellHeight - 14;
+                            context.fillStyle =
+                                rowColors[Math.min(row, rowColors.length - 1)];
+                            context.fillText(
+                                row === activeRows - 1 ? "+" : "#",
+                                x,
+                                y,
+                            );
+                        }
                     }
-
-                    return Math.min(
-                        1,
-                        Math.sqrt(total / timeDomainData.length) * 3.5,
-                    );
                 }
 
                 draw();
@@ -5368,6 +3575,9 @@ I'll be back
             const ECHO_TRIM_PAD_MS = 60;
             const ECHO_WAVE_BUCKETS = 40;
             const ECHO_P = { beat: 0.35, wall: 0.5, life: 1, random: 0.25 };
+            const TALKBACK_LOCAL_ENDPOINT = "http://127.0.0.1:8000";
+            const TALKBACK_TUNNEL_ENDPOINT =
+                "https://linux-closure-appointment-install.trycloudflare.com";
             const TALKBACK_MODEL_ID = "qwen3-tts-0.6b-base";
             const TALKBACK_MIN_REF_SECONDS = 5;
             const TALKBACK_TARGET_REF_SECONDS = 12;
@@ -5428,6 +3638,34 @@ I'll be back
                     voiceText,
                     progress >= threshold ? "ok" : "",
                 );
+            }
+
+            function getDefaultTalkbackEndpoint() {
+                const { protocol, hostname, pathname } = window.location;
+                const isGitHubPagesPassphrase =
+                    protocol === "https:" &&
+                    hostname === "terschure.github.io" &&
+                    (pathname === "/passphrase/" ||
+                        pathname.startsWith("/passphrase/"));
+
+                return isGitHubPagesPassphrase
+                    ? TALKBACK_TUNNEL_ENDPOINT
+                    : TALKBACK_LOCAL_ENDPOINT;
+            }
+
+            function applyDefaultTalkbackEndpoint() {
+                const endpoint = getDefaultTalkbackEndpoint();
+
+                if (talkbackEndpointInput.value.trim() === endpoint) {
+                    return;
+                }
+
+                talkbackEndpointInput.value = endpoint;
+                talkbackSessionId += 1;
+                talkbackReady = false;
+                talkbackHealthDetail = "checking";
+                talkbackRef = null;
+                talkbackRefSignature = "";
             }
 
             function getTalkbackEndpoint() {
@@ -5508,7 +3746,7 @@ I'll be back
                 if (isSequenceMode()) {
                     return Math.min(
                         getTargetWords().length,
-                        currentWordIndex + (wordCaughtThisBeat ? 1 : 0),
+                        sequenceIndex + (wordCaughtThisBeat ? 1 : 0),
                     );
                 }
 
@@ -6390,7 +4628,7 @@ I'll be back
                 }
 
                 if (isSequenceMode()) {
-                    return Math.min(1, currentWordIndex / words.length);
+                    return Math.min(1, sequenceIndex / words.length);
                 }
 
                 return Math.min(1, caughtWords.size / words.length);
@@ -6530,7 +4768,7 @@ I'll be back
                 const words = getTargetWords();
                 const currentWord =
                     isSequenceMode() && !sequenceFailed
-                        ? words[currentWordIndex]
+                        ? words[sequenceIndex]
                         : null;
                 const idle = echoSnippets.filter(
                     (snippet) => snippet.state === "idle",
@@ -6754,10 +4992,7 @@ I'll be back
 
             function startMainThemeFromGameStart() {
                 startMainTheme().catch((error) => {
-                    console.warn(
-                        "[audio] Main theme could not start.",
-                        error,
-                    );
+                    console.warn("[audio] Main theme could not start.", error);
                 });
             }
 
@@ -6784,9 +5019,7 @@ I'll be back
                 }
             }
 
-            async function startGame(
-                { levelId = 1, useMockMemories = false } = {},
-            ) {
+            async function startGame() {
                 if (!activeRecognition) {
                     status.textContent =
                         "Speech recognition is not supported in this browser. Try Chrome or Edge.";
@@ -6799,10 +5032,6 @@ I'll be back
 
                 gameStarted = true;
                 hideOnboarding();
-                setActiveLevel(levelId, {
-                    showIntro: true,
-                    useMockMemories,
-                });
                 startMainThemeFromGameStart();
 
                 try {
@@ -6819,8 +5048,7 @@ I'll be back
                             isSequenceMode() &&
                             getTargetWords().length &&
                             !deadline &&
-                            !sequenceFailed &&
-                            !levelTransitionActive
+                            !sequenceFailed
                         ) {
                             startSequenceTimer();
                         }
@@ -6843,66 +5071,6 @@ I'll be back
                 startGame();
             }
 
-            function jumpToLevel(levelId, useMockMemories = false) {
-                if (!gameStarted) {
-                    startGame({ levelId, useMockMemories });
-                    return;
-                }
-
-                setActiveLevel(levelId, {
-                    showIntro: true,
-                    useMockMemories,
-                });
-            }
-
-            function debugCompleteCurrentPhrase() {
-                if (!DEV_MODE || levelTransitionActive || sequenceFailed) {
-                    return;
-                }
-
-                const words = getTargetWords();
-                const phrase = words[currentWordIndex];
-
-                if (!phrase) {
-                    return;
-                }
-
-                caughtWords.add(phrase.toLowerCase());
-                recordCompletedPhrase(phrase);
-                currentWordIndex += 1;
-                registerSuccessfulLevel2Phrase();
-                wordCaughtThisBeat = false;
-                gateOpenedAt = Date.now();
-                triggerVoiceSignal("success");
-                playWallPassSound();
-
-                if (currentWordIndex >= words.length) {
-                    completeSequence();
-                } else {
-                    startSequenceTimer();
-                    renderSequenceStatus();
-                    renderWordList();
-                }
-            }
-
-            function debugCompleteLevel1() {
-                if (!DEV_MODE) {
-                    return;
-                }
-
-                if (currentLevel !== 1) {
-                    setActiveLevel(1, { showIntro: false });
-                }
-
-                for (const phrase of getTargetWords()) {
-                    recordCompletedPhrase(phrase);
-                    caughtWords.add(phrase.toLowerCase());
-                }
-
-                currentWordIndex = getTargetWords().length;
-                completeSequence();
-            }
-
             function startGameFromVoice() {
                 if (gameStarted || onboardingStep !== 2) {
                     return;
@@ -6913,7 +5081,10 @@ I'll be back
             }
 
             function normalizeVoiceCommand(text) {
-                return text.toLowerCase().trim().replace(/[.,!?]/g, "");
+                return text
+                    .toLowerCase()
+                    .trim()
+                    .replace(/[.,!?]/g, "");
             }
 
             function isStartCommand(text) {
@@ -6923,14 +5094,6 @@ I'll be back
 
             onboardingAction.addEventListener("click", () => {
                 startGameFromOnboarding();
-            });
-
-            devLevel1Button.addEventListener("click", () => {
-                jumpToLevel(1);
-            });
-
-            devLevel2Button.addEventListener("click", () => {
-                jumpToLevel(2, completedPhrasesFromLevel1.length === 0);
             });
 
             document.addEventListener("keydown", (event) => {
@@ -6944,45 +5107,9 @@ I'll be back
                 }
             });
 
-            document.addEventListener("keydown", (event) => {
-                if (!DEV_MODE) {
-                    return;
-                }
-
-                const target = event.target;
-                const isEditing =
-                    target instanceof HTMLInputElement ||
-                    target instanceof HTMLTextAreaElement ||
-                    target instanceof HTMLSelectElement;
-
-                if (isEditing) {
-                    return;
-                }
-
-                if (event.key === "1") {
-                    jumpToLevel(1);
-                } else if (event.key === "2") {
-                    jumpToLevel(
-                        2,
-                        completedPhrasesFromLevel1.length === 0,
-                    );
-                } else if (event.key === "]") {
-                    debugCompleteCurrentPhrase();
-                } else if (event.key.toLowerCase() === "l") {
-                    debugCompleteLevel1();
-                }
-            });
-
-            devLevelButtons.style.display = DEV_MODE ? "flex" : "none";
-
-            if (DEV_MODE) {
-                console.info(
-                    "[dev] Level shortcuts: 1 = Level 1, 2 = Level 2, ] = complete phrase, L = complete Level 1",
-                );
-            }
-
             renderWordList();
             renderSequenceStatus();
+            applyDefaultTalkbackEndpoint();
             renderTalkbackPanel();
             startTalkbackHealthChecks();
             AudioManager.preloadAll();
@@ -7011,7 +5138,6 @@ I'll be back
                     }
 
                     status.textContent = "Listening...";
-                    triggerVoiceSignal("speaking");
                     startButton.disabled = true;
                     stopButton.disabled = false;
                     startRoadAnimation();
@@ -7020,8 +5146,7 @@ I'll be back
                         isSequenceMode() &&
                         getTargetWords().length &&
                         !deadline &&
-                        !sequenceFailed &&
-                        !levelTransitionActive
+                        !sequenceFailed
                     ) {
                         startSequenceTimer();
                     }
@@ -7033,10 +5158,7 @@ I'll be back
 
                     if (!gameStarted) {
                         status.textContent = "Voice start idle";
-                        if (
-                            onboardingStep === 2 &&
-                            !onboardingVoiceBlocked
-                        ) {
+                        if (onboardingStep === 2 && !onboardingVoiceBlocked) {
                             setTimeout(startOnboardingVoiceRecognition, 600);
                         }
                         return;
@@ -7046,10 +5168,10 @@ I'll be back
                     startButton.disabled = false;
                     stopButton.disabled = true;
                     interimText.textContent = "";
+                    stopRoadAnimation();
                     stopEchoSystem();
                     stopTalkbackCaptureSystem();
                     stopVisualizer();
-                    drawIdleVisualizer();
                 };
 
                 recognition.onerror = (event) => {
@@ -7076,10 +5198,6 @@ I'll be back
                             i += 1
                         ) {
                             const text = event.results[i][0].transcript;
-
-                            if (gameStarted && text.trim()) {
-                                triggerVoiceSignal("speaking");
-                            }
 
                             if (event.results[i].isFinal) {
                                 const chunk = text.trim();
