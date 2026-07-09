@@ -171,23 +171,32 @@ export function createMusicManager({
     async function startMainTheme() {
         unlockAudio();
 
+        const graphReady = ensureMusicGraph();
+
+        // iOS Safari only permits media playback and AudioContext.resume()
+        // that are *initiated synchronously* inside the user gesture — before
+        // any await. So start play() and resume() first, then await them.
+        // (Awaiting resume() before calling play() silently drops the gesture
+        // on iOS, so the music never starts even though desktop tolerates it.)
+        if (mainTheme.paused && !mainThemePlayPromise) {
+            mainThemePlayPromise = mainTheme.play().finally(() => {
+                mainThemePlayPromise = null;
+            });
+        }
+
+        const resumePromise =
+            graphReady && musicContext && musicContext.state !== "running"
+                ? musicContext.resume()
+                : null;
+
         try {
-            if (ensureMusicGraph() && musicContext) {
-                await musicContext.resume();
+            await Promise.all(
+                [mainThemePlayPromise, resumePromise].filter(Boolean),
+            );
+
+            if (graphReady && musicContext) {
                 applyMusicDegradationAmount(degradationAmount, "resume");
             }
-
-            if (!mainTheme.paused) {
-                return;
-            }
-
-            if (!mainThemePlayPromise) {
-                mainThemePlayPromise = mainTheme.play().finally(() => {
-                    mainThemePlayPromise = null;
-                });
-            }
-
-            await mainThemePlayPromise;
         } catch (error) {
             warn(
                 "Main theme could not play. It may need a user click or a supported audio codec.",
