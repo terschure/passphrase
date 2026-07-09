@@ -194,6 +194,9 @@ export function initPassphraseApp() {
                 listening: false,
             };
             let onboardingVoiceBlocked = false;
+            let onboardingRestartTimer = null;
+            let recognitionStartedAt = 0;
+            let onboardingRestartDelay = 500;
             let lastGameOverFireFrame = -1;
             let lastKeygenHitAt = 0;
             const firedTalkbackCues = new Set();
@@ -337,13 +340,7 @@ export function initPassphraseApp() {
 
             // Single opening modal: start the mic (for the live spectrum) and
             // voice recognition (so saying "start" begins the game) right away.
-            function startOnboarding() {
-                startOnboardingVoiceRecognition();
-
-                startVisualizer().catch(() => {
-                    /* mic blocked — the button still starts the game */
-                });
-
+            async function startOnboarding() {
                 const resumeAudio = () => {
                     getAudioContext()?.resume?.().catch(() => {});
                     document.removeEventListener("pointerdown", resumeAudio);
@@ -351,6 +348,42 @@ export function initPassphraseApp() {
                 };
                 document.addEventListener("pointerdown", resumeAudio);
                 document.addEventListener("keydown", resumeAudio);
+
+                // Open the mic first so permission is resolved before speech
+                // recognition starts — starting them in a race made recognition
+                // begin before it had mic access and immediately end.
+                try {
+                    await startVisualizer();
+                } catch (error) {
+                    /* mic blocked — the button still starts the game */
+                }
+
+                startOnboardingVoiceRecognition();
+            }
+
+            // Restart onboarding recognition with backoff. A recognizer that
+            // ends almost immediately (no mic, network error, etc.) must not
+            // hot-loop; each quick failure widens the delay, a healthy session
+            // resets it.
+            function scheduleOnboardingRecognitionRestart() {
+                if (
+                    onboardingRestartTimer ||
+                    gameStarted ||
+                    onboardingVoiceBlocked
+                ) {
+                    return;
+                }
+
+                const ranMs = Date.now() - recognitionStartedAt;
+                onboardingRestartDelay =
+                    ranMs < 1500
+                        ? Math.min(onboardingRestartDelay * 2, 10000)
+                        : 500;
+
+                onboardingRestartTimer = setTimeout(() => {
+                    onboardingRestartTimer = null;
+                    startOnboardingVoiceRecognition();
+                }, onboardingRestartDelay);
             }
 
             function hideOnboarding() {
@@ -1446,6 +1479,7 @@ export function initPassphraseApp() {
 
                 try {
                     recognitionState.starting = true;
+                    recognitionStartedAt = Date.now();
                     console.log("[voice] starting onboarding recognition");
                     speechService.start();
                 } catch (error) {
@@ -1472,6 +1506,10 @@ export function initPassphraseApp() {
                 }
 
                 gameStarted = true;
+                if (onboardingRestartTimer) {
+                    clearTimeout(onboardingRestartTimer);
+                    onboardingRestartTimer = null;
+                }
                 hideOnboarding();
                 setActiveLevel(levelId, {
                     showIntro: true,
@@ -1726,7 +1764,8 @@ export function initPassphraseApp() {
                     setOnboardingVoiceBlocked(value) {
                         onboardingVoiceBlocked = value;
                     },
-                    startOnboardingVoiceRecognition,
+                    scheduleOnboardingRestart:
+                        scheduleOnboardingRecognitionRestart,
                     triggerVoiceSignal,
                     startRoadAnimation,
                     shouldStartSequenceTimer: () =>

@@ -43,15 +43,20 @@ export function createTalkbackRuntime({
     timers = {
         setInterval: (...a) => setInterval(...a),
         clearInterval: (...a) => clearInterval(...a),
+        setTimeout: (...a) => setTimeout(...a),
+        clearTimeout: (...a) => clearTimeout(...a),
     },
     now = Date.now,
 }) {
     const settings = { ...TALKBACK_RUNTIME_CONFIG, ...config };
     const segments = [];
     const queue = [];
+    const HEALTH_BASE_MS = 8000;
+    const HEALTH_MAX_MS = 60000;
     let recorder = null;
     let recorderStartedAt = 0;
-    let healthInterval = null;
+    let healthTimer = null;
+    let healthDelay = HEALTH_BASE_MS;
     let ready = false;
     let healthDetail = "checking";
     let reference = null;
@@ -86,7 +91,8 @@ export function createTalkbackRuntime({
             ready = false;
             healthDetail = getEnabled() ? "no endpoint" : "off";
             render();
-            return;
+            // No request made — nothing to back off from.
+            return true;
         }
 
         try {
@@ -103,22 +109,39 @@ export function createTalkbackRuntime({
             const health = await response.json();
             ready = Boolean(health.ready);
             healthDetail = ready ? "ready" : "not ready";
+            render();
+            return true;
         } catch (error) {
             ready = false;
             healthDetail =
                 error.name === "AbortError" ? "timeout" : "unavailable";
+            render();
+            return false;
         }
+    }
 
-        render();
+    function stopHealthChecks() {
+        if (healthTimer) {
+            timers.clearTimeout(healthTimer);
+            healthTimer = null;
+        }
+    }
+
+    // Poll health, but back off exponentially when the endpoint is
+    // unreachable so an unconfigured TTS server doesn't spam the console
+    // (a missing local server refuses the connection on every probe).
+    async function runHealthCycle() {
+        const ok = await checkHealth();
+        healthDelay = ok
+            ? HEALTH_BASE_MS
+            : Math.min(healthDelay * 2, HEALTH_MAX_MS);
+        healthTimer = timers.setTimeout(runHealthCycle, healthDelay);
     }
 
     function startHealthChecks() {
-        if (healthInterval) {
-            timers.clearInterval(healthInterval);
-        }
-
-        checkHealth();
-        healthInterval = timers.setInterval(checkHealth, 7000);
+        stopHealthChecks();
+        healthDelay = HEALTH_BASE_MS;
+        runHealthCycle();
     }
 
     function startCapture() {
@@ -462,6 +485,8 @@ export function createTalkbackRuntime({
         ready = false;
         reference = null;
         referenceSignature = "";
+        // Re-probe promptly after the endpoint changes.
+        healthDelay = HEALTH_BASE_MS;
     }
 
     function markEndpointChecking() {

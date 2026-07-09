@@ -90,7 +90,7 @@ export function createSpeechServiceCallbacks({
     isGameStarted,
     isOnboardingVoiceBlocked,
     setOnboardingVoiceBlocked,
-    startOnboardingVoiceRecognition,
+    scheduleOnboardingRestart,
     triggerVoiceSignal,
     startRoadAnimation,
     shouldStartSequenceTimer,
@@ -131,7 +131,7 @@ export function createSpeechServiceCallbacks({
             if (!isGameStarted()) {
                 status.textContent = "Voice start idle";
                 if (!isOnboardingVoiceBlocked()) {
-                    setTimeout(startOnboardingVoiceRecognition, 600);
+                    scheduleOnboardingRestart?.();
                 }
                 return;
             }
@@ -148,6 +148,7 @@ export function createSpeechServiceCallbacks({
         onError(event) {
             recognitionState.starting = false;
             status.textContent = `Error: ${event.error}`;
+            warn("[voice] recognition error:", event.error);
             if (
                 event.error === "not-allowed" ||
                 event.error === "service-not-allowed"
