@@ -1,0 +1,105 @@
+export function createDomRefs(documentRef = document) {
+    return {
+        startButton: documentRef.querySelector("#start"),
+        onboardingScreen: documentRef.querySelector("#onboarding-screen"),
+        onboardingCard: documentRef.querySelector("#onboarding-card"),
+        onboardingTitle: documentRef.querySelector("#onboarding-title"),
+        onboardingCopy: documentRef.querySelector("#onboarding-copy"),
+        onboardingAction: documentRef.querySelector("#onboarding-action"),
+        stopButton: documentRef.querySelector("#stop"),
+        clearButton: documentRef.querySelector("#clear"),
+        openSettingsButton: documentRef.querySelector("#open-settings"),
+        closeSettingsButton: documentRef.querySelector("#close-settings"),
+        settingsBackdrop: documentRef.querySelector("#settings-backdrop"),
+        settingsPanel: documentRef.querySelector("#settings-panel"),
+        resetSequenceButton: documentRef.querySelector("#reset-sequence"),
+        modeInput: documentRef.querySelector("#mode"),
+        secondsInput: documentRef.querySelector("#seconds"),
+        livesInput: documentRef.querySelector("#lives"),
+        retriesInput: documentRef.querySelector("#retries"),
+        transcriptSourceInput: documentRef.querySelector("#transcript-source"),
+        sentenceFuzzyMatchInput: documentRef.querySelector(
+            "#sentence-fuzzy-match",
+        ),
+        continuePhraseInput: documentRef.querySelector("#continue-phrase"),
+        echoModeInput: documentRef.querySelector("#echo-mode"),
+        gameOverScreen: documentRef.querySelector("#game-over-screen"),
+        gameOverTitle: documentRef.querySelector("#game-over-title"),
+        gameOverFire: documentRef.querySelector("#game-over-fire"),
+        gameOverRound: documentRef.querySelector("#game-over-round"),
+        gameOverCopy: documentRef.querySelector("#game-over-copy"),
+        gameOverPhrase: documentRef.querySelector("#game-over-phrase"),
+        gameOverTranscript: documentRef.querySelector("#game-over-transcript"),
+        echoPanel: documentRef.querySelector("#echo-panel"),
+        echoHeader: documentRef.querySelector("#echo-panel .echo-header"),
+        echoRows: documentRef.querySelector("#echo-rows"),
+        talkbackEnabledInput: documentRef.querySelector("#talkback-enabled"),
+        talkbackEndpointInput: documentRef.querySelector(
+            "#talkback-endpoint-url",
+        ),
+        talkbackThresholdInput: documentRef.querySelector(
+            "#talkback-threshold",
+        ),
+        talkbackPhrasesInput: documentRef.querySelector("#talkback-phrases"),
+        talkbackEndpointStatus: documentRef.querySelector("#talkback-endpoint"),
+        talkbackReferenceStatus: documentRef.querySelector(
+            "#talkback-reference",
+        ),
+        talkbackVoiceStatus: documentRef.querySelector("#talkback-voice"),
+        talkbackLastStatus: documentRef.querySelector("#talkback-last"),
+        wordsInput: documentRef.querySelector("#words"),
+        wordList: documentRef.querySelector("#word-list"),
+        sequenceStatus: documentRef.querySelector("#sequence-status"),
+        timelineState: documentRef.querySelector("#timeline-state"),
+        currentLevelTitle: documentRef.querySelector("#current-level"),
+        currentSequenceTitle: documentRef.querySelector("#current-sequence"),
+        timerDisplay: documentRef.querySelector("#timer-display"),
+        livesDisplay: documentRef.querySelector("#lives-display"),
+        scoreDisplay: documentRef.querySelector("#score-display"),
+        timeline: documentRef.querySelector("#timeline"),
+        levelIntro: documentRef.querySelector("#level-intro"),
+        levelIntroTitle: documentRef.querySelector("#level-intro-title"),
+        levelIntroSubtitle: documentRef.querySelector("#level-intro-subtitle"),
+        memoryPhraseLayer: documentRef.querySelector("#memory-phrase-layer"),
+        devLevelButtons: documentRef.querySelector("#dev-level-buttons"),
+        devLevel1Button: documentRef.querySelector("#dev-level-1"),
+        devLevel2Button: documentRef.querySelector("#dev-level-2"),
+        status: documentRef.querySelector("#status"),
+        finalText: documentRef.querySelector("#final"),
+        interimText: documentRef.querySelector("#interim"),
+        asciiWaveformBackground: documentRef.querySelector(
+            "#ascii-waveform-bg",
+        ),
+        gameOverVisualizer: documentRef.querySelector("#game-over-visualizer"),
+    };
+}
+
+export function readConfig(refs) {
+    return {
+        mode: refs.modeInput.value,
+        seconds: Math.max(1, Number(refs.secondsInput.value) || 5),
+        lives: Math.max(1, Number(refs.livesInput.value) || 3),
+        retries: Math.max(0, Number(refs.retriesInput.value) || 0),
+        transcriptSource: refs.transcriptSourceInput.value,
+        sentenceFuzzyThreshold:
+            Math.max(
+                50,
+                Math.min(100, Number(refs.sentenceFuzzyMatchInput.value) || 78),
+            ) / 100,
+        continuePhrase: refs.continuePhraseInput.value.trim() || "I'll be back",
+        echoMode: refs.echoModeInput.value,
+        talkbackEnabled: Boolean(refs.talkbackEnabledInput.checked),
+        talkbackEndpoint: refs.talkbackEndpointInput.value
+            .trim()
+            .replace(/\/+$/, ""),
+        talkbackThreshold: Math.max(
+            1,
+            Number(refs.talkbackThresholdInput.value) || 4,
+        ),
+        talkbackPhrases: refs.talkbackPhrasesInput.value
+            .split("\n")
+            .map((phrase) => phrase.trim())
+            .filter(Boolean),
+        wordPlan: refs.wordsInput.value,
+    };
+}

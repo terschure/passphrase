@@ -1,0 +1,1123 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>PASSPHRASE · Architecture Deck</title>
+<style>
+  :root{
+    color-scheme: dark;
+    --bg:#0a0a0a; --panel:#111111; --ink:#eeeeee; --muted:#888888; --dim:#666666;
+    --line:#2a2a2a; --yellow:#facc15; --green:#22c55e; --red:#ef4444; --cyan:#8be9fd; --pink:#f472b6;
+    --mono: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
+  }
+  *,*::before,*::after{box-sizing:border-box}
+  html,body{margin:0;height:100%}
+  body{
+    background:var(--bg); color:var(--ink); font-family:var(--mono);
+    line-height:1.5; overflow:hidden; letter-spacing:0.01em;
+  }
+  /* faint scanlines echoing the game CRT feel */
+  body::after{
+    content:""; position:fixed; inset:0; z-index:60; pointer-events:none;
+    background:repeating-linear-gradient(to bottom, rgba(255,255,255,0.02) 0 1px, transparent 1px 3px);
+    mix-blend-mode:screen; opacity:0.5;
+  }
+  #app{position:fixed; inset:0; display:flex; flex-direction:column}
+  /* top bar */
+  header#bar{
+    flex:none; display:grid; grid-template-columns:1fr auto 1fr; align-items:center;
+    padding:12px 20px; border-bottom:1px solid var(--line);
+    color:#fff; text-shadow:0 0 8px rgba(255,255,255,0.14);
+  }
+  #bar .brand{font-weight:700; letter-spacing:0.14em}
+  #bar .brand b{color:var(--yellow)}
+  #bar .section-tag{justify-self:center; color:var(--muted); font-size:0.8rem; letter-spacing:0.08em; text-transform:uppercase}
+  #bar .counter{justify-self:end; color:var(--dim); font-size:0.82rem}
+  #bar .counter b{color:var(--ink)}
+  /* stage */
+  #stage{flex:1; min-height:0; position:relative; overflow:hidden}
+  .slide{
+    position:absolute; inset:0; padding:min(6vh,54px) min(7vw,90px);
+    overflow-y:auto; animation:fade 260ms ease both;
+  }
+  @keyframes fade{from{opacity:0; transform:translateY(6px)} to{opacity:1; transform:none}}
+  .slide-inner{max-width:1180px; margin:0 auto; min-height:100%; display:flex; flex-direction:column; justify-content:center}
+  /* progress rail */
+  #rail{flex:none; display:flex; gap:3px; padding:6px 20px 10px; border-top:1px solid var(--line); overflow-x:auto}
+  #rail .seg{flex:1; min-width:8px; height:4px; border-radius:2px; background:#222; cursor:pointer; transition:background 150ms}
+  #rail .seg.done{background:#3a3a2a}
+  #rail .seg.here{background:var(--yellow)}
+  /* typography */
+  h1{font-size:clamp(2rem,6vw,4.4rem); margin:0 0 .2em; letter-spacing:0.05em;
+     text-shadow:1px 0 0 rgba(239,68,68,.5),-1px 0 0 rgba(255,255,255,.28),0 0 26px rgba(255,255,255,.14)}
+  h2{font-size:clamp(1.3rem,3.4vw,2.3rem); margin:0 0 .5em; color:#fff; letter-spacing:0.03em}
+  h3{font-size:1rem; color:var(--yellow); text-transform:uppercase; letter-spacing:0.1em; margin:0 0 .6em}
+  p{margin:0 0 .8em; color:#dcdcdc; font-size:clamp(.92rem,1.5vw,1.08rem)}
+  .lead{font-size:clamp(1rem,1.9vw,1.3rem); color:#eaeaea}
+  .kicker{color:var(--yellow); letter-spacing:0.18em; text-transform:uppercase; font-size:.8rem; margin-bottom:1.2em}
+  .muted{color:var(--muted)} .dim{color:var(--dim)}
+  code, .chip{font-family:var(--mono)}
+  code{color:var(--cyan)}
+  .chips{display:flex; flex-wrap:wrap; gap:6px; margin:.2em 0 0}
+  .chip{border:1px solid #334; background:rgba(139,233,253,.06); color:var(--cyan);
+        padding:2px 8px; border-radius:5px; font-size:.82rem}
+  ul.ticks{list-style:none; padding:0; margin:.2em 0}
+  ul.ticks li{position:relative; padding-left:1.3em; margin:.35em 0; color:#dcdcdc}
+  ul.ticks li::before{content:"›"; position:absolute; left:0; color:var(--yellow); font-weight:700}
+  /* plain-terms callout */
+  .plain{border-left:3px solid var(--yellow); background:rgba(250,204,21,.06);
+         padding:.7em 1em; border-radius:0 6px 6px 0; margin:.2em 0 0}
+  .plain .lbl{display:block; color:var(--yellow); font-size:.72rem; letter-spacing:.14em; text-transform:uppercase; margin-bottom:.25em}
+  .plain p{margin:0; color:#f3eccf}
+  /* file slide layout */
+  .file-head{display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin-bottom:.2em}
+  .path{font-size:clamp(1.05rem,2.4vw,1.7rem); color:#fff; font-weight:700}
+  .path .dir{color:var(--dim)}
+  .path .name{color:var(--yellow)}
+  .badge{font-size:.68rem; letter-spacing:.08em; text-transform:uppercase; padding:3px 8px; border-radius:4px; border:1px solid}
+  .badge.pure{color:var(--green); border-color:#1c4}
+  .badge.service{color:var(--cyan); border-color:#268}
+  .badge.ui{color:var(--pink); border-color:#835}
+  .badge.data{color:#c4b5fd; border-color:#549}
+  .badge.shell{color:#fca; border-color:#853}
+  .badge.coord{color:var(--yellow); border-color:#872}
+  .sub-tag{color:var(--muted); font-size:.78rem}
+  .grid2{display:grid; grid-template-columns:1fr 1fr; gap:22px 34px; margin-top:.4em}
+  @media(max-width:860px){.grid2{grid-template-columns:1fr}}
+  .connects{margin-top:1em; color:var(--muted); font-size:.9rem}
+  .connects b{color:#cfcfcf; font-weight:600}
+  .connects code{color:var(--green)}
+  /* section divider */
+  .section-hero .num{color:var(--dim); letter-spacing:.2em}
+  .filelist{display:flex; flex-wrap:wrap; gap:8px; margin-top:1em}
+  .filelist .f{border:1px solid var(--line); border-radius:5px; padding:4px 10px; color:#cfcfcf; font-size:.85rem; background:#141414}
+  .filelist .f b{color:var(--yellow)}
+  .deepdive{margin-top:1.1em; border:1px solid var(--line); border-radius:8px; padding:1em 1.2em; background:#0e0e0e}
+  .deepdive h3{color:var(--cyan)}
+  /* diagrams */
+  pre.ascii{font-family:var(--mono); white-space:pre; overflow-x:auto; color:#cfe; background:#0d0d0d;
+            border:1px solid var(--line); border-radius:8px; padding:1em 1.2em; font-size:clamp(.62rem,1.15vw,.9rem); line-height:1.35}
+  .flow{display:flex; flex-wrap:wrap; align-items:center; gap:10px; margin:.6em 0}
+  .flow .node{border:1px solid #334; background:#111; border-radius:7px; padding:8px 12px; font-size:.86rem}
+  .flow .node b{color:var(--yellow)} .flow .node span{color:var(--muted); display:block; font-size:.72rem}
+  .flow .arr{color:var(--dim)}
+  /* architecture map */
+  .map{display:grid; grid-template-columns:repeat(4,1fr); gap:12px; margin-top:.6em}
+  @media(max-width:860px){.map{grid-template-columns:repeat(2,1fr)}}
+  .box{border:1px solid var(--line); border-radius:8px; padding:12px 14px; background:#101010; cursor:pointer;
+       transition:border-color 150ms, transform 150ms, background 150ms}
+  .box:hover{border-color:var(--yellow); transform:translateY(-2px); background:#151510}
+  .box .t{color:#fff; font-weight:700; letter-spacing:.03em}
+  .box .c{color:var(--dim); font-size:.72rem}
+  .box .d{color:var(--muted); font-size:.82rem; margin-top:.25em}
+  .box.wide{grid-column:1/-1; background:#0e0e0f}
+  .box.coordbox{border-color:#7a5f12; background:#14120a}
+  /* title waveform */
+  #wave{color:rgba(250,204,21,.5); white-space:pre; font-size:clamp(.5rem,1.1vw,.85rem); line-height:1;
+        margin:1.4em 0 0; text-shadow:0 0 10px rgba(250,204,21,.25); pointer-events:none; overflow:hidden}
+  .title-meta{margin-top:1.6em; color:var(--muted)}
+  .title-meta b{color:var(--ink)}
+  /* legend */
+  .legend{display:flex; flex-wrap:wrap; gap:10px 18px; margin-top:.6em}
+  .legend .item{display:flex; align-items:center; gap:8px; font-size:.86rem; color:#cfcfcf}
+  .keys{display:inline-block; border:1px solid var(--line); border-radius:5px; padding:1px 7px; color:#fff; background:#141414; font-size:.8rem}
+  /* TOC overlay */
+  #toc{position:fixed; inset:0; z-index:80; background:rgba(6,6,6,.94); display:none; padding:5vh 6vw; overflow-y:auto}
+  #toc.open{display:block}
+  #toc h2{color:var(--yellow)}
+  #toc .cols{columns:2; column-gap:40px}
+  @media(max-width:760px){#toc .cols{columns:1}}
+  #toc a{display:block; color:#cfcfcf; text-decoration:none; padding:4px 0; break-inside:avoid; border-bottom:1px solid #191919}
+  #toc a:hover{color:var(--yellow)}
+  #toc a .n{color:var(--dim); margin-right:.6em}
+  #toc .hint{color:var(--dim); margin-top:1em}
+  /* nav buttons */
+  .nav-btn{position:fixed; top:50%; transform:translateY(-50%); z-index:40; background:transparent; border:0;
+           color:#333; font-size:2.4rem; cursor:pointer; padding:0 14px; transition:color 150ms}
+  .nav-btn:hover{color:var(--yellow)}
+  #prev{left:2px} #next{right:2px}
+  .cover-badge{display:inline-block; border:1px solid var(--green); color:var(--green); border-radius:5px;
+               padding:3px 10px; font-size:.85rem; margin-top:.4em}
+  .hintbar{position:fixed; bottom:56px; left:50%; transform:translateX(-50%); z-index:30; color:var(--dim);
+           font-size:.72rem; letter-spacing:.06em; opacity:.7}
+</style>
+</head>
+<body>
+<div id="app">
+  <header id="bar">
+    <div class="brand"><b>▮</b> PASSPHRASE <span class="dim">/ architecture</span></div>
+    <div class="section-tag" id="sectionTag"></div>
+    <div class="counter"><b id="cur">1</b> / <span id="total">1</span></div>
+  </header>
+  <div id="stage"></div>
+  <div id="rail"></div>
+</div>
+<button class="nav-btn" id="prev" aria-label="Previous">‹</button>
+<button class="nav-btn" id="next" aria-label="Next">›</button>
+<div class="hintbar">← → navigate · <span class="keys">T</span> contents · <span class="keys">Home/End</span> jump</div>
+<div id="toc"><h2>Contents</h2><div class="cols" id="tocList"></div><div class="hint">Press <span class="keys">T</span> or <span class="keys">Esc</span> to close · click any entry to jump.</div></div>
+
+<script>
+"use strict";
+
+/* ============================================================================
+   SUBSYSTEM SECTIONS + PER-FILE CONTENT
+   Each section => one divider slide + one dedicated slide per file.
+   ==========================================================================*/
+const SECTIONS = [
+  {
+    name:"App shell", tag:"shell",
+    purpose:"The static page, styling, sounds, tests, and docs the game is served from.",
+    plain:"The stage, the paint, the sound library, and the instruction manual — everything around the game itself.",
+    files:[
+      {path:"index.html", layer:"shell",
+       purpose:"The single HTML document: all DOM targets and z-ordered layers the game manipulates.",
+       plain:"The empty stage — every place a piece of the game can appear is marked out here.",
+       exports:["#game","#onboarding-screen","#timeline","#settings-panel","<script type=module>"],
+       does:["Declares layers: onboarding, top HUD, waveform background, memory-phrase layer, level intro, the ASCII road timeline, echo + talk-back panels, transcript, game-over modal, settings drawer.",
+             "Contains the default settings form (words, mode, lives, echo mode, TTS endpoint) that the game reads on startup.",
+             "Loads exactly one script: the ES-module entry point src/main.js."],
+       connects:"Loaded styling from <b>styles/main.css</b>; boots <code>src/main.js</code>."},
+      {path:"styles/main.css", layer:"shell",
+       purpose:"All visual styling, layout, color-coding, and keyframe animations (extracted from the monolith).",
+       plain:"The look: dark cyberpunk theme, glowing text, layered panels, and smooth animations.",
+       exports:[":root theme","road/fence/gate classes","keyframes: glitch, fire-flicker, refill"],
+       does:["Dark monospace theme (#0a0a0a bg, Pexico-with-monospace-fallback), fixed HUD, full-screen centered ASCII road (z-1), waveform background (z-0, screen blend).",
+             "Color-codes road parts via classes: .wall-word, .fence-wire, .gate-0..3, password-key / passport character states.",
+             "Animations: level-intro glitch-out, game-over fire flicker, lives refill pulse, character pulse/glitch; responsive rules hide side panels below 760px."],
+       connects:"Styles the DOM in <b>index.html</b>; class names are emitted by the renderers."},
+      {path:"assets/audio/", layer:"shell",
+       purpose:"The five self-contained audio files: looping theme (2 formats) + three one-shot SFX.",
+       plain:"The soundtrack and sound effects — a moody loop plus three short stingers.",
+       exports:["main_sound_theme.ogg","main_sound_theme.mp3","game_fx_wall_pass.wav","game_fx_respawn.wav","game_fx_level_failed.wav"],
+       does:["main_sound_theme.ogg / .mp3 — looping background music with OGG-preferred, MP3-fallback sources.",
+             "game_fx_wall_pass.wav (success), game_fx_respawn.wav (continue), game_fx_level_failed.wav (fail) — short cloned-per-trigger stingers.",
+             "Fully local — the only optional network dependency in the whole app is the TTS endpoint used by talk-back."],
+       connects:"Loaded + ducked by <code>audio/musicManager.js</code>."},
+      {path:"tests/run-tests.mjs", layer:"shell",
+       purpose:"Dependency-free Node test suite (~31 assertions) covering pure logic across every subsystem.",
+       plain:"An automated checklist that proves the game's logic works without ever opening a browser.",
+       exports:["node tests/run-tests.mjs"],
+       does:["Imports the real modules, feeds them mock DOM/streams/timers, and asserts behavior with node:assert — no framework, no browser.",
+             "Covers content parsing, fuzzy matching, sequence/lives rules, level progression, audio buffer math, renderer geometry, echo policy, talk-back URL/reference logic, and config normalization.",
+             "The safety net that lets the pure modules be refactored with confidence."],
+       connects:"Exercises every <code>src/</code> subsystem; the browser-free contract in the READMEs makes this possible."},
+      {path:"README.md", layer:"shell",
+       purpose:"Top-level architecture overview, run/test instructions, and multi-developer guidance.",
+       plain:"The front-door guide: how to run it, how it's organized, and how to change it safely.",
+       exports:["Run","Architecture","Multi-Dev Guidance"],
+       does:["Explains setup (python3 -m http.server), browser + mic requirements, and the test command.",
+             "States the coordinator rule: passphraseApp.js owns cross-subsystem flow; runtime services never import each other.",
+             "Lays out the parity contract with the root prototype and the 'boring, explicit module APIs' philosophy."],
+       connects:"Describes <b>every</b> subsystem folder; paired with <code>src/README.md</code>."},
+      {path:"src/README.md", layer:"shell",
+       purpose:"Per-file source inventory and the dependency-direction rules for the src/ tree.",
+       plain:"The table of contents for the code — one line on what each file is for.",
+       exports:["file-by-file inventory","Dependency direction","Next extraction targets"],
+       does:["Names every module with a one-to-two sentence responsibility.",
+             "Codifies dependency direction: pure modules never import the app; runtime modules receive browser APIs and state snapshots as arguments.",
+             "Lists remaining refactor targets — this deck is effectively its visual companion."],
+       connects:"Indexes all of <code>src/</code>; expands on <b>README.md</b>."},
+    ]
+  },
+  {
+    name:"Entry & Coordinator", tag:"coord",
+    purpose:"The bootstrap and the single conductor that wires every subsystem together.",
+    plain:"The on-switch and the orchestra conductor — nothing plays until, and unless, this says so.",
+    deepDive:{title:"The coordinator pattern",
+      body:"passphraseApp.js is the only place allowed to cross subsystem boundaries. It owns the mutable game state (level, word index, deadline, lives) and calls pure helpers with plain-data snapshots (createRuleStateSnapshot / applyRuleState), then triggers side effects — sound, DOM, echo, talk-back — itself. Runtime services never import one another; they receive callbacks and getters. That is why the whole thing stays testable and refactorable."},
+    files:[
+      {path:"src/main.js", layer:"coord",
+       purpose:"The entry point: imports and calls initPassphraseApp().",
+       plain:"The light switch that turns the whole game on.",
+       exports:["(bootstrap)"],
+       does:["Three lines: import initPassphraseApp and invoke it.","Keeps the HTML's script tag trivial and gives the app one clear ignition point."],
+       connects:"Calls <code>app/passphraseApp.js</code>."},
+      {path:"src/app/passphraseApp.js", layer:"coord",
+       purpose:"The central coordinator: owns game state and wires speech, UI, rules, renderers, audio, echo, and talk-back into one loop.",
+       plain:"The conductor of the orchestra — it decides when each system plays based on what's happening in the game.",
+       exports:["initPassphraseApp()"],
+       does:["Creates DOM refs + reads config, instantiates every subsystem (speech service, music, echo, talk-back, visualizer, memory enemies), and holds the game-state variables.",
+             "Implements the flow: processTranscriptText → catchWords / processSequenceText, startSequenceTimer, handleDeadline, failSequence, completeSequence, level transitions.",
+             "Drives all rendering (renderSequenceStatus, renderTimeline, renderWordList, renderTranscript, renderGameOverScreen) and holds pure logic behind snapshot helpers."],
+       connects:"Imports ~40 modules; the only file that coordinates side effects across subsystems."},
+      {path:"src/app/actionBindings.js", layer:"coord",
+       purpose:"Wires primary buttons, onboarding, and dev keyboard shortcuts to app handlers.",
+       plain:"A receptionist that sends each button press or shortcut to the right part of the game.",
+       exports:["bindActionEvents()"],
+       does:["Binds Start / Stop / Clear, the onboarding Continue button, and Enter-to-start.",
+             "Binds dev shortcuts: 1 / 2 (jump level), ] (complete current phrase), L (complete Level 1).",
+             "Guards shortcuts when the user is typing in an input/textarea/select."],
+       connects:"Called by <b>passphraseApp</b> with a handlers object; touches DOM from <code>ui/domRefs.js</code>."},
+      {path:"src/app/controlBindings.js", layer:"coord",
+       purpose:"Wires the settings-panel inputs to live game-behavior updates.",
+       plain:"The control panel — turning a knob immediately feeds the change back into the game.",
+       exports:["bindControlEvents()"],
+       does:["Listens to ~17 settings inputs: words, mode, seconds, lives, retries, transcript source, fuzzy %, continue phrase, echo mode, all talk-back fields.",
+             "Each change routes to explicit app callbacks: resetSequence, rebuild catch words, restart timers, re-render, toggle echo/talk-back systems.",
+             "Keeps settings reactive without the app polling for changes."],
+       connects:"Called by <b>passphraseApp</b>; reads via <code>ui/domRefs.js</code> readConfig."},
+    ]
+  },
+  {
+    name:"UI", tag:"ui",
+    purpose:"DOM lookup, config normalization, and all user-facing view rendering.",
+    plain:"Everything you see and read on screen — the menus, dashboards, checklists, and messages.",
+    files:[
+      {path:"src/ui/domRefs.js", layer:"data",
+       purpose:"Centralizes DOM element lookup and validated config reading.",
+       plain:"A contact list for on-screen elements, plus a reader for the current settings.",
+       exports:["createDomRefs()","readConfig()"],
+       does:["createDomRefs queries ~50 elements by id once and returns them as a named object.",
+             "readConfig reads the settings inputs and returns a normalized config (clamped numbers, trimmed text, fuzzy % scaled to 0–1, sensible defaults)."],
+       connects:"Used everywhere; the single source of DOM + settings for <b>passphraseApp</b> and both binding files."},
+      {path:"src/ui/gameOver.js", layer:"ui",
+       purpose:"Renders the game-over / continue screen.",
+       plain:"The screen that appears when you fail and tells you the phrase to say to continue.",
+       exports:["renderGameOverScreen()"],
+       does:["Shows/hides based on sequenceFailed + gameOverContinuing; toggles a 'confirmed' state when the continue phrase is accepted.",
+             "Renders title, round counter, the imitation phrase to speak, and drives the fire animation. Sequence-mode only."],
+       connects:"Called from <b>passphraseApp</b>; fire frames come from <code>renderers/ascii/roadScene.js</code>."},
+      {path:"src/ui/hud.js", layer:"ui",
+       purpose:"Renders the heads-up display: level titles, score, lives/retries, and sequence status text.",
+       plain:"The dashboard — your progress, score, remaining lives, and what to say next.",
+       exports:["renderLevelStatus()","renderScoreDisplay()","renderLivesDisplay()","renderSequenceStatusText()"],
+       does:["Score = caught words (catch) or word index + Level-1 carry-over (sequence).",
+             "Lives shown as ♥ / ♡ hearts with a retries counter and a 'refilled' pulse.",
+             "Sequence status is a multi-line summary: state, level, deadline, next word, lives left."],
+       connects:"Called by <b>passphraseApp</b> render passes; data only, no game logic."},
+      {path:"src/ui/levelIntro.js", layer:"ui",
+       purpose:"Controller that animates the level intro card in and out.",
+       plain:"The title card that flashes a level's name for two seconds, then glitches away.",
+       exports:["createLevelIntroController()"],
+       does:["show(level) displays name + subtitle, holds ~1800ms, then plays a 420ms glitch-out.",
+             "Fires onComplete (begin gameplay) and exposes clear() to cancel pending timers."],
+       connects:"Owned by <b>passphraseApp</b>; onComplete begins the active level."},
+      {path:"src/ui/onboarding.js", layer:"pure",
+       purpose:"Renders the two-step onboarding and validates spoken start commands.",
+       plain:"The tutorial screen — and it recognizes when you say “start” to begin.",
+       exports:["showOnboardingStep()","hideOnboarding()","normalizeVoiceCommand()","isStartCommand()"],
+       does:["showOnboardingStep swaps intro → instructions and adapts the button to speech support.",
+             "normalizeVoiceCommand lowercases/strips punctuation; isStartCommand detects 'start' / 'start game'."],
+       connects:"Used by <b>passphraseApp</b> + the recognition flow to allow a hands-free start."},
+      {path:"src/ui/settingsPanel.js", layer:"ui",
+       purpose:"Opens/closes the settings drawer.",
+       plain:"The light switch for the settings menu.",
+       exports:["openSettings()","closeSettings()"],
+       does:["Toggles the 'open' class on the backdrop + panel and flips aria-hidden for accessibility."],
+       connects:"Called from the control/action bindings via <b>passphraseApp</b>."},
+      {path:"src/ui/transcript.js", layer:"ui",
+       purpose:"Renders what the player said, highlighting target words.",
+       plain:"A live caption of your speech with the important words lit up.",
+       exports:["renderTranscript()","renderTranscriptInto()"],
+       does:["Builds a DOM tree by regex-matching target words (longest-first, word-boundary, case-insensitive).",
+             "Matches get a 'hit' color class; renders to both the main transcript and the game-over transcript."],
+       connects:"Called by <b>passphraseApp</b>; uses its colorSpan + escapeRegExp helpers."},
+      {path:"src/ui/wordList.js", layer:"ui",
+       purpose:"Renders the hierarchical checklist of target words grouped by level and round.",
+       plain:"A checklist showing which words you've cleared and which one is next.",
+       exports:["renderWordList()"],
+       does:["Groups entries under level + round headings, inserting a heading only when the key changes.",
+             "Marks caught words (line-through), the current word (› prefix), and a failed word."],
+       connects:"Called by <b>passphraseApp</b>; entries come from <code>content/levelCatalog.js</code>."},
+    ]
+  },
+  {
+    name:"Speech", tag:"speech",
+    purpose:"Wraps the Web Speech API lifecycle and turns recognition events into game input.",
+    plain:"The ears of the game — turning the microphone on, listening, and passing along what it heard.",
+    files:[
+      {path:"src/speech/speechService.js", layer:"service",
+       purpose:"Wraps window.SpeechRecognition and manages its start/stop lifecycle.",
+       plain:"The microphone driver — it turns listening on and off and reports its state.",
+       exports:["createSpeechService()"],
+       does:["Detects SpeechRecognition / webkitSpeechRecognition; configures continuous + interim results.",
+             "Exposes start / stop / ensureRecognition / isSupported / isListening and delegates onStart/onEnd/onError/onResult to injected callbacks."],
+       connects:"Callbacks built by <code>speech/recognitionFlow.js</code>; owned by <b>passphraseApp</b>."},
+      {path:"src/speech/recognitionFlow.js", layer:"service",
+       purpose:"Builds the result handler and lifecycle callbacks that plug recognition into the game.",
+       plain:"The translator-dispatcher: it hears the words and decides what the game should do.",
+       exports:["createRecognitionResultHandler()","createSpeechServiceCallbacks()"],
+       does:["Result handler extracts final/interim text, routes it to processTranscriptText (or onboarding start), and re-renders.",
+             "Callbacks sync recognition state, update status text, and start/stop the visualizer, echo, and talk-back on start/end."],
+       connects:"Bridges <code>speechService.js</code> ↔ <b>passphraseApp</b>; uses recognitionResults + transcriptState."},
+      {path:"src/speech/recognitionResults.js", layer:"pure",
+       purpose:"Extracts final and interim text from Web Speech result events.",
+       plain:"A subtitle extractor that pulls recognized words out of the browser's result objects.",
+       exports:["collectFinalChunks()","collectLiveTranscript()"],
+       does:["collectFinalChunks walks results from resultIndex, invoking a callback per finalized chunk.",
+             "collectLiveTranscript concatenates interim + final text into one live string (respecting mid-result wipes)."],
+       connects:"Pure helper called by <code>recognitionFlow.js</code>."},
+      {path:"src/speech/transcriptState.js", layer:"pure",
+       purpose:"In-memory store for final chunks and interim text, with wipe bookkeeping.",
+       plain:"A notepad recording both what the mic confirmed and what it's still guessing.",
+       exports:["createTranscriptState()"],
+       does:["Tracks finalChunks[] and interimTranscript; methods appendFinal / setInterim / clear / getSelected(source).",
+             "Records whether the transcript was wiped mid-recognition so results stay consistent."],
+       connects:"Owned by <b>passphraseApp</b>; read by the recognition flow and matching."},
+    ]
+  },
+  {
+    name:"Matching", tag:"matching",
+    purpose:"Forgiving speech-to-target matching: exact, speech-normalized, then fuzzy.",
+    plain:"The judge of “close enough” — it understands you even if you say a word slightly wrong.",
+    deepDive:{title:"How forgiving matching works",
+      body:"Three tiers, cheapest first. (1) Exact word-boundary regex. (2) Speech-normalized regex — turns * into 'star', strips spoken punctuation. (3) For multi-word targets only, token-level edit distance over sliding windows, accepting a window at ≥ 78% similarity. Example: “i am not a rob” vs “I am not a robot” scores 0.8 → match."},
+    files:[
+      {path:"src/matching/matching.js", layer:"pure",
+       purpose:"Tokenization + Levenshtein fuzzy matching with speech normalization and ordered search.",
+       plain:"A forgiving recognizer: handles typos, mispronunciations, and spoken symbols like “star” for *.",
+       exports:["textMatchesTarget()","findTargetEnd()","findOrderedMatchEnd()","normalizeSpokenTarget()","tokenEditDistance()","escapeRegExp()"],
+       does:["Tokenizes text (words + apostrophes) with positions; tokenEditDistance is Levenshtein over token sequences.",
+             "findTargetEnd tries exact → speech-normalized → fuzzy-sentence, returning the match end index (or -1).",
+             "findOrderedMatchEnd advances a search cursor so sequence words must appear in order."],
+       connects:"Called by <b>passphraseApp</b>, <code>game/catchMode.js</code>, and <code>game/sequenceText.js</code>."},
+    ]
+  },
+  {
+    name:"Content", tag:"content",
+    purpose:"Level definitions, phrase lists, and the parser for the editable word plan.",
+    plain:"The script and level list — which words belong to which level and round.",
+    files:[
+      {path:"src/content/targetPlan.js", layer:"data",
+       purpose:"Parses the markdown-ish word plan and holds default level/phrase data.",
+       plain:"The word-list manager — it reads the levels and rounds from a simple text format.",
+       exports:["parseTargetPlan()","getLevelEntries()","LEVEL_1_WORD_COUNT","LEVEL_2_ROUNDS","DEFAULT_WORD_PLAN","DEFAULT_TALKBACK_PHRASES"],
+       does:["parseTargetPlan reads '# Level' / '## Round' headers into flat entries {text, levelTitle, sequenceTitle, indices}.",
+             "Defaults: Level 1 = 18 border/immigration words; Level 2 = 3 rounds of surveillance-satire phrases."],
+       connects:"Consumed by <code>content/levelCatalog.js</code> and <b>passphraseApp</b>."},
+      {path:"src/content/levelCatalog.js", layer:"data",
+       purpose:"Builds level definitions and a consistent query API over them.",
+       plain:"The level registry — one source of truth for each level's name, setting, and words.",
+       exports:["createLevelCatalog()"],
+       does:["Returns {levels, getLevelConfig(id), getLevelEntries(id)} with names, subtitles, and environments (BORDER CHECKPOINT / UNDERSEA CABLE).",
+             "Lazy-loads Level 1 from parseTargetPlan; Level 2 comes from fixed rounds. Extensible by adding to the levels array."],
+       connects:"Built by <b>passphraseApp</b> from <code>targetPlan.js</code>; feeds HUD + word list."},
+    ]
+  },
+  {
+    name:"Game logic", tag:"game",
+    purpose:"Pure, browser-free rules: matching consumption, sequence/lives state, and level progression.",
+    plain:"The rulebook and referee — it knows the modes, tracks your progress, and decides win or lose.",
+    deepDive:{title:"Catch mode vs sequence mode",
+      body:"Catch mode: any target word you say gets collected — no order, no timer. Sequence mode comes in two flavors. Continuous: say words in order, multiple can advance in one utterance. Beat (rhythm/lives): one word per deadline — hit it to advance and refill, miss it to lose a life (lives) or fail instantly (rhythm)."},
+    files:[
+      {path:"src/game/rules.js", layer:"pure",
+       purpose:"Core state transitions and win/lose logic for catch and sequence/beat modes.",
+       plain:"The scorekeeper referee that applies the rules and updates your standing.",
+       exports:["createInitialGameState()","handleBeatDeadline()","markCurrentWordCaught()","resetSequence()","acceptContinuePhrase()","recordCompletedPhrase()"],
+       does:["Tracks word index, caught words, lives, retries, and beat completion as a plain state object.",
+             "handleBeatDeadline: if caught this beat → advance + refill; else lose a life (lives) or fail (rhythm).",
+             "acceptContinuePhrase / resetSequence restore state after a game-over continue."],
+       connects:"Pure; the app mutates copies via snapshot in/out. Imported by <code>sequenceText.js</code>."},
+      {path:"src/game/catchMode.js", layer:"pure",
+       purpose:"Consumes spoken text against the word list, collecting new matches only.",
+       plain:"A word collector — it finds every target word you said, without caring about order.",
+       exports:["consumeCatchText()"],
+       does:["Tests each target against the text via an injected matcher and adds hits to a caught set.",
+             "Returns {changed, caught}; changed flags whether new words were added."],
+       connects:"Called by <b>passphraseApp</b>.catchWords with <code>matching.js</code> as the matcher."},
+      {path:"src/game/sequenceText.js", layer:"pure",
+       purpose:"Consumes text against the ordered sequence, advancing only on in-order matches.",
+       plain:"A strict task tracker that makes you say words in the right order and won't let you skip ahead.",
+       exports:["consumeSequenceText()","findSequenceSearchStart()"],
+       does:["Advances a forward-only cursor past matched words so search always looks ahead.",
+             "Beat modes set beatHit on first match per beat; continuous mode greedily matches consecutive words.",
+             "Returns {changed, completed, beatHit, completedPhrases}."],
+       connects:"Called by <b>passphraseApp</b>.processSequenceText; uses <code>rules.js</code> + injected findWordEnd."},
+      {path:"src/game/levelProgression.js", layer:"pure",
+       purpose:"Level activation state and level navigation / distortion helpers.",
+       plain:"The level setup sheet — it initializes timers and how glitchy your character looks.",
+       exports:["createLevelActivationState()","getNextLevel()","getKeygenDistortionForLevel()"],
+       does:["createLevelActivationState builds the fresh per-level state (deadline, gate timing, cooldowns, refill).",
+             "getKeygenDistortionForLevel maps level 1–5 to a 0–1 visual-distortion amount; getNextLevel walks the catalog."],
+       connects:"Called by <b>passphraseApp</b>.setActiveLevel; distortion feeds the keygen character."},
+      {path:"src/game/levelProgressionEffects.js", layer:"pure",
+       purpose:"Policy layer mapping progression to music, enemy count, and distortion side effects.",
+       plain:"The game director that tells the music, enemies, and visuals to ramp up as you advance.",
+       exports:["createLevelProgressionEffects()"],
+       does:["Tracks Level-2 completed-word count; on each success syncs enemy count and music degradation.",
+             "syncMusicDegradationToLevel triggers the right music state per level via injected callbacks."],
+       connects:"Wraps callbacks into <code>audio/musicManager.js</code> + the memory-enemy system; owned by <b>passphraseApp</b>."},
+    ]
+  },
+  {
+    name:"Renderers / ASCII", tag:"renderers",
+    purpose:"The ASCII engine: math, scene props, per-frame state, row assembly, the player, and the loop.",
+    plain:"The art department and animator — it draws the scrolling road, walls, gates, and your character.",
+    deepDive:{title:"The rendering pipeline",
+      body:"Game state → timelineState computes what to show (wall row, gate progress, timer) → roadRenderer.buildRoadRows assembles a character grid, filling terrain via hash.hashCell and walls via roadScene → the keygen character is composited in → renderRoadScene turns rows into styled DOM → roadAnimation calls it ~11×/sec."},
+    files:[
+      {path:"src/renderers/ascii/hash.js", layer:"pure",
+       purpose:"Deterministic procedural math: cell hashing, viewport metrics, collision test.",
+       plain:"The repeatable landscape generator — same spot on the road always draws the same detail.",
+       exports:["hashCell()","getRoadMetricsFromViewport()","obstacleIntersectsPlayer()"],
+       does:["hashCell(row,col) returns a stable pseudo-random uint32 from coordinates (multiply-hash).",
+             "getRoadMetricsFromViewport converts pixels to a character grid, lane width, and player position.",
+             "obstacleIntersectsPlayer is a simple bounding-box collision check."],
+       connects:"Foundation for <code>roadScene.js</code>, <code>roadRenderer.js</code>, and collision in <b>passphraseApp</b>."},
+      {path:"src/renderers/ascii/keygenCharacter.js", layer:"ui",
+       purpose:"State machine + ASCII art for the player avatar (passport in L1, password-key in L2).",
+       plain:"Your animated avatar — a passport or digital key that reacts, glitches, and breaks.",
+       exports:["createKeygenCharacter()","getPlayerBounds()","KEYGEN_HIT_COOLDOWN_MS","createPlayerLines()"],
+       does:["Tracks state (idle/speaking/success/fail/broken/glitch) with expiry timers + a 0–1 distortion level.",
+             "Draws passport (L1) or key (L2) art, sprinkling glitch particles proportional to distortion.",
+             "createVoiceSignalLines shows an upward wave above the character while you speak."],
+       connects:"Distortion from <code>levelProgression.js</code>; drawn via <code>player.js</code> + <code>roadRenderer.js</code>."},
+      {path:"src/renderers/ascii/player.js", layer:"ui",
+       purpose:"Composites the player character + voice signal into the road grid.",
+       plain:"The hand that places your avatar (and its speech ripple) onto the road at the right spot.",
+       exports:["drawPlayerCharacter()","getPlayerCharClass()"],
+       does:["drawPlayerCharacter writes the character's ASCII lines into the row array at the player position.",
+             "getPlayerCharClass assigns CSS classes per state (passport/password-key, --speaking/--fail...)."],
+       connects:"Uses <code>keygenCharacter.js</code> line generators + <code>hash.js</code>; called by <code>roadRenderer.js</code>."},
+      {path:"src/renderers/ascii/roadAnimation.js", layer:"ui",
+       purpose:"Throttled requestAnimationFrame loop driving the road at a steady frame rate.",
+       plain:"The animation engine — it redraws the road at a steady pace no matter the browser.",
+       exports:["createRoadAnimation()"],
+       does:["start/stop/reset/isRunning; calls an injected render(timestamp) via rAF.",
+             "Throttles to ~90ms (≈11fps) by tracking lastRender, skipping frames that come too soon."],
+       connects:"Render callback is <b>passphraseApp</b>.renderSequenceStatus."},
+      {path:"src/renderers/ascii/roadRenderer.js", layer:"ui",
+       purpose:"Assembles the full ASCII scene into DOM: road, walls, word, gate, player.",
+       plain:"The master painter that draws the entire scene and puts it on screen.",
+       exports:["renderRoadScene()","buildRoadRows()"],
+       does:["buildRoadRows makes the character grid: scroll offset, terrain via hashCell, the wall via roadScene, the word label, gate opening, and the player.",
+             "renderRoadScene converts rows to a DocumentFragment of classed <span>s and swaps it into the timeline."],
+       connects:"Uses <code>roadScene.js</code>, <code>player.js</code>, <code>hash.js</code>; called by the animation loop."},
+      {path:"src/renderers/ascii/roadScene.js", layer:"ui",
+       purpose:"Wall/fence/firewall visuals, terrain props, fire frames, and char-class mapping.",
+       plain:"The set designer — it defines the border fence, the burning firewall, and the ground.",
+       exports:["fillChainLinkFenceRow()","fillDigitalFirewallRow()","getWallBounds()","createScaryFireFrames()","WALL_HEIGHT","WALL_FIRE_FRAMES","renderLevel2CableRoad()"],
+       does:["L1: chain-link fence with barbed-wire top, diamond mesh, word label. L2: animated burning brick firewall + scrolling cable road.",
+             "groundProp / underseaProp scatter procedural detail via hashCell; getWallBounds computes wall columns.",
+             "Char-class helpers assign colors (fence-wire, wall-fire-top, wall-brick...)."],
+       connects:"Uses <code>hash.js</code>; consumed by <code>roadRenderer.js</code>; fire frames reused by game-over."},
+      {path:"src/renderers/ascii/timelineState.js", layer:"pure",
+       purpose:"Pure per-frame calculation of what the road should show, before any DOM work.",
+       plain:"The state translator — it decides where the wall is, how open the gate is, and time left.",
+       exports:["createTimelineRenderState()"],
+       does:["Blank during transitions; 'mode: catch' when not in sequence; otherwise computes wall row from elapsed time.",
+             "Computes timer text, gate progress (beat modes), completion, and whether collision should be checked.",
+             "Returns {timelineText, timerText, road:{word,wallRow,gateProgress}, checkCollision}."],
+       connects:"Pure input to <code>roadRenderer.js</code>; called inside <b>passphraseApp</b>.renderTimeline."},
+    ]
+  },
+  {
+    name:"Audio", tag:"audio",
+    purpose:"Background music with degradation/ducking, shared buffer math, and reusable segment recording.",
+    plain:"The DJ and recording studio — music that corrupts as things get harder, plus voice capture.",
+    deepDive:{title:"Music degradation & ducking",
+      body:"A WebAudio chain (distortion → bitcrusher → lowpass) progressively corrupts the theme: clean at Level 1, lo-fi/broken toward Level 5, with extra decay per Level-2 phrase. SFX briefly duck the music (fade to 12%, hold, restore) so stingers stay clear. All parameters ramp over ~900ms to avoid clicks."},
+    files:[
+      {path:"src/audio/bufferUtils.js", layer:"pure",
+       purpose:"Shared audio-buffer analysis and WAV encoding.",
+       plain:"The recording-studio basics — measure loudness, trim silence, package to WAV.",
+       exports:["computeRms()","computePeaks()","trimSilence()","encodeWavFromFloat32()","writeAscii()"],
+       does:["RMS energy + peak histogram (for waveform bars); trimSilence removes quiet edges by RMS threshold.",
+             "encodeWavFromFloat32 writes a 16-bit mono RIFF/WAVE payload."],
+       connects:"Used by <code>echo/runtime.js</code> and <code>talkback/runtime.js</code>; tested directly."},
+      {path:"src/audio/musicManager.js", layer:"service",
+       purpose:"Background theme, SFX, ducking, and real-time music degradation.",
+       plain:"The DJ that keeps the theme playing, ducks it for effects, and destroys it as difficulty climbs.",
+       exports:["createMusicManager()","startMainTheme()","updateMusicDegradation()","updateLevel2MusicDegradation()","playWallPassSound()","playRespawnSound()","playLevelFailedSound()"],
+       does:["Loops an <audio> theme (OGG/MP3) routed through a WebAudio distortion→bitcrusher→lowpass graph.",
+             "SFX trigger ducking + cooldown throttling; preloadAll warms assets; play wrapped for autoplay policy."],
+       connects:"Driven by <code>game/levelProgressionEffects.js</code> via <b>passphraseApp</b>; assets from <code>assets/audio/</code>."},
+      {path:"src/audio/segmentRecorder.js", layer:"service",
+       purpose:"Reusable MediaRecorder wrapper for capture-to-blob segments.",
+       plain:"A record button that captures a clip and can be cancelled without saving.",
+       exports:["startSegmentRecorder()","discardRecorder()"],
+       does:["Starts a MediaRecorder on the mic stream, collects chunks, and fires onStop({blob,label,durationMs}).",
+             "A discard flag lets a recording be cancelled without triggering finalization."],
+       connects:"Shared primitive for <code>echo/runtime.js</code> and <code>talkback/runtime.js</code>."},
+    ]
+  },
+  {
+    name:"Echo", tag:"echo",
+    purpose:"Voice-interference effect: record snippets, then replay them pitched through delay+reverb.",
+    plain:"A haunting effect — the game records your voice and whispers it back, distorted, to disorient you.",
+    deepDive:{title:"The echo interference loop",
+      body:"Mic → MediaRecorder cuts snippets → trim + analyze → store. On game events (beat/wall/life/random) the policy checks mode, cooldown (tightening as you progress), and probability. A chosen snippet plays at a random pitch through a delay+reverb bus that gets wetter the further you get — building interference."},
+    files:[
+      {path:"src/echo/defaultConfig.js", layer:"data",
+       purpose:"Echo runtime tuning constants + preferred MIME detection.",
+       plain:"The echo control knobs — how often, how loud, and when echoes happen.",
+       exports:["ECHO_RUNTIME_CONFIG","getPreferredEchoMimeType()"],
+       does:["Sets gain, preroll, cooldown, per-event probabilities (life always, random rarely), delay/reverb params.",
+             "getPreferredEchoMimeType picks an Opus/WebM MIME the browser's MediaRecorder supports."],
+       connects:"Consumed by <code>echo/runtime.js</code>, <code>policy.js</code>, and <code>fxBus.js</code>."},
+      {path:"src/echo/fxBus.js", layer:"ui",
+       purpose:"Builds and modulates the WebAudio delay + reverb effect bus.",
+       plain:"A virtual echo chamber that gets muddier the further you progress.",
+       exports:["createEchoBus()","updateEchoBus()","buildReverbImpulse()","disconnectEchoBus()"],
+       does:["Chains input → dry + delay(with feedback) + convolver reverb → master.",
+             "buildReverbImpulse makes a procedural stereo noise impulse; updateEchoBus fades dry down / delay+reverb up with progress."],
+       connects:"Instantiated by <code>echo/runtime.js</code> on the shared AudioContext."},
+      {path:"src/echo/policy.js", layer:"pure",
+       purpose:"Pure decisions: which events echo, playback rate, snippet choice, trigger gating.",
+       plain:"The referee that decides when it's the right moment to mess with the player.",
+       exports:["echoAllows()","pickEchoRate()","selectEchoSnippet()","shouldTriggerEcho()"],
+       does:["echoAllows filters by mode (off/random/key/both); pickEchoRate returns a pitch-shift rate.",
+             "selectEchoSnippet avoids replaying the current word; shouldTriggerEcho gates on cooldown + progress-scaled probability."],
+       connects:"Pure logic used by <code>echo/runtime.js</code>; unit-tested."},
+      {path:"src/echo/panel.js", layer:"ui",
+       purpose:"Renders the echo debug panel (snippet list + waveforms).",
+       plain:"The on-screen readout of which recorded clips are ready and at what speed.",
+       exports:["renderEchoPanel()"],
+       does:["Shows progress %, a recording indicator, and each snippet with a mini waveform canvas + rate badge.",
+             "Wave color is grey when idle, yellow when playing; the DOM is rebuilt each render."],
+       connects:"Called by <code>echo/runtime.js</code>.render; draws via Canvas 2D."},
+      {path:"src/echo/runtime.js", layer:"service",
+       purpose:"Orchestrates echo capture, storage, cooldowns, and playback.",
+       plain:"The worker that records your voice, stores clips, and replays them with delay and reverb.",
+       exports:["createEchoRuntime()","start()/stop()","cutSnippet()","maybeTrigger()","clearSnippets()"],
+       does:["Records via segmentRecorder, cuts at ~8s, decodes + trims + stores snippets with peaks.",
+             "maybeTrigger consults the policy then plays a snippet through the fx bus at a random rate; a 5s tick auto-cuts.",
+             "Timer functions are injectable (the two-file this-binding fix lives on this default)."],
+       connects:"Uses segmentRecorder, bufferUtils, fxBus, policy, defaultConfig; owned by <b>passphraseApp</b>."},
+    ]
+  },
+  {
+    name:"Talk-back", tag:"talkback",
+    purpose:"Clones the player's voice via an external TTS service and speaks scripted phrases back.",
+    plain:"An AI that learns your voice from what you say, then talks back to you in it.",
+    deepDive:{title:"Capture → upload → generate → play",
+      body:"Records mic segments (trimmed, up to 16). Selects a 5–12s reference and uploads it to /api/refs (cached by signature). Once you've cleared enough phrases, it POSTs a phrase + ref id to /api/generate (up to 90s), then plays the returned audio. A /api/health poll every 7s tracks whether the endpoint is ready. The endpoint is the app's only optional network dependency."},
+    files:[
+      {path:"src/talkback/defaultConfig.js", layer:"data",
+       purpose:"Talk-back runtime tuning constants.",
+       plain:"The settings for how often the game asks the AI to speak, and the model to use.",
+       exports:["TALKBACK_RUNTIME_CONFIG"],
+       does:["Model id, reference length (5–12s), per-event probabilities (lower than echo), and network timeouts (8s fetch / 90s generate)."],
+       connects:"Consumed by <code>talkback/runtime.js</code>."},
+      {path:"src/talkback/reference.js", layer:"pure",
+       purpose:"Endpoint URL building, timeout-fetch, and reference-segment selection.",
+       plain:"Chooses which of your recordings to send as a voice sample, and talks to the server safely.",
+       exports:["talkbackUrl()","fetchWithTimeout()","selectTalkbackReference()"],
+       does:["talkbackUrl normalizes endpoint + path; fetchWithTimeout uses an AbortController.",
+             "selectTalkbackReference prefers one long clip, else concatenates recent clips to 5–12s, returning a cache signature."],
+       connects:"Used by <code>talkback/runtime.js</code> + <code>client.js</code>."},
+      {path:"src/talkback/panel.js", layer:"ui",
+       purpose:"Renders the talk-back status rows (endpoint / reference / voice).",
+       plain:"The indicator showing if the AI voice server is ready and how close the next line is.",
+       exports:["renderTalkbackPanel()","setTalkbackStatus()"],
+       does:["Endpoint row: checking/ready/timeout/unavailable. Reference row: uploaded or captured duration, or clip count.",
+             "Voice row: generating / playing / progress ratio (e.g. 2/4 phrases)."],
+       connects:"Called by <code>talkback/runtime.js</code>.render."},
+      {path:"src/talkback/client.js", layer:"service",
+       purpose:"HTTP client for the TTS API: upload reference, request generation, play result.",
+       plain:"The messenger that sends your voice to the AI and brings back the spoken audio.",
+       exports:["uploadTalkbackReference()","generateTalkbackAudioRecord()","absolutizeTalkbackAudioUrl()","playTalkbackAudio()"],
+       does:["POST multipart to /api/refs → ref_id; POST JSON {model_id,prompt,ref_id} to /api/generate → audio_url.",
+             "playTalkbackAudio creates an <audio>, hooks lifecycle callbacks, and handles blocked playback."],
+       connects:"Called by <code>talkback/runtime.js</code>; uses <code>reference.js</code> fetch."},
+      {path:"src/talkback/runtime.js", layer:"service",
+       purpose:"Full talk-back orchestration: capture, reference cache, health polling, generation queue, playback.",
+       plain:"The secretary that records you, sends a voice sample, requests lines, and plays them back.",
+       exports:["createTalkbackRuntime()","startCapture()/stopCapture()","checkHealth()/startHealthChecks()","maybeTrigger()","clear()"],
+       does:["Records + stores up to 16 segments; uploads a reference (signature-cached to avoid re-upload).",
+             "Health poll every 7s; a session id cancels stale generations; probabilistic maybeTrigger queues phrases.",
+             "Injectable timers — the other half of the two-file this-binding fix."],
+       connects:"Uses segmentRecorder, bufferUtils, client, reference, panel; owned by <b>passphraseApp</b>."},
+    ]
+  },
+  {
+    name:"Effects", tag:"effects",
+    purpose:"Non-gameplay atmosphere: waveform background, Level-2 enemy swarm, and the mic visualizer.",
+    plain:"The mood and motion — the pulsing background, the swarm of ghost words, and the mic meter.",
+    files:[
+      {path:"src/effects/asciiWaveform.js", layer:"ui",
+       purpose:"Procedural ASCII waveform background + game-over fire animation.",
+       plain:"The mesmerizing background that pulses with your voice, plus the game-over fire.",
+       exports:["generateAsciiWaveform()","updateAsciiWaveformBackground()","updateGameOverWaveform()","updateGameOverFire()"],
+       does:["Overlays three sine waves whose peak height tracks mic amplitude; a 'broken' mode adds glitch chars.",
+             "Opacity varies by level (L1 brighter, L2 dimmer). Fire cycles pre-rendered frames every ~160ms."],
+       connects:"Fed amplitude by <code>microphoneVisualizer.js</code> via <b>passphraseApp</b>; fire frames from <code>roadScene.js</code>."},
+      {path:"src/effects/memoryPhraseEnemies.js", layer:"service",
+       purpose:"Level-2 floating 'memory phrase' swarm that grows with progress.",
+       plain:"A swarm of ghostly words that multiplies as you clear Level 2 — memory overload made visible.",
+       exports:["createMemoryPhraseEnemySystem()","getMemoryPhraseEnemyTargetCount()","createLevel2MatrixFragment()"],
+       does:["Spawns floating spans (your completed phrases + matrix symbols) that drift, glitch, burst, and wrap.",
+             "Count scales 8→28 (one per completed phrase); syncEnemyCount adds/removes to hit the target."],
+       connects:"Driven by <code>game/levelProgressionEffects.js</code>; renders into #memory-phrase-layer."},
+      {path:"src/effects/microphoneVisualizer.js", layer:"service",
+       purpose:"Captures mic input and reports a normalized amplitude each frame.",
+       plain:"The meter that measures how loud your microphone is right now, feeding the visuals.",
+       exports:["createMicrophoneVisualizer()","getWaveformAmplitude()"],
+       does:["getUserMedia → AnalyserNode (FFT 256); reads time-domain data and computes a 0–1 amplitude per frame.",
+             "start / stop / startIdle; exposes the shared audioContext + micStream to echo and talk-back."],
+       connects:"Amplitude callback drives <code>asciiWaveform.js</code>; stream shared with echo + talk-back."},
+    ]
+  },
+];
+
+/* ============================================================================
+   NON-FILE NARRATIVE SLIDES
+   ==========================================================================*/
+const OPENING = [
+  {type:"title"},
+  {type:"content", nav:"What is Passphrase?", html:`
+    <div class="kicker">The game, in one minute</div>
+    <h2>You talk your way past the machine.</h2>
+    <p class="lead">Passphrase is a voice-driven browser game. An ASCII road scrolls toward you and each wall
+      carries a word or phrase. <b>Say it correctly before the wall arrives</b> and a gate opens; hesitate or
+      misspeak and you lose a life.</p>
+    <div class="grid2" style="margin-top:1em">
+      <div><h3>Level 1 · Border checkpoint</h3><p class="muted">Immigration and border vocabulary — a chain-link
+        fence, a passport avatar, clean audio.</p></div>
+      <div><h3>Level 2 · Undersea cable</h3><p class="muted">Surveillance-and-consent satire (cookies, captchas,
+        data grabs) — a burning firewall, a password-key avatar, degrading audio and a swarm of ghost phrases.</p></div>
+    </div>
+    <p class="muted" style="margin-top:1em">Under the hood it leans on the browser's <b>Web Speech API</b>, plus optional
+      voice-cloning talk-back and a self-recording echo effect that turn your own voice against you.</p>`},
+  {type:"content", nav:"How to read this deck", html:`
+    <div class="kicker">Two audiences, one story</div>
+    <h2>Built for developers and non-developers alike.</h2>
+    <p>Every file slide carries <b>two tracks</b>: the technical detail (exports, mechanics, connections) and a
+      plain-language callout. Read whichever you need.</p>
+    <div class="plain" style="max-width:640px"><span class="lbl">In plain terms</span>
+      <p>Yellow callouts like this one explain each part with no jargon.</p></div>
+    <h3 style="margin-top:1.4em">Layer badges (for developers)</h3>
+    <div class="legend">
+      <span class="item"><span class="badge coord">coordinator</span> wires everything together</span>
+      <span class="item"><span class="badge pure">pure logic</span> browser-free, unit-tested</span>
+      <span class="item"><span class="badge service">browser service</span> talks to Web APIs</span>
+      <span class="item"><span class="badge ui">UI render</span> draws to the DOM</span>
+      <span class="item"><span class="badge data">data</span> config / content</span>
+      <span class="item"><span class="badge shell">shell</span> page / assets / docs</span>
+    </div>
+    <p class="muted" style="margin-top:1.2em">Navigate with <span class="keys">←</span> <span class="keys">→</span>,
+      jump around with <span class="keys">T</span> (contents), and deep-link any slide via its <code>#number</code> in the URL.</p>`},
+  {type:"content", nav:"The 30-second architecture", html:`
+    <div class="kicker">The whole thing at a glance</div>
+    <h2>One coordinator, eleven focused subsystems.</h2>
+    <p><code>index.html</code> loads one script. <code>main.js</code> starts <b>passphraseApp.js</b> — the coordinator —
+      which owns the game state and calls into small, single-purpose modules. Pure logic never touches the browser;
+      only the coordinator triggers sound, DOM, speech, echo, and talk-back.</p>
+    <pre class="ascii">
+   index.html ── main.js ──▶ passphraseApp.js  (the conductor)
+                                  │
+     ┌──────────────┬────────────┼────────────┬───────────────┐
+   speech/        game/       renderers/     audio/          ui/
+   matching/     content/      effects/      echo/        talkback/
+     (ears)     (rulebook)     (the screen)  (sound)     (your voice)
+    </pre>
+    <p class="muted">The next few slides zoom into how a spoken word travels through this, and how a frame gets drawn.
+      Then we visit every file, one at a time.</p>`},
+];
+
+const ARCH = [
+  {type:"content", nav:"Design philosophy", html:`
+    <div class="kicker">Why it's shaped this way</div>
+    <h2>Self-contained, no build, brutally explicit.</h2>
+    <div class="grid2">
+      <div>
+        <h3>Static &amp; dependency-free</h3>
+        <ul class="ticks"><li>Plain ES modules loaded straight by the browser — no bundler, no npm, no framework.</li>
+        <li>Deployable as static files (e.g. GitHub Pages). Only optional network call: the TTS endpoint.</li>
+        <li>Tests run in Node with zero dependencies.</li></ul>
+      </div>
+      <div>
+        <h3>Pure logic vs browser services</h3>
+        <ul class="ticks"><li>Game rules, matching, and content are <b>pure</b> — they take data and return data.</li>
+        <li>Anything touching mic, audio, DOM, or network is a <b>runtime service</b> that receives its Web APIs as arguments.</li>
+        <li>This split is what makes ~31 browser-free tests possible.</li></ul>
+      </div>
+    </div>
+    <div class="plain" style="margin-top:1.2em"><span class="lbl">In plain terms</span>
+      <p>The thinking parts of the game are kept separate from the parts that touch the microphone or screen — so the
+        brains can be tested and rearranged without breaking the body.</p></div>`},
+  {type:"map", nav:"Architecture map (clickable)"},
+  {type:"content", nav:"The coordinator pattern", html:`
+    <div class="kicker">One place holds the baton</div>
+    <h2>passphraseApp.js conducts; nobody else crosses lines.</h2>
+    <p>The coordinator owns the mutable state (level, word index, deadline, lives, retries). Pure rules are called with a
+      <b>snapshot</b> of that state and hand back an updated snapshot; the app then applies it and fires the side effects.</p>
+    <pre class="ascii">
+  app state ──createRuleStateSnapshot()──▶  pure rule (game/*.js)
+      ▲                                          │
+      └──────────applyRuleState()◀───────────────┘   then: sound, DOM, echo, talk-back
+    </pre>
+    <ul class="ticks">
+      <li>Runtime services (speech, audio, echo, talk-back, effects) <b>never import each other</b>.</li>
+      <li>They receive narrow callbacks + getters, so the app is the only integration point.</li>
+      <li>Result: each subsystem can be read, tested, or replaced on its own.</li>
+    </ul>`},
+  {type:"content", nav:"Journey of a spoken word", html:`
+    <div class="kicker">Microphone to gameplay</div>
+    <h2>What happens when you say the word.</h2>
+    <div class="flow">
+      <div class="node"><b>Web Speech API</b><span>browser hears audio</span></div><span class="arr">→</span>
+      <div class="node"><b>speechService</b><span>onresult fires</span></div><span class="arr">→</span>
+      <div class="node"><b>recognitionFlow</b><span>extract + route</span></div><span class="arr">→</span>
+      <div class="node"><b>transcriptState</b><span>store final/interim</span></div>
+    </div>
+    <div class="flow">
+      <div class="node"><b>matching.js</b><span>exact → normalized → fuzzy</span></div><span class="arr">→</span>
+      <div class="node"><b>game/sequenceText or catchMode</b><span>advance / collect</span></div><span class="arr">→</span>
+      <div class="node"><b>game/rules</b><span>lives, completion</span></div><span class="arr">→</span>
+      <div class="node"><b>render + audio + echo</b><span>feedback</span></div>
+    </div>
+    <div class="plain" style="margin-top:1em"><span class="lbl">In plain terms</span>
+      <p>Your voice becomes text, the text is matched (forgivingly) against the target, the rulebook updates your progress,
+        and the screen, sound, and effects react — all in a fraction of a second.</p></div>`},
+  {type:"content", nav:"The rendering pipeline", html:`
+    <div class="kicker">How a frame gets drawn ~11×/second</div>
+    <h2>From game state to ASCII on screen.</h2>
+    <div class="flow">
+      <div class="node"><b>game state</b><span>word, time, lives</span></div><span class="arr">→</span>
+      <div class="node"><b>timelineState</b><span>wall row, gate, timer</span></div><span class="arr">→</span>
+      <div class="node"><b>roadRenderer.buildRoadRows</b><span>character grid</span></div>
+    </div>
+    <div class="flow" style="margin-left:1.2em">
+      <span class="arr">uses</span>
+      <div class="node"><b>hash.hashCell</b><span>terrain detail</span></div>
+      <div class="node"><b>roadScene</b><span>fence / firewall</span></div>
+      <div class="node"><b>player.drawPlayerCharacter</b><span>your avatar</span></div>
+    </div>
+    <div class="flow">
+      <div class="node"><b>renderRoadScene</b><span>rows → classed DOM</span></div><span class="arr">→</span>
+      <div class="node"><b>roadAnimation</b><span>throttled rAF loop</span></div><span class="arr">→</span>
+      <div class="node"><b>screen</b><span></span></div>
+    </div>
+    <p class="muted">Same maths powers collision detection: <code>obstacleIntersectsPlayer</code> tests the wall row against the
+      player bounds each frame.</p>`},
+  {type:"content", nav:"Directory layout", html:`
+    <div class="kicker">Where everything lives</div>
+    <h2>Eleven subsystem folders under src/.</h2>
+    <pre class="ascii">
+passphrase-modular/
+├─ index.html            the stage            ├─ src/
+├─ styles/main.css       the look             │  ├─ main.js          entry
+├─ assets/audio/         5 sound files        │  ├─ app/     (3)     coordinator + bindings
+├─ tests/run-tests.mjs   ~31 assertions       │  ├─ ui/      (8)     views + DOM/config
+├─ README.md             overview             │  ├─ speech/  (4)     Web Speech lifecycle
+└─ src/README.md         file inventory       │  ├─ matching/(1)     fuzzy matching
+                                              │  ├─ content/ (2)     levels + parsing
+                                              │  ├─ game/    (5)     pure rules
+                                              │  ├─ renderers/ascii/ (7)  ASCII engine
+                                              │  ├─ audio/   (3)     music + buffers
+                                              │  ├─ echo/    (5)     voice interference
+                                              │  ├─ talkback/(5)     voice cloning
+                                              │  └─ effects/ (3)     atmosphere
+    </pre>
+    <p class="muted">47 JavaScript modules in total. From here, we walk every one — grouped by subsystem.</p>`},
+];
+
+const CLOSING = [
+  {type:"content", nav:"How it's verified", html:`
+    <div class="kicker">Confidence without a browser</div>
+    <h2>tests/run-tests.mjs — ~31 browser-free assertions.</h2>
+    <p>Because the logic layers are pure, the whole rulebook, matcher, renderer maths, echo policy, and config
+      normalization can be tested in Node with no framework and no DOM.</p>
+    <ul class="ticks">
+      <li>Content parsing, fuzzy matching, and ordered-match anchoring.</li>
+      <li>Beat/lives rules, level progression, sequence + catch consumption.</li>
+      <li>Audio buffer math + WAV, renderer geometry + collision, echo policy, talk-back URL/reference logic.</li>
+    </ul>
+    <p class="muted">Run it with <code>node passphrase-modular/tests/run-tests.mjs</code>.</p>`},
+  {type:"content", nav:"How to extend it", html:`
+    <div class="kicker">Working in the codebase</div>
+    <h2>The rules that keep it maintainable.</h2>
+    <div class="grid2">
+      <div><h3>Dependency direction</h3><ul class="ticks">
+        <li>Pure modules never import the app.</li>
+        <li>Runtime services never import each other — only the app wires them.</li>
+        <li>Cross-subsystem state travels as plain snapshots or narrow callbacks.</li></ul></div>
+      <div><h3>Common changes</h3><ul class="ticks">
+        <li>Add a level → extend <code>content/levelCatalog.js</code>.</li>
+        <li>Tune matching → <code>matching/matching.js</code> (+ a test).</li>
+        <li>New effect → a module exposing start/stop, triggered by the app.</li></ul></div>
+    </div>
+    <div class="plain" style="margin-top:1em"><span class="lbl">In plain terms</span>
+      <p>Change one subsystem at a time, keep the thinking parts pure, and let the conductor do the wiring.</p></div>`},
+  {type:"content", nav:"Recap", html:`
+    <div class="kicker">That's the whole map</div>
+    <h2>One conductor, eleven subsystems, every file covered.</h2>
+    <p>You've seen the game concept, the coordinator pattern, the spoken-word journey, the render pipeline, and a
+      dedicated slide for every source file, doc, and asset.</p>
+    <div id="coverBadge" class="cover-badge">coverage: …</div>
+    <p class="muted" style="margin-top:1.2em">Deep-link any slide by its number in the URL. Press <span class="keys">T</span> for the full contents.
+      ▮ End of deck.</p>`},
+];
+
+/* ============================================================================
+   BUILD SLIDE LIST  (opening + arch + [section divider + files]* + closing)
+   ==========================================================================*/
+const SLIDES = [];
+OPENING.forEach(s=>SLIDES.push(s));
+ARCH.forEach(s=>SLIDES.push(s));
+SECTIONS.forEach((sec,si)=>{
+  SLIDES.push({type:"section", section:sec, index:si});
+  sec.files.forEach(f=>SLIDES.push({type:"file", file:f, section:sec}));
+});
+CLOSING.forEach(s=>SLIDES.push(s));
+
+/* ---- Coverage self-check ---------------------------------------------------
+   EXPECTED = the authoritative list of files that must each have a slide. ---*/
+const EXPECTED = [
+  "index.html","styles/main.css","assets/audio/","tests/run-tests.mjs","README.md","src/README.md",
+  "src/main.js","src/app/passphraseApp.js","src/app/actionBindings.js","src/app/controlBindings.js",
+  "src/ui/domRefs.js","src/ui/gameOver.js","src/ui/hud.js","src/ui/levelIntro.js","src/ui/onboarding.js",
+  "src/ui/settingsPanel.js","src/ui/transcript.js","src/ui/wordList.js",
+  "src/speech/speechService.js","src/speech/recognitionFlow.js","src/speech/recognitionResults.js","src/speech/transcriptState.js",
+  "src/matching/matching.js","src/content/targetPlan.js","src/content/levelCatalog.js",
+  "src/game/rules.js","src/game/catchMode.js","src/game/sequenceText.js","src/game/levelProgression.js","src/game/levelProgressionEffects.js",
+  "src/renderers/ascii/hash.js","src/renderers/ascii/keygenCharacter.js","src/renderers/ascii/player.js",
+  "src/renderers/ascii/roadAnimation.js","src/renderers/ascii/roadRenderer.js","src/renderers/ascii/roadScene.js","src/renderers/ascii/timelineState.js",
+  "src/audio/bufferUtils.js","src/audio/musicManager.js","src/audio/segmentRecorder.js",
+  "src/echo/defaultConfig.js","src/echo/fxBus.js","src/echo/policy.js","src/echo/panel.js","src/echo/runtime.js",
+  "src/talkback/defaultConfig.js","src/talkback/reference.js","src/talkback/panel.js","src/talkback/client.js","src/talkback/runtime.js",
+  "src/effects/asciiWaveform.js","src/effects/memoryPhraseEnemies.js","src/effects/microphoneVisualizer.js",
+];
+function runCoverageCheck(){
+  const fileSlidePaths = SLIDES.filter(s=>s.type==="file").map(s=>s.file.path.replace(/^src\//,"src/"));
+  // normalize: file slides store full-ish paths already
+  const present = SLIDES.filter(s=>s.type==="file").map(s=>s.file.path);
+  const norm = p => p; // paths already match EXPECTED form
+  const missing = EXPECTED.filter(e=>!present.some(p=>norm(p)===e));
+  const extra = present.filter(p=>!EXPECTED.includes(p));
+  const dupes = present.filter((p,i)=>present.indexOf(p)!==i);
+  const ok = missing.length===0 && extra.length===0 && dupes.length===0;
+  const line = `coverage: ${present.length}/${EXPECTED.length} ${ok?"✓":"✗"}`;
+  if(ok){ console.log("%c[deck] "+line,"color:#22c55e"); }
+  else {
+    console.warn("[deck] "+line);
+    if(missing.length) console.warn("  missing slides for:", missing);
+    if(extra.length)   console.warn("  unexpected slides:", extra);
+    if(dupes.length)   console.warn("  duplicate slides:", dupes);
+  }
+  return {ok,line,count:present.length,total:EXPECTED.length,missing,extra,dupes};
+}
+const COVERAGE = runCoverageCheck();
+
+/* ============================================================================
+   RENDER
+   ==========================================================================*/
+const stage=document.getElementById("stage");
+const railEl=document.getElementById("rail");
+const curEl=document.getElementById("cur");
+const totalEl=document.getElementById("total");
+const sectionTagEl=document.getElementById("sectionTag");
+const hintbarEl=document.querySelector(".hintbar");
+let idx=0;
+
+const LAYER_LABEL={pure:"pure logic",service:"browser service",ui:"UI render",data:"data",shell:"shell",coord:"coordinator"};
+function esc(s){return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;");}
+
+function pathHtml(p){
+  const i=p.lastIndexOf("/");
+  if(i<0) return `<span class="name">${esc(p)}</span>`;
+  return `<span class="dir">${esc(p.slice(0,i+1))}</span><span class="name">${esc(p.slice(i+1))}</span>`;
+}
+
+function slideHtml(s){
+  if(s.type==="title"){
+    return `<div class="slide-inner" style="align-items:flex-start">
+      <div class="kicker">Codebase &amp; game-software architecture</div>
+      <h1>PASSPHRASE</h1>
+      <p class="lead" style="max-width:720px">A tour of the modular voice-game codebase — from folder layout to
+        how a spoken word becomes gameplay — with a dedicated slide for every single file.</p>
+      <pre id="wave"></pre>
+      <div class="title-meta"><b>${SLIDES.length}</b> slides · <b>${EXPECTED.length}</b> files covered ·
+        <span class="muted">use ← → to begin</span></div>
+    </div>`;
+  }
+  if(s.type==="content"){
+    return `<div class="slide-inner">${s.html}</div>`;
+  }
+  if(s.type==="map"){
+    const boxes = SECTIONS.map(sec=>{
+      const target = SLIDES.findIndex(x=>x.type==="section" && x.section===sec);
+      const cls = sec.tag==="coord" ? "box coordbox" : "box";
+      return `<div class="${cls}" data-goto="${target}"><div class="t">${esc(sec.name)}</div>
+        <div class="c">${sec.files.length} file${sec.files.length>1?"s":""}</div>
+        <div class="d">${esc(sec.purpose)}</div></div>`;
+    }).join("");
+    return `<div class="slide-inner">
+      <div class="kicker">Click any subsystem to jump to it</div>
+      <h2>The architecture map</h2>
+      <div class="box wide" data-goto="${SLIDES.findIndex(x=>x.type==="section"&&x.section.tag==="coord")}">
+        <div class="t">index.html → main.js → passphraseApp.js</div>
+        <div class="d">The shell boots the coordinator, which owns state and wires everything below.</div></div>
+      <div class="map">${boxes}</div>
+    </div>`;
+  }
+  if(s.type==="section"){
+    const sec=s.section;
+    const files = sec.files.map(f=>{
+      const nm=f.path.split("/").pop()||f.path;
+      return `<span class="f"><b>${esc(nm)}</b></span>`;
+    }).join("");
+    const dd = sec.deepDive ? `<div class="deepdive"><h3>${esc(sec.deepDive.title)}</h3><p>${esc(sec.deepDive.body)}</p></div>` : "";
+    return `<div class="slide-inner section-hero">
+      <div class="kicker">Subsystem · <span class="num">${String(s.index+1).padStart(2,"0")}</span></div>
+      <h1 style="font-size:clamp(1.8rem,5vw,3.4rem)">${esc(sec.name)}</h1>
+      <p class="lead" style="max-width:820px">${esc(sec.purpose)}</p>
+      <div class="plain" style="max-width:820px"><span class="lbl">In plain terms</span><p>${esc(sec.plain)}</p></div>
+      <div class="filelist">${files}</div>
+      ${dd}
+    </div>`;
+  }
+  if(s.type==="file"){
+    const f=s.file;
+    const layer=f.layer;
+    const chips=f.exports.map(e=>`<span class="chip">${esc(e)}</span>`).join("");
+    const does=f.does.map(d=>`<li>${esc(d)}</li>`).join("");
+    return `<div class="slide-inner">
+      <div class="file-head">
+        <div class="path">${pathHtml(f.path)}</div>
+        <span class="badge ${layer}">${LAYER_LABEL[layer]||layer}</span>
+        <span class="sub-tag">${esc(s.section.name)}</span>
+      </div>
+      <p class="lead" style="margin-bottom:.6em">${esc(f.purpose)}</p>
+      <div class="plain"><span class="lbl">In plain terms</span><p>${esc(f.plain)}</p></div>
+      <div class="grid2">
+        <div>
+          <h3>What it does</h3>
+          <ul class="ticks">${does}</ul>
+        </div>
+        <div>
+          <h3>Key exports</h3>
+          <div class="chips">${chips}</div>
+          <div class="connects"><b>Connects:</b> ${f.connects}</div>
+        </div>
+      </div>
+    </div>`;
+  }
+  return `<div class="slide-inner"><p>?</p></div>`;
+}
+
+function navLabel(s){
+  if(s.type==="title") return "Title";
+  if(s.type==="map") return s.nav||"Architecture map";
+  if(s.type==="content") return s.nav||"—";
+  if(s.type==="section") return s.section.name+" · overview";
+  if(s.type==="file") return s.file.path;
+  return "—";
+}
+function sectionOf(s){
+  if(s.type==="section") return s.section.name;
+  if(s.type==="file") return s.section.name;
+  return "";
+}
+
+let waveTimer=null;
+function render(){
+  const s=SLIDES[idx];
+  const div=document.createElement("div");
+  div.className="slide";
+  div.innerHTML=slideHtml(s);
+  stage.replaceChildren(div);
+  // wire clickable boxes
+  div.querySelectorAll("[data-goto]").forEach(b=>{
+    b.addEventListener("click",()=>{const t=parseInt(b.getAttribute("data-goto"),10); if(t>=0) go(t);});
+  });
+  // coverage badge on recap
+  const badge=div.querySelector("#coverBadge");
+  if(badge){ badge.textContent=COVERAGE.line; badge.style.borderColor=COVERAGE.ok?"var(--green)":"var(--red)"; badge.style.color=COVERAGE.ok?"var(--green)":"var(--red)"; }
+  // title waveform animation
+  if(waveTimer){cancelAnimationFrame(waveTimer); waveTimer=null;}
+  const wave=div.querySelector("#wave");
+  if(wave) startWave(wave);
+  // chrome
+  curEl.textContent=String(idx+1);
+  totalEl.textContent=String(SLIDES.length);
+  sectionTagEl.textContent=sectionOf(s);
+  hintbarEl.style.display = idx===0 ? "block" : "none"; // avoid overlapping dense slides
+  buildRail();
+  history.replaceState(null,"", "#"+(idx+1));
+}
+function go(n){ idx=Math.max(0,Math.min(SLIDES.length-1,n)); render(); }
+function next(){ if(idx<SLIDES.length-1) go(idx+1); }
+function prev(){ if(idx>0) go(idx-1); }
+
+function buildRail(){
+  railEl.replaceChildren();
+  SLIDES.forEach((s,i)=>{
+    const seg=document.createElement("div");
+    seg.className="seg"+(i<idx?" done":"")+(i===idx?" here":"");
+    seg.title=(i+1)+". "+navLabel(s);
+    seg.addEventListener("click",()=>go(i));
+    railEl.appendChild(seg);
+  });
+}
+
+/* title-slide ASCII waveform: three summed sines, gentle motion */
+function startWave(el){
+  const cols=90, rows=7;
+  let t=0;
+  function frame(){
+    t+=0.06;
+    const mid=(rows-1)/2;
+    const grid=Array.from({length:rows},()=>new Array(cols).fill(" "));
+    for(let x=0;x<cols;x++){
+      const v=Math.sin(x*0.19+t)*0.6+Math.sin(x*0.47+t*1.3)*0.28+Math.sin(x*0.91+t*0.7)*0.16;
+      const peak=Math.round(mid - v*mid*0.9);
+      for(let y=0;y<rows;y++){
+        if(y===peak) grid[y][x]= (x%5===0)?"^":"/";
+        else if(y>peak && y<=mid) grid[y][x]="|";
+        else if(y===Math.round(mid)) grid[y][x]="_";
+      }
+    }
+    el.textContent=grid.map(r=>r.join("")).join("\n");
+    waveTimer=requestAnimationFrame(frame);
+  }
+  frame();
+}
+
+/* ---- TOC overlay ---- */
+const toc=document.getElementById("toc");
+const tocList=document.getElementById("tocList");
+function buildToc(){
+  tocList.replaceChildren();
+  SLIDES.forEach((s,i)=>{
+    if(!(s.type==="section" || s.type==="title" || (s.type==="content"&&s.nav) || s.type==="map" || s.type==="file" && false)) {
+      // include section dividers + key narrative slides only (keep TOC scannable)
+    }
+    const isEntry = s.type==="section" || s.type==="title" || s.type==="map" || (s.type==="content" && s.nav);
+    if(!isEntry) return;
+    const a=document.createElement("a");
+    a.href="#"+(i+1);
+    a.innerHTML=`<span class="n">${String(i+1).padStart(2,"0")}</span>${esc(navLabel(s))}`;
+    a.addEventListener("click",e=>{e.preventDefault(); toc.classList.remove("open"); go(i);});
+    tocList.appendChild(a);
+  });
+}
+function toggleToc(){ toc.classList.toggle("open"); if(toc.classList.contains("open")) buildToc(); }
+
+/* ---- input ---- */
+document.getElementById("next").addEventListener("click",next);
+document.getElementById("prev").addEventListener("click",prev);
+window.addEventListener("keydown",e=>{
+  if(toc.classList.contains("open")){
+    if(e.key==="Escape"||e.key.toLowerCase()==="t"){e.preventDefault(); toc.classList.remove("open");}
+    return;
+  }
+  switch(e.key){
+    case "ArrowRight": case "PageDown": case " ": e.preventDefault(); next(); break;
+    case "ArrowLeft": case "PageUp": e.preventDefault(); prev(); break;
+    case "Home": e.preventDefault(); go(0); break;
+    case "End": e.preventDefault(); go(SLIDES.length-1); break;
+    case "t": case "T": e.preventDefault(); toggleToc(); break;
+    case "Escape": e.preventDefault(); toggleToc(); break;
+  }
+});
+
+/* live hash edits navigate (go() uses replaceState, which does NOT fire this) */
+window.addEventListener("hashchange",()=>{
+  const h=parseInt((location.hash||"").replace("#",""),10);
+  if(!isNaN(h)&&h>=1&&h<=SLIDES.length&&h-1!==idx) go(h-1);
+});
+
+/* start at hash if present */
+(function init(){
+  const h=parseInt((location.hash||"").replace("#",""),10);
+  if(!isNaN(h)&&h>=1&&h<=SLIDES.length) idx=h-1;
+  render();
+})();
+</script>
+</body>
+</html>
