@@ -106,6 +106,8 @@ export function initPassphraseApp() {
                 onboardingCopy,
                 onboardingAction,
                 onboardingSpectrum,
+                micInitScreen,
+                micInitAction,
                 stopButton,
                 clearButton,
                 openSettingsButton,
@@ -388,6 +390,28 @@ export function initPassphraseApp() {
 
             function hideOnboarding() {
                 hideOnboardingView(refs);
+            }
+
+            function hideMicInit() {
+                if (!micInitScreen) {
+                    return;
+                }
+
+                micInitScreen.classList.add("hidden");
+                micInitScreen.setAttribute("aria-hidden", "true");
+            }
+
+            // Runs inside the "initialize microphone" tap. That gesture is the
+            // one chance to unlock the sound engine (resume the WebAudio
+            // context) so that afterwards the game can be started by voice and
+            // still play music/effects on iOS. It also turns the microphone
+            // permission prompt into a response to an explicit action rather
+            // than an unexpected pop-up on page load.
+            function initializeMicAndAudio() {
+                AudioManager.unlock();
+                hideMicInit();
+                startOnboarding();
+                onboardingAction.focus();
             }
 
             function startRoadAnimation() {
@@ -1734,7 +1758,7 @@ export function initPassphraseApp() {
             startTalkbackHealthChecks();
             AudioManager.preloadAll();
             drawIdleVisualizer();
-            onboardingAction.focus();
+            micInitAction.focus();
 
             const handleRecognitionResult = createRecognitionResultHandler({
                 transcriptState,
@@ -1790,7 +1814,9 @@ export function initPassphraseApp() {
                 startButton.disabled = true;
             }
 
-            // Opening modal: begin mic capture (live spectrum) and listen for
-            // the spoken "start" command straight away.
-            startOnboarding();
+            // The mic + sound engine are only started from the one-time
+            // "initialize microphone" tap (a real user gesture), so audio can
+            // later start even from a spoken "start". This gate shows once per
+            // page load — game-over / restart never bring it back.
+            micInitAction.addEventListener("click", initializeMicAndAudio);
 }

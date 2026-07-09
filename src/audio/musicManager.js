@@ -80,6 +80,18 @@ export function createMusicManager({
         unlocked = true;
     }
 
+    // Called from an explicit user tap to prime the sound engine: it creates
+    // and resumes the WebAudio context *inside* that gesture, so that later a
+    // voice-triggered game start can still play music on iOS (which only lets
+    // an AudioContext resume within a user gesture).
+    function unlock() {
+        unlockAudio();
+
+        if (ensureMusicGraph() && musicContext) {
+            musicContext.resume().catch(() => {});
+        }
+    }
+
     function makeDistortionCurve(amount) {
         const samples = 44100;
         const curve = new Float32Array(samples);
@@ -423,6 +435,7 @@ export function createMusicManager({
 
     return {
         preloadAll,
+        unlock,
         startMainTheme,
         stopMainTheme,
         duckMusic,

@@ -445,6 +445,31 @@
                 opacity: 0.35;
             }
 
+            #mic-init-screen {
+                position: fixed;
+                inset: 0;
+                z-index: 8;
+                display: grid;
+                place-items: center;
+                padding: 24px;
+                background: rgba(8, 8, 8, 0.92);
+                text-align: center;
+            }
+
+            #mic-init-screen.hidden {
+                display: none;
+            }
+
+            #mic-init-action {
+                min-width: 200px;
+                margin-top: 20px;
+                padding: 12px 22px;
+                border: 1px solid rgba(255, 255, 255, 0.35);
+                box-shadow:
+                    0 0 0 1px rgba(0, 0, 0, 0.8),
+                    0 0 24px rgba(255, 255, 255, 0.14);
+            }
+
             #onboarding-screen {
                 position: fixed;
                 inset: 0;
