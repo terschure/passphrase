@@ -40,6 +40,7 @@ export function renderWordList({
         item.className = [
             isChecked ? "checked" : "",
             isCurrent ? "current" : "",
+            entry.soundOnly ? "sound" : "",
             sequenceFailed && isSequenceMode && index === currentWordIndex
                 ? "failed"
                 : "",
@@ -48,7 +49,7 @@ export function renderWordList({
             .join(" ");
         item.innerHTML = `<input type="checkbox" disabled ${isChecked ? "checked" : ""}> <span></span>`;
         item.querySelector("span").textContent =
-            `${isCurrent ? "> " : "  "}${word}`;
+            `${isCurrent ? "> " : "  "}${entry.soundOnly ? `~ ${word} ~` : word}`;
         wordList.append(item);
     }
 }

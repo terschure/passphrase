@@ -20,6 +20,9 @@ shared audio-buffer logic.
   immediately.
 - `content/environments.js` defines the built-in visual style presets
   (`border-fence`, `undersea-cable`) a level selects via `environment:`.
+- `game/vocalization.js` is a pure detector that fires when the live mic
+  amplitude stays above a threshold for a minimum time — used to clear
+  `*sound*` (wordless) targets from the script without a transcript match.
 - `content/gameScriptSource.js` (browser-only) loads the canonical
   `game-script.md`, applies/persists the dev override in `localStorage`, and
   supports reset-to-file.

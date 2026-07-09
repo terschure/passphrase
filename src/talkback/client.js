@@ -80,6 +80,7 @@ export function playTalkbackAudio({
 }) {
     return new Promise((resolve) => {
         const audio = new AudioClass(absolutizeTalkbackAudioUrl(endpoint, audioUrl));
+        audio.volume = 1;
         onCreated?.(audio);
 
         audio.onplay = () => {

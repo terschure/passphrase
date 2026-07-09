@@ -56,7 +56,7 @@ export function parseGameScript(source) {
         inTalkback = false;
     }
 
-    function pushPhrase(text) {
+    function pushPhrase(text, { soundOnly = false } = {}) {
         if (!level) {
             startLevel("Level 1");
         }
@@ -68,6 +68,7 @@ export function parseGameScript(source) {
         round.phrases.push(text);
         level.entries.push({
             text,
+            soundOnly,
             levelTitle: level.name,
             sequenceTitle: round.name,
             levelIndex: level.id - 1,
@@ -146,6 +147,14 @@ export function parseGameScript(source) {
             }
 
             level.talkbackRandom.push(line);
+            continue;
+        }
+
+        // "*sound*" — a wordless vocalization target, cleared by making a
+        // sustained sound rather than by matching the transcript.
+        const soundMatch = line.match(/^\*\s*(.+?)\s*\*$/);
+        if (soundMatch) {
+            pushPhrase(soundMatch[1], { soundOnly: true });
             continue;
         }
 

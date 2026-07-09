@@ -39,6 +39,7 @@ import {
     consumeSequenceText,
     findSequenceSearchStart,
 } from "../src/game/sequenceText.js";
+import { createVocalizationDetector } from "../src/game/vocalization.js";
 import {
     computePeaks,
     computeRms,
@@ -229,6 +230,7 @@ Gamma`);
     assert.equal(entries.length, 3);
     assert.deepEqual(entries[0], {
         text: "Alpha",
+        soundOnly: false,
         levelTitle: "Level A",
         sequenceTitle: "Round 1",
         levelIndex: 0,
@@ -239,6 +241,41 @@ Gamma`);
     assert.equal(entries[2].levelTitle, "Level B");
     assert.equal(entries[2].levelIndex, 1);
     assert.equal(entries[2].sequenceIndex, 0);
+});
+
+test("parseGameScript marks *wrapped* lines as sound-only targets", () => {
+    const { levels } = parseGameScript(`# Level 1
+## Round 1
+*hmmm*
+* ahh *
+Albania
+Delete *
+Delete *.mp3 files`);
+
+    const entries = levels[0].entries;
+    assert.deepEqual(
+        entries.map((e) => [e.text, e.soundOnly]),
+        [
+            ["hmmm", true],
+            ["ahh", true],
+            ["Albania", false],
+            ["Delete *", false],
+            ["Delete *.mp3 files", false],
+        ],
+    );
+});
+
+test("vocalization detector fires once after sustained sound, then re-arms", () => {
+    const detector = createVocalizationDetector({ threshold: 0.2, minMs: 300 });
+
+    assert.equal(detector.sample(0.05, 0), false); // silence
+    assert.equal(detector.sample(0.5, 100), false); // timer starts
+    assert.equal(detector.sample(0.5, 300), false); // 200ms < 300ms
+    assert.equal(detector.sample(0.5, 450), true); // crosses minMs -> fires
+    assert.equal(detector.sample(0.5, 600), false); // disarmed until a dip
+    assert.equal(detector.sample(0.0, 700), false); // dip re-arms
+    assert.equal(detector.sample(0.5, 800), false); // timer restarts
+    assert.equal(detector.sample(0.5, 1200), true); // fires again
 });
 
 test("parseGameScript reads level metadata, comments, and header zone", () => {
@@ -1362,7 +1399,7 @@ test("echo fx bus creates a stereo reverb impulse", () => {
 });
 
 test("echo and talkback default configs expose runtime tuning", () => {
-    assert.equal(ECHO_RUNTIME_CONFIG.gain, 0.15);
+    assert.equal(ECHO_RUNTIME_CONFIG.gain, 0.55);
     assert.equal(ECHO_RUNTIME_CONFIG.probabilities.life, 1);
     assert.equal(TALKBACK_RUNTIME_CONFIG.modelId, "qwen3-tts-0.6b-base");
     assert.equal(TALKBACK_RUNTIME_CONFIG.probabilities.random, 0.12);

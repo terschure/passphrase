@@ -10,6 +10,8 @@
 >                          undersea-cable (firewall, key avatar, dark sea, swarm)
 >   "## Round name"     starts a round within the current level.
 >   any other line      is a phrase to say out loud.
+>   "*hmmm*"            a wordless SOUND target: cleared by making a sustained
+>                       sound (a warm-up "hmm" / "ahh"), not by saying a word.
 >
 > Talk-back (the AI voice cloned from the player, spoken back over the game —
 > it never interrupts play):
@@ -30,14 +32,14 @@ environment: border-fence
 
 
 ## Round 1
-Mmm
-Ahhh
-Ooo
-Mama 
-Papa
-Lala
-Nom nom nom
-Mjam mjam
+*Mmm*
+*Ahhh*
+*Ooo*
+*Mama*
+*Papa*
+*Lala*
+*Nom nom nom*
+*Mjam mjam*
 Hey. Hello?
 Are you there?
 Can you hear me?

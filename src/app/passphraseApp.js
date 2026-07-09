@@ -35,10 +35,12 @@ import {
     acceptContinuePhrase as acceptContinuePhraseRule,
     createInitialGameState,
     handleBeatDeadline as handleBeatDeadlineRule,
+    markCurrentWordCaught as markCurrentWordCaughtRule,
     recordCompletedPhrase as recordCompletedPhraseRule,
     resetSequence as resetSequenceRule,
 } from "../game/rules.js";
 import { consumeSequenceText } from "../game/sequenceText.js";
+import { createVocalizationDetector } from "../game/vocalization.js";
 import {
     escapeRegExp as escapeRegExpText,
     findTargetEnd as findTargetEndInText,
@@ -168,6 +170,12 @@ export function initPassphraseApp() {
             const LEVEL_2_AUDIO_DEGRADATION_START = 0;
             const LEVEL_2_AUDIO_DEGRADATION_PER_WORD = 0.06;
             const LEVEL_2_AUDIO_DEGRADATION_MAX = 1;
+            const VOCAL_THRESHOLD = 0.18;
+            const VOCAL_MIN_MS = 350;
+            const vocalizationDetector = createVocalizationDetector({
+                threshold: VOCAL_THRESHOLD,
+                minMs: VOCAL_MIN_MS,
+            });
             const levelCatalog = createLevelCatalog({
                 getScriptLevels: () =>
                     parseGameScript(readConfig(refs).wordPlan).levels,
@@ -239,6 +247,7 @@ export function initPassphraseApp() {
                 onAmplitude(amplitude, timestamp) {
                     updateAsciiWaveformBackground(amplitude, timestamp);
                     updateGameOverWaveform(amplitude, timestamp);
+                    detectSoundPhrase(amplitude, timestamp);
                 },
                 onIdleFrame(timestamp) {
                     updateAsciiWaveformBackground(0.1, timestamp);
@@ -561,6 +570,7 @@ export function initPassphraseApp() {
                 refillAnimationUntil = activationState.refillAnimationUntil;
                 caughtWords.clear();
                 firedTalkbackCues.clear();
+                vocalizationDetector.reset();
                 lastKeygenHitAt = activationState.lastKeygenHitAt;
                 keygenCharacter.reset();
                 levelProgressionEffects.reset(level.id);
@@ -759,7 +769,9 @@ export function initPassphraseApp() {
 
                 const result = consumeCatchText(
                     caughtWords,
-                    getTargetWords(),
+                    getTargetEntries()
+                        .filter((entry) => !entry.soundOnly)
+                        .map((entry) => entry.text),
                     text,
                     textMatchesTarget,
                 );
@@ -768,6 +780,80 @@ export function initPassphraseApp() {
                     triggerVoiceSignal("success");
                     maybeTriggerTalkback("beat");
                 }
+            }
+
+            function isSoundPhraseTargetActive() {
+                if (
+                    !gameStarted ||
+                    !isSequenceMode() ||
+                    sequenceFailed ||
+                    levelTransitionActive
+                ) {
+                    return false;
+                }
+
+                const entry = getCurrentTargetEntry();
+                if (!entry || !entry.soundOnly) {
+                    return false;
+                }
+
+                // In beat modes the wall is already cleared for this beat.
+                return !(isBeatMode() && wordCaughtThisBeat);
+            }
+
+            // Drives sound-only ("*hmmm*") targets from the live mic level: a
+            // sustained vocalization clears the current wall instead of a
+            // transcript match.
+            function detectSoundPhrase(amplitude, timestamp) {
+                if (!isSoundPhraseTargetActive()) {
+                    vocalizationDetector.reset();
+                    return;
+                }
+
+                if (vocalizationDetector.sample(amplitude, timestamp)) {
+                    catchCurrentSoundPhrase();
+                }
+            }
+
+            function catchCurrentSoundPhrase() {
+                const words = getTargetWords();
+                const state = createRuleStateSnapshot();
+                const result = markCurrentWordCaughtRule(
+                    state,
+                    words,
+                    modeInput.value,
+                );
+                applyRuleState(state);
+
+                if (!result.changed) {
+                    return;
+                }
+
+                triggerVoiceSignal("success");
+                maybeTriggerTalkback("beat");
+
+                if (isBeatMode()) {
+                    // Caught this beat — the deadline handler advances/refills,
+                    // exactly as for a spoken word.
+                    gateOpenedAt = Date.now();
+                    renderSequenceStatus();
+                    return;
+                }
+
+                // Continuous mode: advance now, mirroring processSequenceText.
+                levelProgressionEffects.registerSuccessfulPhrase();
+                refillLivesAndRetries();
+                playWallPassSound();
+
+                if (result.completed) {
+                    completeSequence();
+                } else {
+                    startSequenceTimer();
+                }
+
+                renderSequenceStatus();
+                renderWordList();
+                fireDueTalkbackCues();
             }
 
             function getSecondsLimit() {
@@ -850,6 +936,7 @@ export function initPassphraseApp() {
                 gateOpenedAt = 0;
                 refillAnimationUntil = 0;
                 firedTalkbackCues.clear();
+                vocalizationDetector.reset();
                 levelProgressionEffects.reset(currentLevel);
 
                 if (modeInput.value === "catch") {
@@ -1067,10 +1154,15 @@ export function initPassphraseApp() {
             }
 
             function renderRoad(word, wallRow, gateProgress = null) {
+                const currentEntry = getCurrentTargetEntry();
+                const displayWord =
+                    word && currentEntry && currentEntry.soundOnly
+                        ? `~ ${word} ~`
+                        : word;
                 renderRoadScene({
                     timeline,
                     doc: document,
-                    word,
+                    word: displayWord,
                     wallRow,
                     gateProgress,
                     metrics: getRoadMetrics(),
@@ -1141,6 +1233,11 @@ export function initPassphraseApp() {
                     sequenceFailed ||
                     levelTransitionActive
                 ) {
+                    return false;
+                }
+
+                // Sound-only targets are cleared by vocalization, never text.
+                if (getCurrentTargetEntry()?.soundOnly) {
                     return false;
                 }
 

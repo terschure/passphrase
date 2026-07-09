@@ -59,9 +59,15 @@ How can I help you?           spoken at random moments during the level
 ## Round 1                    a round within the level
 Albania                       a phrase to say
 Exit
+*hmmm*                        a wordless SOUND target (see below)
 ~ Sorry, this checkpoint...   a specific cue, played after "Exit" clears
 Germany
 ```
+
+A phrase wrapped in asterisks — `*hmmm*` — is a **sound target**: instead of matching the
+transcript it is cleared when the player makes a **sustained vocalization** (mic level above a
+threshold for a minimum time). Handy for warm-up sounds the speech recognizer can't catch. The
+sensitivity is set by `VOCAL_THRESHOLD` / `VOCAL_MIN_MS` in `src/app/passphraseApp.js`.
 
 - `subtitle:` and `environment:` must sit directly under the `# Level` line,
   before the first `## Round`. Lines starting with `>` are comments.

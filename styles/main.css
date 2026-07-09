@@ -846,6 +846,11 @@
                 text-decoration: underline;
             }
 
+            li.sound {
+                font-style: italic;
+                color: #8be9fd;
+            }
+
             li.word-heading {
                 display: block;
                 margin-top: 10px;
