@@ -35,10 +35,10 @@ environment: border-fence
 *Mmm*
 *Ahhh*
 *Ooo*
-*Mama*
-*Papa*
-*Lala*
-*Nom nom nom*
+Mama
+Papa
+Lala
+Nom nom nom
 *Mjam mjam*
 Hey. Hello?
 Are you there?
