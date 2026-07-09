@@ -33,8 +33,13 @@
   #bar .brand{font-weight:700; letter-spacing:0.14em}
   #bar .brand b{color:var(--yellow)}
   #bar .section-tag{justify-self:center; color:var(--muted); font-size:0.8rem; letter-spacing:0.08em; text-transform:uppercase}
-  #bar .counter{justify-self:end; color:var(--dim); font-size:0.82rem}
+  #bar .counter{justify-self:end; display:flex; align-items:center; gap:12px; color:var(--dim); font-size:0.82rem}
   #bar .counter b{color:var(--ink)}
+  #pdf-btn{font:inherit; font-size:0.7rem; letter-spacing:0.06em; color:var(--dim); background:transparent;
+           border:1px solid var(--line); border-radius:5px; padding:3px 9px; cursor:pointer;
+           transition:color 150ms, border-color 150ms}
+  #pdf-btn:hover{color:var(--yellow); border-color:var(--yellow)}
+  #pdf-btn:disabled{opacity:0.55; cursor:default; border-color:var(--line); color:var(--dim)}
   /* stage */
   #stage{flex:1; min-height:0; position:relative; overflow:hidden}
   .slide{
@@ -148,7 +153,7 @@
   <header id="bar">
     <div class="brand"><b>▮</b> PASSPHRASE <span class="dim">/ architecture</span></div>
     <div class="section-tag" id="sectionTag"></div>
-    <div class="counter"><b id="cur">1</b> / <span id="total">1</span></div>
+    <div class="counter"><button id="pdf-btn" type="button" title="Download every slide as a PDF (one page per slide)">⤓ PDF</button><span><b id="cur">1</b> / <span id="total">1</span></span></div>
   </header>
   <div id="stage"></div>
   <div id="rail"></div>
@@ -176,9 +181,17 @@ const SECTIONS = [
        plain:"The empty stage — every place a piece of the game can appear is marked out here.",
        exports:["#game","#onboarding-screen","#timeline","#settings-panel","<script type=module>"],
        does:["Declares layers: onboarding, top HUD, waveform background, memory-phrase layer, level intro, the ASCII road timeline, echo + talk-back panels, transcript, game-over modal, settings drawer.",
-             "Contains the default settings form (words, mode, lives, echo mode, TTS endpoint) that the game reads on startup.",
+             "Hosts the settings form (game-script editor + reset button, mode, lives, echo mode, TTS endpoint) and an empty dev-level-buttons bar the app fills at startup.",
              "Loads exactly one script: the ES-module entry point src/main.js."],
        connects:"Loaded styling from <b>styles/main.css</b>; boots <code>src/main.js</code>."},
+      {path:"game-script.md", layer:"data",
+       purpose:"The single source of truth for all game content: levels, rounds, phrases, per-level styling, and talk-back.",
+       plain:"One text file anyone — even non-coders — can edit to change the whole game.",
+       exports:["# Level","subtitle:","environment:","## Round","## Talkback","~ cue"],
+       does:["'# Level' with 'subtitle:' / 'environment:' defines a level and its visual preset; '## Round' groups the phrases you must say (plain lines).",
+             "'## Talkback' lists the level's random talk-back pool; a '~' line inside a round is a specific cue played after the phrase above it clears.",
+             "Fetched at startup; the in-game 'game script' editor overrides it live (saved to localStorage) with a reset-to-file button."],
+       connects:"Fetched by <code>content/gameScriptSource.js</code>; parsed by <code>content/targetPlan.js</code>."},
       {path:"styles/main.css", layer:"shell",
        purpose:"All visual styling, layout, color-coding, and keyframe animations (extracted from the monolith).",
        plain:"The look: dark cyberpunk theme, glowing text, layered panels, and smooth animations.",
@@ -196,7 +209,7 @@ const SECTIONS = [
              "Fully local — the only optional network dependency in the whole app is the TTS endpoint used by talk-back."],
        connects:"Loaded + ducked by <code>audio/musicManager.js</code>."},
       {path:"tests/run-tests.mjs", layer:"shell",
-       purpose:"Dependency-free Node test suite (~31 assertions) covering pure logic across every subsystem.",
+       purpose:"Dependency-free Node test suite (45 assertions) covering pure logic across every subsystem.",
        plain:"An automated checklist that proves the game's logic works without ever opening a browser.",
        exports:["node tests/run-tests.mjs"],
        does:["Imports the real modules, feeds them mock DOM/streams/timers, and asserts behavior with node:assert — no framework, no browser.",
@@ -229,11 +242,11 @@ const SECTIONS = [
       body:"passphraseApp.js is the only place allowed to cross subsystem boundaries. It owns the mutable game state (level, word index, deadline, lives) and calls pure helpers with plain-data snapshots (createRuleStateSnapshot / applyRuleState), then triggers side effects — sound, DOM, echo, talk-back — itself. Runtime services never import one another; they receive callbacks and getters. That is why the whole thing stays testable and refactorable."},
     files:[
       {path:"src/main.js", layer:"coord",
-       purpose:"The entry point: imports and calls initPassphraseApp().",
+       purpose:"The entry point: loads the game script into the editor, then calls initPassphraseApp().",
        plain:"The light switch that turns the whole game on.",
        exports:["(bootstrap)"],
-       does:["Three lines: import initPassphraseApp and invoke it.","Keeps the HTML's script tag trivial and gives the app one clear ignition point."],
-       connects:"Calls <code>app/passphraseApp.js</code>."},
+       does:["Awaits loadInitialScript() (from gameScriptSource), writes it into the settings editor, then calls initPassphraseApp() — which reads the script from that editor as usual.","Keeps the HTML's script tag trivial and gives the app one clear ignition point."],
+       connects:"Uses <code>content/gameScriptSource.js</code>; calls <code>app/passphraseApp.js</code>."},
       {path:"src/app/passphraseApp.js", layer:"coord",
        purpose:"The central coordinator: owns game state and wires speech, UI, rules, renderers, audio, echo, and talk-back into one loop.",
        plain:"The conductor of the orchestra — it decides when each system plays based on what's happening in the game.",
@@ -377,23 +390,40 @@ const SECTIONS = [
   },
   {
     name:"Content", tag:"content",
-    purpose:"Level definitions, phrase lists, and the parser for the editable word plan.",
-    plain:"The script and level list — which words belong to which level and round.",
+    purpose:"Turns the single game-script.md file into levels, rounds, phrases, style presets, and talk-back — and sources it at runtime.",
+    plain:"Turns the one editable text file into the game's levels, look, and talk-back.",
+    deepDive:{title:"game-script.md is the single source of content",
+      body:"Nothing about the game's content is hardcoded in JavaScript any more. targetPlan.parseGameScript turns game-script.md into structured levels; levelCatalog is a thin query layer that re-reads it on each call (so edits apply live); environments maps each level's environment: to a visual preset; and gameScriptSource fetches the file and manages the localStorage dev override. Add a level by adding a '# Level' block — everything else follows from the file."},
     files:[
       {path:"src/content/targetPlan.js", layer:"data",
-       purpose:"Parses the markdown-ish word plan and holds default level/phrase data.",
-       plain:"The word-list manager — it reads the levels and rounds from a simple text format.",
-       exports:["parseTargetPlan()","getLevelEntries()","LEVEL_1_WORD_COUNT","LEVEL_2_ROUNDS","DEFAULT_WORD_PLAN","DEFAULT_TALKBACK_PHRASES"],
-       does:["parseTargetPlan reads '# Level' / '## Round' headers into flat entries {text, levelTitle, sequenceTitle, indices}.",
-             "Defaults: Level 1 = 18 border/immigration words; Level 2 = 3 rounds of surveillance-satire phrases."],
-       connects:"Consumed by <code>content/levelCatalog.js</code> and <b>passphraseApp</b>."},
+       purpose:"Parses game-script.md into structured levels (title, subtitle, environment, rounds, talk-back) plus a flat entry list.",
+       plain:"Reads the game-script file and turns it into the levels and phrases the game uses.",
+       exports:["parseGameScript()","parseTargetPlan()"],
+       does:["parseGameScript emits levels with {id, name, subtitle, environment, rounds, entries, talkbackRandom, talkbackCues}; a '~' cue is anchored to the phrase directly above it.",
+             "'## Talkback' lines and '~' cues are captured as talk-back — never as target phrases; parseTargetPlan is the flat-entry back-compat wrapper.",
+             "Level 1 = border/immigration words; Level 2 = surveillance-satire phrases — all now living in the file, not in code."],
+       connects:"Input from <code>gameScriptSource.js</code>; consumed by <code>content/levelCatalog.js</code> and <b>passphraseApp</b>."},
       {path:"src/content/levelCatalog.js", layer:"data",
-       purpose:"Builds level definitions and a consistent query API over them.",
-       plain:"The level registry — one source of truth for each level's name, setting, and words.",
+       purpose:"A thin query layer over the parsed script: levels, per-level config, and level entries.",
+       plain:"Looks up each level's name, style, and words from the current script.",
        exports:["createLevelCatalog()"],
-       does:["Returns {levels, getLevelConfig(id), getLevelEntries(id)} with names, subtitles, and environments (BORDER CHECKPOINT / UNDERSEA CABLE).",
-             "Lazy-loads Level 1 from parseTargetPlan; Level 2 comes from fixed rounds. Extensible by adding to the levels array."],
-       connects:"Built by <b>passphraseApp</b> from <code>targetPlan.js</code>; feeds HUD + word list."},
+       does:["Exposes getLevels() / getLevelConfig(id) / getLevelEntries(id), re-reading the parsed script on every call.",
+             "Because it re-reads live, edits in the dev script editor take effect immediately — no restart, no rebuild."],
+       connects:"Given a getScriptLevels() that calls <code>parseGameScript</code>; feeds HUD, word list, and the dev level buttons."},
+      {path:"src/content/environments.js", layer:"data",
+       purpose:"Defines the built-in visual style presets a level selects via its environment: line.",
+       plain:"The catalogue of looks a level can choose from.",
+       exports:["ENVIRONMENTS","resolveEnvironment()","ENVIRONMENT_BODY_CLASSES"],
+       does:["Each preset maps an environment name to an avatar (passport / password-key), a <body> theme class, and whether the Level-2 memory-enemy swarm runs.",
+             "resolveEnvironment falls back to the default (border-fence) look for an unknown value, so a typo in the script never breaks rendering."],
+       connects:"Used by <b>passphraseApp</b> (environment application + avatar) and the ASCII renderers."},
+      {path:"src/content/gameScriptSource.js", layer:"service",
+       purpose:"Loads game-script.md at runtime and manages the localStorage dev override.",
+       plain:"Fetches the game-script file and remembers your playtest edits.",
+       exports:["loadInitialScript()","fetchFileScript()","saveScriptOverride()","clearScriptOverride()"],
+       does:["loadInitialScript returns a saved override if present, else fetches game-script.md, else a tiny offline fallback (with a console warning).",
+             "save/clearScriptOverride persist and reset the dev edit; reset-to-file re-fetches the committed script. Browser-only — kept out of the Node tests."],
+       connects:"Called by <code>main.js</code> at boot and by <b>passphraseApp</b>'s persist / reset handlers."},
     ]
   },
   {
@@ -468,10 +498,11 @@ const SECTIONS = [
       {path:"src/renderers/ascii/player.js", layer:"ui",
        purpose:"Composites the player character + voice signal into the road grid.",
        plain:"The hand that places your avatar (and its speech ripple) onto the road at the right spot.",
-       exports:["drawPlayerCharacter()","getPlayerCharClass()"],
+       exports:["drawPlayerCharacter()","getPlayerCharClass()","getPlayerBounds()"],
        does:["drawPlayerCharacter writes the character's ASCII lines into the row array at the player position.",
-             "getPlayerCharClass assigns CSS classes per state (passport/password-key, --speaking/--fail...)."],
-       connects:"Uses <code>keygenCharacter.js</code> line generators + <code>hash.js</code>; called by <code>roadRenderer.js</code>."},
+             "The avatar (passport vs password-key) and its CSS classes are chosen by the level's environment preset — not the level number — so any level's look stays consistent.",
+             "getPlayerCharClass assigns per-state classes (--speaking / --fail / --broken …)."],
+       connects:"Uses <code>keygenCharacter.js</code> line generators + <code>hash.js</code>; called by <code>roadRenderer.js</code> with the level's environment."},
       {path:"src/renderers/ascii/roadAnimation.js", layer:"ui",
        purpose:"Throttled requestAnimationFrame loop driving the road at a steady frame rate.",
        plain:"The animation engine — it redraws the road at a steady pace no matter the browser.",
@@ -584,7 +615,7 @@ const SECTIONS = [
     purpose:"Clones the player's voice via an external TTS service and speaks scripted phrases back.",
     plain:"An AI that learns your voice from what you say, then talks back to you in it.",
     deepDive:{title:"Capture → upload → generate → play",
-      body:"Records mic segments (trimmed, up to 16). Selects a 5–12s reference and uploads it to /api/refs (cached by signature). Once you've cleared enough phrases, it POSTs a phrase + ref id to /api/generate (up to 90s), then plays the returned audio. A /api/health poll every 7s tracks whether the endpoint is ready. The endpoint is the app's only optional network dependency."},
+      body:"Records mic segments (trimmed, up to 16). Selects a 5–12s reference and uploads it to /api/refs (cached by signature). Once you've cleared enough phrases, it POSTs a phrase + ref id to /api/generate (up to 90s), then plays the returned audio. A /api/health poll every 7s tracks whether the endpoint is ready. The phrases themselves — both the random pool and the positional '~' cues — now come from game-script.md, per level. The endpoint is the app's only optional network dependency."},
     files:[
       {path:"src/talkback/defaultConfig.js", layer:"data",
        purpose:"Talk-back runtime tuning constants.",
@@ -616,11 +647,11 @@ const SECTIONS = [
       {path:"src/talkback/runtime.js", layer:"service",
        purpose:"Full talk-back orchestration: capture, reference cache, health polling, generation queue, playback.",
        plain:"The secretary that records you, sends a voice sample, requests lines, and plays them back.",
-       exports:["createTalkbackRuntime()","startCapture()/stopCapture()","checkHealth()/startHealthChecks()","maybeTrigger()","clear()"],
-       does:["Records + stores up to 16 segments; uploads a reference (signature-cached to avoid re-upload).",
-             "Health poll every 7s; a session id cancels stale generations; probabilistic maybeTrigger queues phrases.",
+       exports:["createTalkbackRuntime()","startCapture()/stopCapture()","checkHealth()","maybeTrigger()","triggerSpecific()","clear()"],
+       does:["Records + stores up to 16 segments; uploads a reference (signature-cached to avoid re-upload). Health poll every 7s; a session id cancels stale generations.",
+             "maybeTrigger picks a random phrase from the level's pool (probability + threshold + cooldown); triggerSpecific plays a scripted narrative cue immediately, bypassing those gates but still queued so it never interrupts the loop.",
              "Injectable timers — the other half of the two-file this-binding fix."],
-       connects:"Uses segmentRecorder, bufferUtils, client, reference, panel; owned by <b>passphraseApp</b>."},
+       connects:"Random pool + cues come from <code>game-script.md</code> via <b>passphraseApp</b>; uses segmentRecorder, bufferUtils, client, reference, panel."},
     ]
   },
   {
@@ -723,7 +754,7 @@ const ARCH = [
         <h3>Pure logic vs browser services</h3>
         <ul class="ticks"><li>Game rules, matching, and content are <b>pure</b> — they take data and return data.</li>
         <li>Anything touching mic, audio, DOM, or network is a <b>runtime service</b> that receives its Web APIs as arguments.</li>
-        <li>This split is what makes ~31 browser-free tests possible.</li></ul>
+        <li>This split is what makes the 45 browser-free tests possible.</li></ul>
       </div>
     </div>
     <div class="plain" style="margin-top:1.2em"><span class="lbl">In plain terms</span>
@@ -786,30 +817,68 @@ const ARCH = [
       player bounds each frame.</p>`},
   {type:"content", nav:"Directory layout", html:`
     <div class="kicker">Where everything lives</div>
-    <h2>Eleven subsystem folders under src/.</h2>
+    <h2>The repo root is the canonical app.</h2>
     <pre class="ascii">
-passphrase-modular/
+passphrase/  (repo root)
 ├─ index.html            the stage            ├─ src/
-├─ styles/main.css       the look             │  ├─ main.js          entry
-├─ assets/audio/         5 sound files        │  ├─ app/     (3)     coordinator + bindings
-├─ tests/run-tests.mjs   ~31 assertions       │  ├─ ui/      (8)     views + DOM/config
+├─ game-script.md        all game content     │  ├─ main.js          entry (loads script)
+├─ styles/main.css       the look             │  ├─ app/     (3)     coordinator + bindings
+├─ assets/audio/         5 sound files        │  ├─ ui/      (8)     views + DOM/config
+├─ tests/run-tests.mjs   45 assertions        │  ├─ content/ (4)     script → levels + presets
+├─ documentation/        this deck            │  ├─ matching/(1)     fuzzy matching
 ├─ README.md             overview             │  ├─ speech/  (4)     Web Speech lifecycle
-└─ src/README.md         file inventory       │  ├─ matching/(1)     fuzzy matching
-                                              │  ├─ content/ (2)     levels + parsing
-                                              │  ├─ game/    (5)     pure rules
-                                              │  ├─ renderers/ascii/ (7)  ASCII engine
+├─ src/README.md         file inventory       │  ├─ game/    (5)     pure rules
+└─ OLD/                  archived prototypes  │  ├─ renderers/ascii/ (7)  ASCII engine
                                               │  ├─ audio/   (3)     music + buffers
                                               │  ├─ echo/    (5)     voice interference
                                               │  ├─ talkback/(5)     voice cloning
                                               │  └─ effects/ (3)     atmosphere
     </pre>
-    <p class="muted">47 JavaScript modules in total. From here, we walk every one — grouped by subsystem.</p>`},
+    <p class="muted">49 JavaScript modules in total (plus game-script.md). From here, we walk every one — grouped by subsystem.</p>`},
+  {type:"content", nav:"Game content: game-script.md", html:`
+    <div class="kicker">Content is data, not code</div>
+    <h2>One markdown file controls the entire game.</h2>
+    <p>Every level, round, phrase, visual style, and talk-back line lives in <code>game-script.md</code> at the repo
+      root. Anyone — including non-coders — can edit it to reshape the game; no JavaScript is touched.</p>
+    <pre class="ascii"># Level 1
+subtitle: BORDER CHECKPOINT      &lt;- intro-card subtitle
+environment: border-fence        &lt;- visual preset (fence + passport + land)
+
+## Talkback                      &lt;- this level's random AI talk-back pool
+How can I help you?
+
+## Round 1                       &lt;- a round of the sequence
+Albania
+Exit
+~ Sorry, this checkpoint is now closed   &lt;- cue played after "Exit" clears
+Germany</pre>
+    <p class="muted">Add a level by adding another <code># Level …</code> block — a dev jump button appears for it
+      automatically. An unknown <code>environment:</code> safely falls back to the default look.</p>`},
+  {type:"content", nav:"From file to gameplay", html:`
+    <div class="kicker">Fetch → parse → play, editable live</div>
+    <h2>How the script becomes the game.</h2>
+    <div class="flow">
+      <div class="node"><b>game-script.md</b><span>the source file</span></div><span class="arr">→</span>
+      <div class="node"><b>gameScriptSource</b><span>fetch / localStorage override</span></div><span class="arr">→</span>
+      <div class="node"><b>parseGameScript</b><span>structured levels</span></div><span class="arr">→</span>
+      <div class="node"><b>levelCatalog</b><span>levels · rounds · phrases</span></div><span class="arr">→</span>
+      <div class="node"><b>the game</b><span>HUD · road · talk-back</span></div>
+    </div>
+    <ul class="ticks">
+      <li>The settings <b>game script</b> editor is pre-filled from the file; edits apply live and persist in
+        <code>localStorage</code> for playtesting.</li>
+      <li><b>[ reset to file ]</b> discards the override and reloads the committed <code>game-script.md</code>.</li>
+      <li><code>environment:</code> selects a preset in <code>environments.js</code>; talk-back cues play
+        asynchronously and never interrupt the game loop.</li>
+    </ul>
+    <div class="plain"><span class="lbl">In plain terms</span>
+      <p>Type new words into the file (or the in-game editor) and the levels change — no code, no rebuild.</p></div>`},
 ];
 
 const CLOSING = [
   {type:"content", nav:"How it's verified", html:`
     <div class="kicker">Confidence without a browser</div>
-    <h2>tests/run-tests.mjs — ~31 browser-free assertions.</h2>
+    <h2>tests/run-tests.mjs — 45 browser-free assertions.</h2>
     <p>Because the logic layers are pure, the whole rulebook, matcher, renderer maths, echo policy, and config
       normalization can be tested in Node with no framework and no DOM.</p>
     <ul class="ticks">
@@ -817,7 +886,7 @@ const CLOSING = [
       <li>Beat/lives rules, level progression, sequence + catch consumption.</li>
       <li>Audio buffer math + WAV, renderer geometry + collision, echo policy, talk-back URL/reference logic.</li>
     </ul>
-    <p class="muted">Run it with <code>node passphrase-modular/tests/run-tests.mjs</code>.</p>`},
+    <p class="muted">Run it with <code>node tests/run-tests.mjs</code>.</p>`},
   {type:"content", nav:"How to extend it", html:`
     <div class="kicker">Working in the codebase</div>
     <h2>The rules that keep it maintainable.</h2>
@@ -827,9 +896,9 @@ const CLOSING = [
         <li>Runtime services never import each other — only the app wires them.</li>
         <li>Cross-subsystem state travels as plain snapshots or narrow callbacks.</li></ul></div>
       <div><h3>Common changes</h3><ul class="ticks">
-        <li>Add a level → extend <code>content/levelCatalog.js</code>.</li>
-        <li>Tune matching → <code>matching/matching.js</code> (+ a test).</li>
-        <li>New effect → a module exposing start/stop, triggered by the app.</li></ul></div>
+        <li>Add a level / edit content / talk-back → <code>game-script.md</code> (no code).</li>
+        <li>Add a visual theme → a preset in <code>content/environments.js</code> (+ CSS).</li>
+        <li>Tune matching → <code>matching/matching.js</code> (+ a test).</li></ul></div>
     </div>
     <div class="plain" style="margin-top:1em"><span class="lbl">In plain terms</span>
       <p>Change one subsystem at a time, keep the thinking parts pure, and let the conductor do the wiring.</p></div>`},
@@ -858,12 +927,12 @@ CLOSING.forEach(s=>SLIDES.push(s));
 /* ---- Coverage self-check ---------------------------------------------------
    EXPECTED = the authoritative list of files that must each have a slide. ---*/
 const EXPECTED = [
-  "index.html","styles/main.css","assets/audio/","tests/run-tests.mjs","README.md","src/README.md",
+  "index.html","game-script.md","styles/main.css","assets/audio/","tests/run-tests.mjs","README.md","src/README.md",
   "src/main.js","src/app/passphraseApp.js","src/app/actionBindings.js","src/app/controlBindings.js",
   "src/ui/domRefs.js","src/ui/gameOver.js","src/ui/hud.js","src/ui/levelIntro.js","src/ui/onboarding.js",
   "src/ui/settingsPanel.js","src/ui/transcript.js","src/ui/wordList.js",
   "src/speech/speechService.js","src/speech/recognitionFlow.js","src/speech/recognitionResults.js","src/speech/transcriptState.js",
-  "src/matching/matching.js","src/content/targetPlan.js","src/content/levelCatalog.js",
+  "src/matching/matching.js","src/content/targetPlan.js","src/content/levelCatalog.js","src/content/environments.js","src/content/gameScriptSource.js",
   "src/game/rules.js","src/game/catchMode.js","src/game/sequenceText.js","src/game/levelProgression.js","src/game/levelProgressionEffects.js",
   "src/renderers/ascii/hash.js","src/renderers/ascii/keygenCharacter.js","src/renderers/ascii/player.js",
   "src/renderers/ascii/roadAnimation.js","src/renderers/ascii/roadRenderer.js","src/renderers/ascii/roadScene.js","src/renderers/ascii/timelineState.js",
@@ -1110,6 +1179,147 @@ window.addEventListener("keydown",e=>{
 window.addEventListener("hashchange",()=>{
   const h=parseInt((location.hash||"").replace("#",""),10);
   if(!isNaN(h)&&h>=1&&h<=SLIDES.length&&h-1!==idx) go(h-1);
+});
+
+/* ============================================================================
+   EXPORT TO PDF — fully in-browser, no dependencies.
+   Each slide is rendered to an image via an SVG <foreignObject> snapshot, then
+   the images are assembled into a minimal PDF (one page per slide).
+   ==========================================================================*/
+const PDF_PAGE_W = 1280, PDF_PAGE_H = 800, PDF_SCALE = 2;
+
+function collectDeckCss(){
+  return [...document.querySelectorAll("style")].map(s=>s.textContent).join("\n");
+}
+function collectRootVars(){
+  const cs = getComputedStyle(document.documentElement);
+  return ["--bg","--panel","--ink","--muted","--dim","--line","--yellow","--green","--red","--cyan","--pink","--mono"]
+    .map(n=>`${n}:${cs.getPropertyValue(n).trim()}`).join(";");
+}
+function base64ToBytes(b64){
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for(let i=0;i<bin.length;i++) bytes[i]=bin.charCodeAt(i);
+  return bytes;
+}
+
+// Build an SVG snapshot of slide `i` (HTML rendered inside a foreignObject).
+function buildSlideSvg(i){
+  const cap = document.createElement("div");
+  cap.setAttribute("style",
+    `width:${PDF_PAGE_W}px;height:${PDF_PAGE_H}px;padding:46px 90px;overflow:hidden;`+
+    `box-sizing:border-box;background:#0a0a0a;`);
+  cap.innerHTML = slideHtml(SLIDES[i]);
+  // Serialize as XHTML so it is valid inside the SVG foreignObject.
+  const inner = new XMLSerializer().serializeToString(cap);
+  const css = collectDeckCss() + "\n*{animation:none!important;transition:none!important}";
+  return `<svg xmlns="http://www.w3.org/2000/svg" width="${PDF_PAGE_W}" height="${PDF_PAGE_H}">`+
+    `<foreignObject x="0" y="0" width="${PDF_PAGE_W}" height="${PDF_PAGE_H}">`+
+    `<div xmlns="http://www.w3.org/1999/xhtml" style='${collectRootVars()};`+
+    `width:${PDF_PAGE_W}px;height:${PDF_PAGE_H}px;background:#0a0a0a;color:#eeeeee;`+
+    `font-family:var(--mono);line-height:1.5;'>`+
+    `<style>${css}</style>${inner}</div></foreignObject></svg>`;
+}
+
+// Render slide `i` to a JPEG (Uint8Array) at the fixed page size.
+async function slideToImage(i){
+  const svg = buildSlideSvg(i);
+  const img = new Image();
+  await new Promise((res,rej)=>{
+    img.onload=res; img.onerror=()=>rej(new Error("slide render failed"));
+    img.src = "data:image/svg+xml;charset=utf-8,"+encodeURIComponent(svg);
+  });
+
+  const canvas = document.createElement("canvas");
+  canvas.width = PDF_PAGE_W*PDF_SCALE;
+  canvas.height = PDF_PAGE_H*PDF_SCALE;
+  const ctx = canvas.getContext("2d");
+  ctx.fillStyle="#0a0a0a";
+  ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.setTransform(PDF_SCALE,0,0,PDF_SCALE,0,0);
+  ctx.drawImage(img,0,0,PDF_PAGE_W,PDF_PAGE_H);
+
+  const dataUrl = canvas.toDataURL("image/jpeg",0.82);
+  return { jpeg: base64ToBytes(dataUrl.split(",")[1]), iw: canvas.width, ih: canvas.height };
+}
+
+// Assemble JPEG pages into a minimal PDF (Uint8Array). One image per page.
+function buildPdf(pages){
+  const enc = new TextEncoder();
+  const chunks = []; let offset = 0; const offsets = [];
+  const put = (data)=>{ const u = typeof data==="string"?enc.encode(data):data; chunks.push(u); offset+=u.length; };
+  const obj = (n)=>{ offsets[n]=offset; };
+
+  put("%PDF-1.3\n");
+  const N = pages.length;
+  const kids = [];
+  for(let p=0;p<N;p++) kids.push(`${5+p*3} 0 R`);
+
+  obj(1); put(`1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n`);
+  obj(2); put(`2 0 obj\n<< /Type /Pages /Kids [${kids.join(" ")}] /Count ${N} >>\nendobj\n`);
+
+  for(let p=0;p<N;p++){
+    const { jpeg, iw, ih } = pages[p];
+    const imgNo=3+p*3, contentNo=4+p*3, pageNo=5+p*3;
+    obj(imgNo);
+    put(`${imgNo} 0 obj\n<< /Type /XObject /Subtype /Image /Width ${iw} /Height ${ih} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /DCTDecode /Length ${jpeg.length} >>\nstream\n`);
+    put(jpeg);
+    put(`\nendstream\nendobj\n`);
+    const content = `q ${PDF_PAGE_W} 0 0 ${PDF_PAGE_H} 0 0 cm /Im0 Do Q\n`;
+    obj(contentNo);
+    put(`${contentNo} 0 obj\n<< /Length ${enc.encode(content).length} >>\nstream\n${content}endstream\nendobj\n`);
+    obj(pageNo);
+    put(`${pageNo} 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${PDF_PAGE_W} ${PDF_PAGE_H}] /Resources << /XObject << /Im0 ${imgNo} 0 R >> >> /Contents ${contentNo} 0 R >>\nendobj\n`);
+  }
+
+  const total = 2 + N*3;
+  const xrefStart = offset;
+  let xref = `xref\n0 ${total+1}\n0000000000 65535 f \n`;
+  for(let n=1;n<=total;n++) xref += String(offsets[n]).padStart(10,"0")+" 00000 n \n";
+  put(xref);
+  put(`trailer\n<< /Size ${total+1} /Root 1 0 R >>\nstartxref\n${xrefStart}\n%%EOF`);
+
+  let len=0; for(const c of chunks) len+=c.length;
+  const out = new Uint8Array(len); let o=0;
+  for(const c of chunks){ out.set(c,o); o+=c.length; }
+  return out;
+}
+
+async function generateDeckPdf({ download=true, limit=SLIDES.length, onProgress }={}){
+  const count = Math.min(limit, SLIDES.length);
+  const pages = [];
+  for(let i=0;i<count;i++){
+    pages.push(await slideToImage(i));
+    if(onProgress) onProgress(i+1, count);
+    await new Promise(r=>setTimeout(r,0)); // yield so the UI can update
+  }
+  const pdf = buildPdf(pages);
+  if(download){
+    const url = URL.createObjectURL(new Blob([pdf],{type:"application/pdf"}));
+    const a = document.createElement("a");
+    a.href=url; a.download="passphrase-architecture-deck.pdf";
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(()=>URL.revokeObjectURL(url),4000);
+  }
+  return pdf;
+}
+window.generateDeckPdf = generateDeckPdf; // also usable from the console
+
+const pdfBtn = document.getElementById("pdf-btn");
+pdfBtn.addEventListener("click", async ()=>{
+  const label = pdfBtn.textContent;
+  pdfBtn.disabled = true;
+  try{
+    await generateDeckPdf({ onProgress:(done,total)=>{ pdfBtn.textContent = `PDF ${done}/${total}`; } });
+    pdfBtn.textContent = "✓ PDF";
+    setTimeout(()=>{ pdfBtn.textContent = label; }, 1500);
+  }catch(err){
+    console.error("[deck] PDF export failed", err);
+    pdfBtn.textContent = "PDF failed";
+    setTimeout(()=>{ pdfBtn.textContent = label; }, 2000);
+  }finally{
+    pdfBtn.disabled = false;
+  }
 });
 
 /* start at hash if present */
