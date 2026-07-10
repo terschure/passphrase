@@ -3,6 +3,7 @@ export function createTimelineRenderState({
     sequenceMode,
     mode,
     deadline,
+    wordStartedAt = 0,
     secondsLimit,
     now,
     metrics,
@@ -36,7 +37,12 @@ export function createTimelineRenderState({
         ? Math.max(0, (deadline - now) / 1000)
         : secondsLimit;
     const elapsed = deadline
-        ? Math.min(secondsLimit, secondsLimit - remaining)
+        ? Math.min(
+              secondsLimit,
+              wordStartedAt
+                  ? Math.max(0, (now - wordStartedAt) / 1000)
+                  : secondsLimit - remaining,
+          )
         : 0;
     const wallRow = Math.round(
         -3 + (elapsed / secondsLimit) * (metrics.carRow - 1),

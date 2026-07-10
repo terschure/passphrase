@@ -1,3 +1,35 @@
+export const AUTO_PASS_GAME_OVER_THRESHOLD = 2;
+export const CAUGHT_BEAT_ADVANCE_DELAY_MS = 2000;
+
+export function getCaughtBeatDeadline(
+    currentDeadline,
+    caughtAt,
+    maximumDelayMs = CAUGHT_BEAT_ADVANCE_DELAY_MS,
+) {
+    const caughtDeadline = caughtAt + maximumDelayMs;
+    return currentDeadline
+        ? Math.min(currentDeadline, caughtDeadline)
+        : caughtDeadline;
+}
+
+export function recordWordGameOver(gameOverCounts, wordIndex) {
+    const count = (gameOverCounts.get(wordIndex) || 0) + 1;
+    gameOverCounts.set(wordIndex, count);
+    return count;
+}
+
+export function shouldAutoPassWord(
+    gameOverCounts,
+    wordIndex,
+    threshold = AUTO_PASS_GAME_OVER_THRESHOLD,
+) {
+    return (gameOverCounts.get(wordIndex) || 0) >= threshold;
+}
+
+export function clearWordGameOverCounts(gameOverCounts) {
+    gameOverCounts.clear();
+}
+
 export function createInitialGameState({
     currentLevel = 1,
     currentWordIndex = 0,

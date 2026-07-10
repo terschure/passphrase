@@ -17,16 +17,26 @@ import {
 } from "../src/speech/recognitionFlow.js";
 import { createTranscriptState } from "../src/speech/transcriptState.js";
 import {
+    findFuzzyWordMatch,
+    findJoinedTargetMatch,
     findOrderedMatchEnd,
     findTargetEnd,
     textMatchesTarget,
 } from "../src/matching/matching.js";
 import {
+    collectTranscriptMatches,
+    renderTranscriptInto,
+} from "../src/ui/transcript.js";
+import {
     acceptContinuePhrase,
+    clearWordGameOverCounts,
     createInitialGameState,
+    getCaughtBeatDeadline,
     handleBeatDeadline,
     markCurrentWordCaught,
+    recordWordGameOver,
     resetSequence,
+    shouldAutoPassWord,
 } from "../src/game/rules.js";
 import { consumeCatchText } from "../src/game/catchMode.js";
 import {
@@ -441,6 +451,110 @@ test("matching handles fuzzy multi-word phrases", () => {
     );
 });
 
+test("matching handles fuzzy single-word targets conservatively", () => {
+    assert.equal(textMatchesTarget("the squirl escaped", "Squirrel"), true);
+    assert.equal(textMatchesTarget("take the exits", "Exit"), true);
+    assert.equal(textMatchesTarget("say exot", "Exit"), false);
+    assert.equal(textMatchesTarget("the cut sat down", "Cat"), false);
+    assert.equal(textMatchesTarget("a squi appeared", "Squirrel"), false);
+    assert.equal(textMatchesTarget("totally unrelated", "Squirrel"), false);
+});
+
+test("matching accepts joined and split target transcriptions", () => {
+    assert.equal(textMatchesTarget("la la", "Lala"), true);
+    assert.equal(
+        textMatchesTarget("lala", "La la", { fuzzyThreshold: 1 }),
+        true,
+    );
+    assert.equal(
+        textMatchesTarget("nomnomnom", "Nom nom nom", {
+            fuzzyThreshold: 1,
+        }),
+        true,
+    );
+    assert.equal(textMatchesTarget("la di la", "Lala"), false);
+
+    assert.deepEqual(findJoinedTargetMatch("lala then la la", "La la", 4), {
+        start: 10,
+        end: 15,
+    });
+    assert.equal(
+        findOrderedMatchEnd("rural la la", ["Lala", "Rural"], 1),
+        -1,
+    );
+});
+
+test("fuzzy word matching respects transcript offsets", () => {
+    const match = findFuzzyWordMatch("squirl then squirre", "Squirrel", 6);
+
+    assert.deepEqual(match, {
+        start: 12,
+        end: 19,
+        score: 0.875,
+    });
+    assert.equal(
+        findOrderedMatchEnd("rural squirl", ["Squirrel", "Rural"], 1),
+        -1,
+    );
+});
+
+test("transcript matching prefers exact ranges and marks fuzzy words", () => {
+    const escapeRegExp = (text) =>
+        String(text).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+    const matches = collectTranscriptMatches(
+        "squirl then squirrel",
+        ["Squire", "Squirrel"],
+        escapeRegExp,
+    );
+
+    assert.deepEqual(
+        matches.map(({ kind, start, end }) => ({ kind, start, end })),
+        [
+            { kind: "partial", start: 0, end: 6 },
+            { kind: "exact", start: 12, end: 20 },
+        ],
+    );
+    assert.deepEqual(
+        collectTranscriptMatches(
+            "squirrel",
+            ["Squire", "Squirrel"],
+            escapeRegExp,
+        ).map(({ kind, start, end }) => ({ kind, start, end })),
+        [{ kind: "exact", start: 0, end: 8 }],
+    );
+    assert.deepEqual(
+        collectTranscriptMatches("la la", ["Lala"], escapeRegExp).map(
+            ({ kind, start, end }) => ({ kind, start, end }),
+        ),
+        [{ kind: "partial", start: 0, end: 5 }],
+    );
+
+    const appended = [];
+    const container = {
+        replaceChildren() {
+            appended.length = 0;
+        },
+        append(...children) {
+            appended.push(...children);
+        },
+    };
+
+    renderTranscriptInto({
+        container,
+        text: "squirl then squirrel",
+        words: ["Squirrel"],
+        escapeRegExp,
+        colorSpan: (className, text) => ({ className, text }),
+    });
+
+    assert.deepEqual(appended, [
+        { className: "partial-hit", text: "squirl" },
+        " then ",
+        { className: "hit", text: "squirrel" },
+        "",
+    ]);
+});
+
 test("ordered matching anchors after completed words", () => {
     const words = ["Alpha", "Beta"];
     assert.notEqual(
@@ -619,6 +733,42 @@ test("game rules advance on beat deadline after hit", () => {
     assert.equal(result.outcome, "completed");
     assert.equal(state.currentWordIndex, 1);
     assert.equal(state.sequenceFailed, false);
+});
+
+test("caught beats advance within two seconds without extending the deadline", () => {
+    assert.equal(getCaughtBeatDeadline(10000, 1000), 3000);
+    assert.equal(getCaughtBeatDeadline(2500, 1000), 2500);
+    assert.equal(getCaughtBeatDeadline(null, 1000), 3000);
+});
+
+test("game rules track per-word game overs and arm assisted passes", () => {
+    const gameOverCounts = new Map();
+
+    assert.equal(recordWordGameOver(gameOverCounts, 0), 1);
+    assert.equal(shouldAutoPassWord(gameOverCounts, 0), false);
+    assert.equal(recordWordGameOver(gameOverCounts, 1), 1);
+    assert.equal(recordWordGameOver(gameOverCounts, 0), 2);
+    assert.equal(shouldAutoPassWord(gameOverCounts, 0), true);
+    assert.equal(shouldAutoPassWord(gameOverCounts, 1), false);
+
+    clearWordGameOverCounts(gameOverCounts);
+    assert.equal(gameOverCounts.size, 0);
+});
+
+test("assisted passes preserve sequence and beat advancement rules", () => {
+    const words = ["Alpha"];
+    const sequenceState = createInitialGameState();
+    markCurrentWordCaught(sequenceState, words, "sequence");
+    assert.equal(sequenceState.currentWordIndex, 1);
+
+    const beatState = createInitialGameState();
+    markCurrentWordCaught(beatState, words, "rhythm");
+    assert.equal(beatState.currentWordIndex, 0);
+    assert.equal(beatState.wordCaughtThisBeat, true);
+
+    const result = handleBeatDeadline(beatState, words, { mode: "rhythm" });
+    assert.equal(result.outcome, "completed");
+    assert.equal(beatState.currentWordIndex, 1);
 });
 
 test("game rules fail rhythm miss and continue resets failure", () => {
@@ -861,7 +1011,7 @@ test("readConfig normalizes numeric and text settings", () => {
     };
 
     const config = readConfig(refs);
-    assert.equal(config.seconds, 5);
+    assert.equal(config.seconds, 8);
     assert.equal(config.lives, 4);
     assert.equal(config.retries, 0);
     assert.equal(config.sentenceFuzzyThreshold, 1);
@@ -1287,6 +1437,42 @@ test("timeline render state covers catch, active, failed, and complete modes", (
     assert.equal(active.road.word, "Alpha");
     assert.equal(active.road.gateProgress, 0.5);
     assert.equal(active.checkCollision, true);
+
+    const beforeSuccessClamp = createTimelineRenderState({
+        levelTransitionActive: false,
+        sequenceMode: true,
+        mode: "lives",
+        deadline: 9000,
+        wordStartedAt: 1000,
+        secondsLimit: 8,
+        now: 3000,
+        metrics,
+        words: ["Alpha"],
+        currentWordIndex: 0,
+        sequenceFailed: false,
+        wordCaughtThisBeat: false,
+        gateOpenedAt: 0,
+        gateAnimationMs: 500,
+        beatMode: true,
+    });
+    const afterSuccessClamp = createTimelineRenderState({
+        levelTransitionActive: false,
+        sequenceMode: true,
+        mode: "lives",
+        deadline: 5000,
+        wordStartedAt: 1000,
+        secondsLimit: 8,
+        now: 3000,
+        metrics,
+        words: ["Alpha"],
+        currentWordIndex: 0,
+        sequenceFailed: false,
+        wordCaughtThisBeat: true,
+        gateOpenedAt: 3000,
+        gateAnimationMs: 500,
+        beatMode: true,
+    });
+    assert.equal(afterSuccessClamp.road.wallRow, beforeSuccessClamp.road.wallRow);
 
     const failed = createTimelineRenderState({
         levelTransitionActive: false,

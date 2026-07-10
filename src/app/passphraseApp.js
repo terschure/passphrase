@@ -33,11 +33,15 @@ import {
 import { createLevelProgressionEffects } from "../game/levelProgressionEffects.js";
 import {
     acceptContinuePhrase as acceptContinuePhraseRule,
+    clearWordGameOverCounts,
     createInitialGameState,
+    getCaughtBeatDeadline,
     handleBeatDeadline as handleBeatDeadlineRule,
     markCurrentWordCaught as markCurrentWordCaughtRule,
+    recordWordGameOver,
     recordCompletedPhrase as recordCompletedPhraseRule,
     resetSequence as resetSequenceRule,
+    shouldAutoPassWord,
 } from "../game/rules.js";
 import { consumeSequenceText } from "../game/sequenceText.js";
 import { createVocalizationDetector } from "../game/vocalization.js";
@@ -199,6 +203,7 @@ export function initPassphraseApp() {
             let sequenceFailed = false;
             let failReason = "timeout";
             let deadline = null;
+            let wordStartedAt = 0;
             let timerInterval = null;
             let livesLeft = 3;
             let retriesLeft = 2;
@@ -207,6 +212,8 @@ export function initPassphraseApp() {
             let refillAnimationUntil = 0;
             let gameOverContinuing = false;
             let gameOverContinueTimer = null;
+            let gameOverRecorded = false;
+            const gameOverCountsByWord = new Map();
             let levelCompleteTimer = null;
             let pendingLevelAfterComplete = null;
             let level3WarningShown = false;
@@ -662,6 +669,8 @@ export function initPassphraseApp() {
             ) {
                 clearLevelCompleteTimer();
                 hideLevelCompleteModal();
+                clearWordGameOverCounts(gameOverCountsByWord);
+                gameOverRecorded = false;
                 const level = getLevelConfig(levelId);
                 const activationState = createLevelActivationState({
                     level,
@@ -677,6 +686,7 @@ export function initPassphraseApp() {
                 sequenceFailed = activationState.sequenceFailed;
                 failReason = activationState.failReason;
                 deadline = activationState.deadline;
+                wordStartedAt = 0;
                 wordCaughtThisBeat = activationState.wordCaughtThisBeat;
                 gateOpenedAt = activationState.gateOpenedAt;
                 wallEchoFiredThisBeat = activationState.wallEchoFiredThisBeat;
@@ -1021,11 +1031,11 @@ export function initPassphraseApp() {
                 }
 
                 if (vocalizationDetector.sample(amplitude, timestamp)) {
-                    catchCurrentSoundPhrase();
+                    catchCurrentTarget();
                 }
             }
 
-            function catchCurrentSoundPhrase() {
+            function catchCurrentTarget() {
                 const words = getTargetWords();
                 const state = createRuleStateSnapshot();
                 const result = markCurrentWordCaughtRule(
@@ -1036,7 +1046,7 @@ export function initPassphraseApp() {
                 applyRuleState(state);
 
                 if (!result.changed) {
-                    return;
+                    return result;
                 }
 
                 triggerVoiceSignal("success");
@@ -1045,9 +1055,9 @@ export function initPassphraseApp() {
                 if (isBeatMode()) {
                     // Caught this beat — the deadline handler advances/refills,
                     // exactly as for a spoken word.
-                    gateOpenedAt = Date.now();
+                    registerCaughtBeat();
                     renderSequenceStatus();
-                    return;
+                    return result;
                 }
 
                 // Continuous mode: advance now, mirroring processSequenceText.
@@ -1064,6 +1074,7 @@ export function initPassphraseApp() {
                 renderSequenceStatus();
                 renderWordList();
                 fireDueTalkbackCues();
+                return result;
             }
 
             function getSecondsLimit() {
@@ -1076,6 +1087,13 @@ export function initPassphraseApp() {
 
             function getRetriesLimit() {
                 return readConfig(refs).retries;
+            }
+
+            function registerCaughtBeat() {
+                const caughtAt = Date.now();
+                gateOpenedAt = caughtAt;
+                deadline = getCaughtBeatDeadline(deadline, caughtAt);
+                playWallPassSound();
             }
 
             function refillLivesAndRetries() {
@@ -1138,6 +1156,8 @@ export function initPassphraseApp() {
                 clearGameOverContinueTimer();
                 clearLevelCompleteTimer();
                 hideLevelCompleteModal();
+                clearWordGameOverCounts(gameOverCountsByWord);
+                gameOverRecorded = false;
                 const state = createRuleStateSnapshot();
                 resetSequenceRule(state, {
                     livesLimit: getLivesLimit(),
@@ -1145,6 +1165,7 @@ export function initPassphraseApp() {
                 });
                 applyRuleState(state);
                 deadline = null;
+                wordStartedAt = 0;
                 gateOpenedAt = 0;
                 refillAnimationUntil = 0;
                 firedTalkbackCues.clear();
@@ -1165,9 +1186,17 @@ export function initPassphraseApp() {
             function failSequence(reason) {
                 clearGameOverContinueTimer();
                 clearTranscript();
+                if (!gameOverRecorded) {
+                    recordWordGameOver(
+                        gameOverCountsByWord,
+                        currentWordIndex,
+                    );
+                    gameOverRecorded = true;
+                }
                 sequenceFailed = true;
                 failReason = reason || "timeout";
                 deadline = null;
+                wordStartedAt = 0;
                 triggerKeygenFail();
                 playLevelFailedSound();
                 stopSequenceTimer();
@@ -1179,6 +1208,7 @@ export function initPassphraseApp() {
             function completeSequence() {
                 clearGameOverContinueTimer();
                 deadline = null;
+                wordStartedAt = 0;
                 stopSequenceTimer();
                 const nextLevel = getNextLevel(getLevels(), currentLevel);
 
@@ -1202,6 +1232,10 @@ export function initPassphraseApp() {
                 renderSequenceStatus();
 
                 gameOverContinueTimer = setTimeout(() => {
+                    const autoPassCurrentWord = shouldAutoPassWord(
+                        gameOverCountsByWord,
+                        currentWordIndex,
+                    );
                     const state = createRuleStateSnapshot();
                     acceptContinuePhraseRule(state, {
                         livesLimit: getLivesLimit(),
@@ -1210,13 +1244,19 @@ export function initPassphraseApp() {
                     applyRuleState(state);
                     gameOverContinueTimer = null;
                     gameOverContinuing = false;
+                    gameOverRecorded = false;
                     gateOpenedAt = 0;
                     wallEchoFiredThisBeat = false;
                     triggerKeygenRespawn();
                     playRespawnSound();
                     renderGameOverScreen();
 
-                    if (currentWordIndex < getTargetWords().length) {
+                    if (autoPassCurrentWord) {
+                        if (isBeatMode()) {
+                            startSequenceTimer();
+                        }
+                        catchCurrentTarget();
+                    } else if (currentWordIndex < getTargetWords().length) {
                         startSequenceTimer();
                     } else {
                         completeSequence();
@@ -1266,7 +1306,6 @@ export function initPassphraseApp() {
                     levelProgressionEffects.registerSuccessfulPhrase();
                     gateOpenedAt = 0;
                     refillLivesAndRetries();
-                    playWallPassSound();
 
                     if (result.outcome === "completed") {
                         completeSequence();
@@ -1305,10 +1344,12 @@ export function initPassphraseApp() {
                     currentWordIndex >= getTargetWords().length
                 ) {
                     deadline = null;
+                    wordStartedAt = 0;
                     return;
                 }
 
-                deadline = Date.now() + getSecondsLimit() * 1000;
+                wordStartedAt = Date.now();
+                deadline = wordStartedAt + getSecondsLimit() * 1000;
                 roadAnimation.reset();
                 wallEchoFiredThisBeat = false;
                 startRoadAnimation();
@@ -1320,6 +1361,7 @@ export function initPassphraseApp() {
 
                     if (
                         deadline &&
+                        !wordCaughtThisBeat &&
                         !wallEchoFiredThisBeat &&
                         (deadline - Date.now()) / 1000 <= getSecondsLimit() / 2
                     ) {
@@ -1406,6 +1448,7 @@ export function initPassphraseApp() {
                     sequenceMode: isSequenceMode(),
                     mode: modeInput.value,
                     deadline,
+                    wordStartedAt,
                     secondsLimit: getSecondsLimit(),
                     now: Date.now(),
                     metrics,
@@ -1462,7 +1505,7 @@ export function initPassphraseApp() {
 
                 if (isBeatMode()) {
                     if (result.beatHit) {
-                        gateOpenedAt = Date.now();
+                        registerCaughtBeat();
                         triggerVoiceSignal("success");
                         maybeTriggerTalkback("beat");
                     }

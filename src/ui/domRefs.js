@@ -87,7 +87,7 @@ export function createDomRefs(documentRef = document) {
 export function readConfig(refs) {
     return {
         mode: refs.modeInput.value,
-        seconds: Math.max(1, Number(refs.secondsInput.value) || 5),
+        seconds: Math.max(1, Number(refs.secondsInput.value) || 8),
         lives: Math.max(1, Number(refs.livesInput.value) || 3),
         retries: Math.max(0, Number(refs.retriesInput.value) || 0),
         transcriptSource: refs.transcriptSourceInput.value,

@@ -36,9 +36,8 @@ environment: bubble-wall
 Mama
 Papa
 Lala
-Nom nom nom
-*Mjam mjam*
-
+Yum yum
+Allow access to microphone
 
 
 # Level 2
@@ -56,20 +55,17 @@ Send €10,000 from Grandma’s account
 
 
 ## Round 1
+Welcome
 Squirrel
-Colonel
 Rural
-Sixth
 Thorough
 Draught
 Authoritarian
 Mischievous
 Anemone
 Bureaucracy
-Worcestershire
 Onomatopoeia
-Antidisestablishmentarianism
-Hippopotomonstrosesquippedaliophobia
+
 
 # Level 3
 subtitle: Getting access to the server / Removing your data from the server
@@ -84,19 +80,19 @@ Request denied
 
 
 ## Round 1
-Welcome01 (game: Incorrect password, try again)
-Password0000
+Welcome
+Password 00
 Accept changes to terms and conditions
 Find account settings
 Delete my account
-Name of first pet: Nemo
+Name of first pet Nemo
 I want to delete my account
 Yes I am sure
-Name of favourite character: Unicode
+Favorite character Unicode
 Confirm deletion of account
 Yes I am sure
 Contact voice sharks customer service
-Dear sharks, please remove all of my voice and personal data
+Please remove all of my voice data
 Confirm identity
 Confirm deletion of personal data
 Yes I am sure

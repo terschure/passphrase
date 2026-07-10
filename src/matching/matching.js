@@ -22,6 +22,123 @@ export function tokenizeForFuzzy(text) {
     return tokens;
 }
 
+function joinTokenValues(tokens) {
+    return tokens.map((token) => token.value.replace(/'/g, "")).join("");
+}
+
+export function findJoinedTargetMatch(text, target, fromIndex = 0) {
+    const targetTokens = tokenizeForFuzzy(target);
+
+    if (!targetTokens.length) {
+        return null;
+    }
+
+    const joinedTarget = joinTokenValues(targetTokens);
+    const textTokens = tokenizeForFuzzy(text).filter(
+        (token) => token.end > fromIndex,
+    );
+
+    for (let start = 0; start < textTokens.length; start += 1) {
+        let joinedCandidate = "";
+
+        for (let end = start; end < textTokens.length; end += 1) {
+            joinedCandidate += textTokens[end].value.replace(/'/g, "");
+
+            if (joinedCandidate === joinedTarget) {
+                return {
+                    start: textTokens[start].start,
+                    end: textTokens[end].end,
+                };
+            }
+
+            if (joinedCandidate.length >= joinedTarget.length) {
+                break;
+            }
+        }
+    }
+
+    return null;
+}
+
+export function characterEditDistance(a, b) {
+    const previous = Array.from(
+        { length: b.length + 1 },
+        (_, index) => index,
+    );
+
+    for (let i = 1; i <= a.length; i += 1) {
+        const current = [i];
+
+        for (let j = 1; j <= b.length; j += 1) {
+            current[j] =
+                a[i - 1] === b[j - 1]
+                    ? previous[j - 1]
+                    : Math.min(previous[j - 1], previous[j], current[j - 1]) +
+                      1;
+        }
+
+        previous.splice(0, previous.length, ...current);
+    }
+
+    return previous[b.length];
+}
+
+export function wordSimilarity(a, b) {
+    const maxLength = Math.max(a.length, b.length);
+
+    if (!maxLength) {
+        return 1;
+    }
+
+    return 1 - characterEditDistance(a, b) / maxLength;
+}
+
+export function findFuzzyWordMatch(text, target, fromIndex = 0) {
+    const targetTokens = tokenizeForFuzzy(target);
+
+    if (targetTokens.length !== 1) {
+        return null;
+    }
+
+    const targetValue = targetTokens[0].value;
+
+    if (targetValue.length < 4) {
+        return null;
+    }
+
+    const threshold = targetValue.length <= 5 ? 0.8 : 0.7;
+    const maximumLengthDifference = Math.max(
+        2,
+        Math.ceil(targetValue.length * 0.35),
+    );
+    let best = null;
+
+    for (const token of tokenizeForFuzzy(text)) {
+        if (token.end <= fromIndex || token.value === targetValue) {
+            continue;
+        }
+
+        if (
+            Math.abs(token.value.length - targetValue.length) >
+            maximumLengthDifference
+        ) {
+            continue;
+        }
+
+        const score = wordSimilarity(token.value, targetValue);
+
+        if (score >= threshold && (!best || score > best.score)) {
+            best = {
+                start: token.start,
+                end: token.end,
+                score,
+            };
+        }
+    }
+
+    return best;
+}
+
 export function tokenEditDistance(a, b) {
     const previous = Array.from(
         { length: b.length + 1 },
@@ -152,9 +269,22 @@ export function findTargetEnd(
         return match.index + match[0].length;
     }
 
-    return isSentenceTarget(rawTarget)
-        ? findFuzzySentenceEnd(source, rawTarget, fromIndex, fuzzyThreshold)
-        : -1;
+    const joinedMatch = findJoinedTargetMatch(source, rawTarget, fromIndex);
+
+    if (joinedMatch) {
+        return joinedMatch.end;
+    }
+
+    if (isSentenceTarget(rawTarget)) {
+        return findFuzzySentenceEnd(
+            source,
+            rawTarget,
+            fromIndex,
+            fuzzyThreshold,
+        );
+    }
+
+    return findFuzzyWordMatch(source, rawTarget, fromIndex)?.end ?? -1;
 }
 
 export function textMatchesTarget(text, target, options = {}) {
