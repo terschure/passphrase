@@ -11,15 +11,14 @@ export function createMusicManager({
   const MUSIC_VOLUME = 0.4;
   const MUSIC_DUCKED_VOLUME = 0.1;
   const SFX_VOLUME = 0.5;
-  // Music stays clean on every level — no distortion / bitcrusher / lowpass
-  // "glitch" degradation is applied regardless of level or progress.
-  const MUSIC_DEGRADATION_ENABLED = false;
+  const MUSIC_DEGRADATION_ENABLED = true;
   const DUCK_FADE_MS = 120;
   const DUCK_HOLD_MS = 400;
   const SFX_COOLDOWN_MS = 120;
   const lastSfxAt = new Map();
   let unlocked = false;
   let warningShown = false;
+  const warnedAssets = new Set();
   let mainThemePlayPromise = null;
   let musicFadeFrame = null;
   let restoreTimer = null;
@@ -31,6 +30,7 @@ export function createMusicManager({
   let lowpassNode = null;
   let musicEffectsReady = false;
   let currentMusicLevel = 0;
+  let currentThemeKey = "";
   let degradationAmount = 0;
   let currentDistortionAmount = 0;
   let currentBitcrusherAmount = 0;
@@ -41,24 +41,77 @@ export function createMusicManager({
   mainTheme.preload = "auto";
   mainTheme.volume = MUSIC_VOLUME;
 
-  const oggSource = documentRef.createElement("source");
-  oggSource.src = `${assetBaseUrl}/main_sound_theme.ogg`;
-  oggSource.type = "audio/ogg";
-  const mp3Source = documentRef.createElement("source");
-  mp3Source.src = `${assetBaseUrl}/main_sound_theme.mp3`;
-  mp3Source.type = "audio/mpeg";
-  mainTheme.append(oggSource, mp3Source);
-
-  const sfx = {
-    levelFailed: createSfx(`${assetBaseUrl}/game_fx_level_failed.wav`),
-    respawn: createSfx(`${assetBaseUrl}/game_fx_respawn.wav`),
-    wallPass: createSfx(`${assetBaseUrl}/game_fx_wall_pass.wav`),
+  const themeSources = {
+    level1: [
+      ["main_sound_theme.ogg", "audio/ogg"],
+      ["main_sound_theme.mp3", "audio/mpeg"],
+    ],
+    level2: [
+      ["level_2_theme.ogg", "audio/ogg"],
+      ["level_2_theme.mp3", "audio/mpeg"],
+      ["main_sound_theme.ogg", "audio/ogg"],
+      ["main_sound_theme.mp3", "audio/mpeg"],
+    ],
+    level3: [
+      ["level_3_theme.ogg", "audio/ogg"],
+      ["level_3_theme.mp3", "audio/mpeg"],
+      ["level_2_theme.ogg", "audio/ogg"],
+      ["level_2_theme.mp3", "audio/mpeg"],
+      ["main_sound_theme.ogg", "audio/ogg"],
+      ["main_sound_theme.mp3", "audio/mpeg"],
+    ],
   };
 
-  function createSfx(src) {
+  function resolveThemeKey(level) {
+    if (Number(level) === 2) {
+      return "level2";
+    }
+
+    if (Number(level) >= 3) {
+      return "level3";
+    }
+
+    return "level1";
+  }
+
+  function setThemeSources(themeKey) {
+    if (currentThemeKey === themeKey) {
+      return false;
+    }
+
+    currentThemeKey = themeKey;
+    mainTheme.replaceChildren();
+
+    for (const [filename, type] of themeSources[themeKey] || themeSources.level1) {
+      const source = documentRef.createElement("source");
+      source.src = `${assetBaseUrl}/${filename}`;
+      source.type = type;
+      source.addEventListener?.("error", () => {
+        warnAsset(`Theme asset failed to load: ${filename}`);
+      });
+      mainTheme.append(source);
+    }
+
+    mainTheme.load();
+    return true;
+  }
+
+  setThemeSources("level1");
+
+  const sfx = {
+    levelFailed: createSfx(`${assetBaseUrl}/game_fx_level_failed.wav`, "levelFailed"),
+    levelComplete: createSfx(`${assetBaseUrl}/game_fx_level_complete.wav`, "levelComplete"),
+    respawn: createSfx(`${assetBaseUrl}/game_fx_respawn.wav`, "respawn"),
+    wallPass: createSfx(`${assetBaseUrl}/game_fx_wall_pass.wav`, "wallPass"),
+  };
+
+  function createSfx(src, name) {
     const audio = new AudioCtor(src);
     audio.preload = "auto";
     audio.volume = SFX_VOLUME;
+    audio.addEventListener?.("error", () => {
+      warnAsset(`Sound effect failed to load: ${name} (${src})`);
+    });
     return audio;
   }
 
@@ -69,6 +122,15 @@ export function createMusicManager({
     } else if (error) {
       console.warn("[audio] " + message, error);
     }
+  }
+
+  function warnAsset(message) {
+    if (warnedAssets.has(message)) {
+      return;
+    }
+
+    warnedAssets.add(message);
+    console.warn("[audio] " + message);
   }
 
   function preloadAll() {
@@ -183,6 +245,7 @@ export function createMusicManager({
 
   async function startMainTheme() {
     unlockAudio();
+    setThemeSources(resolveThemeKey(currentMusicLevel || 1));
 
     const graphReady = ensureMusicGraph();
 
@@ -234,6 +297,17 @@ export function createMusicManager({
 
     mainTheme.pause();
     mainTheme.currentTime = 0;
+  }
+
+  function setMusicLevel(level) {
+    const nextLevel = Math.max(1, Number(level) || 1);
+    currentMusicLevel = nextLevel;
+    const themeChanged = setThemeSources(resolveThemeKey(nextLevel));
+
+    if (themeChanged && unlocked) {
+      mainTheme.currentTime = 0;
+      startMainTheme();
+    }
   }
 
   function fadeMusicVolume(targetVolume, durationMs) {
@@ -335,9 +409,10 @@ export function createMusicManager({
       ? Math.min(1, Math.max(0, Number(requestedAmount) || 0))
       : 0;
     degradationAmount = amount;
-    const distortionAmount = amount;
-    const bitcrusherAmount = amount;
-    const lowpassFrequency = 16000 - amount * 11500;
+    const distortionAmount = amount * 0.45;
+    const bitcrusherAmount = amount * 0.55;
+    const lowpassFrequency = 16000 - amount * 5200;
+    const compensatedGain = Math.max(0.78, 1 - amount * 0.35);
 
     if (!unlocked) {
       console.log("[audio] music degradation queued", {
@@ -346,6 +421,7 @@ export function createMusicManager({
         distortionAmount,
         bitcrusherAmount,
         lowpassFrequency,
+        compensatedGain,
       });
       return;
     }
@@ -356,6 +432,7 @@ export function createMusicManager({
 
     smoothSetEffectAmounts(distortionAmount, bitcrusherAmount, 900);
     smoothSetAudioParam(lowpassNode.frequency, lowpassFrequency, 900);
+    smoothSetAudioParam(musicInputGain.gain, compensatedGain, 900);
 
     console.log("[audio] music degradation updated", {
       source,
@@ -364,21 +441,21 @@ export function createMusicManager({
       bitcrusherAmount,
       bitcrusherBits: bitcrusherNode ? bitcrusherNode.bits : "clean",
       lowpassFrequency,
+      compensatedGain,
     });
   }
 
   function updateMusicDegradation(level) {
-    currentMusicLevel = Math.max(1, Number(level) || 1);
     const maxDegradationLevel = 5;
+    const degradationLevel = Math.max(1, Number(level) || 1);
     const amount = Math.min(
-      Math.max((currentMusicLevel - 1) / (maxDegradationLevel - 1), 0),
+      Math.max((degradationLevel - 1) / (maxDegradationLevel - 1), 0),
       1,
     );
     applyMusicDegradationAmount(amount, "level");
   }
 
   function updateLevel2MusicDegradation(completedWords) {
-    currentMusicLevel = 2;
     const amount = Math.min(
       level2AudioDegradationMax,
       level2AudioDegradationStart +
@@ -430,10 +507,16 @@ export function createMusicManager({
         : DUCK_HOLD_MS;
       duckMusic(durationMs);
       instance.play().catch((error) => {
-        warn("Sound effect " + name + " could not play.", error);
+        warnAsset("Sound effect " + name + " could not play.");
+        if (error) {
+          console.warn("[audio] Sound effect playback error:", error);
+        }
       });
     } catch (error) {
-      warn("Sound effect " + name + " could not start.", error);
+      warnAsset("Sound effect " + name + " could not start.");
+      if (error) {
+        console.warn("[audio] Sound effect start error:", error);
+      }
     }
   }
 
@@ -445,11 +528,13 @@ export function createMusicManager({
     duckMusic,
     restoreMusic,
     fadeMusicVolume,
+    setMusicLevel,
     updateMusicDegradation,
     updateLevel2MusicDegradation,
     setDistortionAmount,
     setBitcrusherAmount,
     playLevelFailedSound: () => playSfx("levelFailed"),
+    playLevelCompleteSound: () => playSfx("levelComplete"),
     playRespawnSound: () => playSfx("respawn"),
     playWallPassSound: () => playSfx("wallPass"),
   };

@@ -107,6 +107,15 @@ export function initPassphraseApp() {
                 onboardingTitle,
                 onboardingCopy,
                 onboardingAction,
+                aboutTitleButton,
+                aboutScreen,
+                aboutCloseButton,
+                aboutBackButton,
+                levelCompleteScreen,
+                levelCompleteTitle,
+                levelCompleteCopy,
+                levelCompleteNext,
+                unicodeFeedback,
                 onboardingSpectrum,
                 micInitScreen,
                 micInitAction,
@@ -167,9 +176,11 @@ export function initPassphraseApp() {
             const caughtWords = new Set();
             const DEV_MODE = true;
             const LEVEL_INTRO_DURATION_MS = 1800;
+            const LEVEL_3_WARNING_DURATION_MS = 2200;
+            const LEVEL_COMPLETE_DURATION_MS = 1900;
             const LEVEL_2_AUDIO_DEGRADATION_START = 0;
-            const LEVEL_2_AUDIO_DEGRADATION_PER_WORD = 0.06;
-            const LEVEL_2_AUDIO_DEGRADATION_MAX = 1;
+            const LEVEL_2_AUDIO_DEGRADATION_PER_WORD = 0.018;
+            const LEVEL_2_AUDIO_DEGRADATION_MAX = 0.28;
             const VOCAL_THRESHOLD = 0.18;
             const VOCAL_MIN_MS = 350;
             const vocalizationDetector = createVocalizationDetector({
@@ -196,6 +207,10 @@ export function initPassphraseApp() {
             let refillAnimationUntil = 0;
             let gameOverContinuing = false;
             let gameOverContinueTimer = null;
+            let levelCompleteTimer = null;
+            let pendingLevelAfterComplete = null;
+            let level3WarningShown = false;
+            let unicodeFeedbackTimer = null;
             let wallEchoFiredThisBeat = false;
             let gameStarted = false;
             let activeRecognition = null;
@@ -211,6 +226,20 @@ export function initPassphraseApp() {
             let lastKeygenHitAt = 0;
             const firedTalkbackCues = new Set();
             const keygenCharacter = createKeygenCharacter();
+            const SUCCESS_COMMENTS = [
+                "ok!",
+                "I passed!",
+                "through!",
+                "nice!",
+                "again!",
+            ];
+            const FAIL_COMMENTS = [
+                "oops",
+                "blocked",
+                "try again",
+                "not yet",
+                "ouch",
+            ];
 
             const AudioManager = createMusicManager({
                 assetBaseUrl: "assets/audio",
@@ -224,6 +253,7 @@ export function initPassphraseApp() {
             const playLevelFailedSound = AudioManager.playLevelFailedSound;
             const playRespawnSound = AudioManager.playRespawnSound;
             const playWallPassSound = AudioManager.playWallPassSound;
+            const playLevelCompleteSound = AudioManager.playLevelCompleteSound;
             const updateMusicDegradation = AudioManager.updateMusicDegradation;
             const updateLevel2MusicDegradation =
                 AudioManager.updateLevel2MusicDegradation;
@@ -410,6 +440,89 @@ export function initPassphraseApp() {
                 micInitScreen.setAttribute("aria-hidden", "true");
             }
 
+            function openAboutModal() {
+                if (!aboutScreen) {
+                    return;
+                }
+
+                aboutScreen.classList.add("visible");
+                aboutScreen.setAttribute("aria-hidden", "false");
+                aboutBackButton?.focus();
+            }
+
+            function closeAboutModal() {
+                if (!aboutScreen) {
+                    return;
+                }
+
+                aboutScreen.classList.remove("visible");
+                aboutScreen.setAttribute("aria-hidden", "true");
+                aboutTitleButton?.focus();
+            }
+
+            function clearLevelCompleteTimer() {
+                if (levelCompleteTimer) {
+                    clearTimeout(levelCompleteTimer);
+                    levelCompleteTimer = null;
+                }
+                pendingLevelAfterComplete = null;
+            }
+
+            function hideLevelCompleteModal() {
+                levelCompleteScreen?.classList.remove("visible");
+                levelCompleteScreen?.setAttribute("aria-hidden", "true");
+            }
+
+            function showUnicodeFeedback(kind) {
+                if (!unicodeFeedback) {
+                    return;
+                }
+
+                const metrics = getRoadMetrics();
+                const bounds = getPlayerBounds(metrics);
+                const styles = getComputedStyle(timeline);
+                const fontSize = parseFloat(styles.fontSize) || 14;
+                const lineHeight =
+                    parseFloat(styles.lineHeight) || fontSize * 1.08;
+                const letterSpacing = parseFloat(styles.letterSpacing) || 0;
+                const measurer =
+                    showUnicodeFeedback.measurer ||
+                    (showUnicodeFeedback.measurer =
+                        document.createElement("canvas"));
+                const context = measurer.getContext("2d");
+                context.font = `${styles.fontWeight} ${fontSize}px ${styles.fontFamily}`;
+                const charWidth =
+                    context.measureText("M").width + letterSpacing;
+                const timelineRect = timeline.getBoundingClientRect();
+                const mouthCol = bounds.left + 5;
+                const mouthRow = bounds.top + 4;
+                unicodeFeedback.style.left = `${Math.max(
+                    8,
+                    timelineRect.left + mouthCol * charWidth - 98,
+                )}px`;
+                unicodeFeedback.style.top = `${Math.max(
+                    44,
+                    timelineRect.top + mouthRow * lineHeight,
+                )}px`;
+                const comments = kind === "fail" ? FAIL_COMMENTS : SUCCESS_COMMENTS;
+                const index = Math.floor(Math.random() * comments.length);
+                unicodeFeedback.textContent = `${comments[index]} >`;
+                unicodeFeedback.classList.remove("visible", "fail", "success");
+                void unicodeFeedback.offsetWidth;
+                unicodeFeedback.classList.add("visible", kind === "fail" ? "fail" : "success");
+                unicodeFeedback.setAttribute("aria-hidden", "false");
+
+                if (unicodeFeedbackTimer) {
+                    clearTimeout(unicodeFeedbackTimer);
+                }
+
+                unicodeFeedbackTimer = setTimeout(() => {
+                    unicodeFeedback.classList.remove("visible", "fail", "success");
+                    unicodeFeedback.setAttribute("aria-hidden", "true");
+                    unicodeFeedbackTimer = null;
+                }, 920);
+            }
+
             // Runs inside the "initialize microphone" tap. That gesture is the
             // one chance to unlock the sound engine (resume the WebAudio
             // context) so that afterwards the game can be started by voice and
@@ -547,6 +660,8 @@ export function initPassphraseApp() {
                 levelId,
                 { showIntro = true, useMockMemories = false } = {},
             ) {
+                clearLevelCompleteTimer();
+                hideLevelCompleteModal();
                 const level = getLevelConfig(levelId);
                 const activationState = createLevelActivationState({
                     level,
@@ -568,6 +683,7 @@ export function initPassphraseApp() {
                 livesLeft = activationState.livesLeft;
                 retriesLeft = activationState.retriesLeft;
                 refillAnimationUntil = activationState.refillAnimationUntil;
+                level3WarningShown = false;
                 caughtWords.clear();
                 firedTalkbackCues.clear();
                 vocalizationDetector.reset();
@@ -577,6 +693,7 @@ export function initPassphraseApp() {
                 stopSequenceTimer();
                 clearTranscript();
                 applyLevelEnvironment(level, useMockMemories);
+                AudioManager.setMusicLevel?.(level.id);
                 renderGameOverScreen();
                 renderWordList();
                 renderSequenceStatus();
@@ -592,11 +709,51 @@ export function initPassphraseApp() {
                 levelTransitionActive = true;
                 deadline = null;
                 stopSequenceTimer();
-                levelIntroController.show(level);
+                levelIntroController.show(level, {
+                    cards: getLevelIntroCards(level),
+                });
+            }
+
+            function getLevelIntroCards(level) {
+                const titleCard = {
+                    title: level.name.toUpperCase(),
+                    subtitle: "",
+                    message: false,
+                    durationMs: 1900,
+                };
+
+                if (level.id === 3) {
+                    return [
+                        titleCard,
+                        {
+                            title: "YOUR VOICE HAS BEEN STOLEN",
+                            subtitle: "",
+                            message: true,
+                            durationMs: 3100,
+                        },
+                        {
+                            title: "Reach the end to claim it back.",
+                            subtitle: "",
+                            message: true,
+                            durationMs: 3100,
+                        },
+                    ];
+                }
+
+                return [
+                    titleCard,
+                    {
+                        title: level.subtitle || "",
+                        subtitle: "",
+                        message: true,
+                        durationMs: 3200,
+                    },
+                ];
             }
 
             function beginActiveLevelGameplay() {
                 levelTransitionActive = false;
+                level3WarningShown = currentLevel === 3;
                 renderSequenceStatus();
 
                 if (gameStarted) {
@@ -626,16 +783,69 @@ export function initPassphraseApp() {
                 return true;
             }
 
+            function showLevelCompleteModal({ final = false, nextLevel = null } = {}) {
+                clearLevelCompleteTimer();
+                levelTransitionActive = true;
+                deadline = null;
+                stopSequenceTimer();
+                stopRoadAnimation();
+                pendingLevelAfterComplete = nextLevel;
+
+                if (levelCompleteTitle) {
+                    levelCompleteTitle.textContent = final
+                        ? "VOICE RECLAIMED"
+                        : "LEVEL COMPLETE";
+                }
+                if (levelCompleteCopy) {
+                    levelCompleteCopy.textContent = final
+                        ? "You beat the system."
+                        : currentLevel === 1
+                          ? "Unicode passed through."
+                          : "Unicode passed through.";
+                }
+                if (levelCompleteNext) {
+                    levelCompleteNext.textContent = final
+                        ? "Your voice is yours again."
+                        : "Moving to the next level.";
+                }
+
+                levelCompleteScreen?.classList.add("visible");
+                levelCompleteScreen?.setAttribute("aria-hidden", "false");
+                playLevelCompleteSound?.();
+                renderSequenceStatus();
+
+                levelCompleteTimer = setTimeout(() => {
+                    levelCompleteTimer = null;
+                    hideLevelCompleteModal();
+
+                    if (pendingLevelAfterComplete) {
+                        const level = pendingLevelAfterComplete;
+                        pendingLevelAfterComplete = null;
+                        setActiveLevel(level.id, { showIntro: true });
+                        return;
+                    }
+
+                    levelTransitionActive = false;
+                    renderSequenceStatus();
+                    renderWordList();
+                }, LEVEL_COMPLETE_DURATION_MS);
+            }
+
             function triggerVoiceSignal(state = "speaking") {
                 keygenCharacter.triggerVoiceSignal(state);
+                if (state === "success") {
+                    showUnicodeFeedback("success");
+                }
             }
 
             function triggerKeygenFail() {
                 keygenCharacter.triggerFail();
+                showUnicodeFeedback("fail");
             }
 
             function triggerKeygenCollisionFail() {
                 keygenCharacter.triggerCollisionFail();
+                showUnicodeFeedback("fail");
                 playLevelFailedSound();
             }
 
@@ -857,7 +1067,7 @@ export function initPassphraseApp() {
             }
 
             function getSecondsLimit() {
-                return readConfig(refs).seconds;
+                return readConfig(refs).seconds * 1.15;
             }
 
             function getLivesLimit() {
@@ -926,6 +1136,8 @@ export function initPassphraseApp() {
 
             function resetSequence() {
                 clearGameOverContinueTimer();
+                clearLevelCompleteTimer();
+                hideLevelCompleteModal();
                 const state = createRuleStateSnapshot();
                 resetSequenceRule(state, {
                     livesLimit: getLivesLimit(),
@@ -938,6 +1150,7 @@ export function initPassphraseApp() {
                 firedTalkbackCues.clear();
                 vocalizationDetector.reset();
                 levelProgressionEffects.reset(currentLevel);
+                level3WarningShown = currentLevel !== 3;
 
                 if (modeInput.value === "catch") {
                     catchWords(getSelectedTranscriptText());
@@ -967,14 +1180,12 @@ export function initPassphraseApp() {
                 clearGameOverContinueTimer();
                 deadline = null;
                 stopSequenceTimer();
+                const nextLevel = getNextLevel(getLevels(), currentLevel);
 
-                if (transitionToNextLevel()) {
-                    return;
-                }
-
-                renderSequenceStatus();
-                renderWordList();
-                renderGameOverScreen();
+                showLevelCompleteModal({
+                    final: !nextLevel,
+                    nextLevel,
+                });
             }
 
             function continueFromGameOver() {
@@ -1839,6 +2050,29 @@ export function initPassphraseApp() {
                     debugCompleteCurrentPhrase,
                     debugCompleteLevel1,
                 },
+            });
+
+            aboutTitleButton?.addEventListener("click", openAboutModal);
+            aboutTitleButton?.addEventListener("keydown", (event) => {
+                if (event.key === "Enter" || event.key === " ") {
+                    event.preventDefault();
+                    openAboutModal();
+                }
+            });
+            aboutCloseButton?.addEventListener("click", closeAboutModal);
+            aboutBackButton?.addEventListener("click", closeAboutModal);
+            aboutScreen?.addEventListener("click", (event) => {
+                if (event.target === aboutScreen) {
+                    closeAboutModal();
+                }
+            });
+            document.addEventListener("keydown", (event) => {
+                if (
+                    event.key === "Escape" &&
+                    aboutScreen?.classList.contains("visible")
+                ) {
+                    closeAboutModal();
+                }
             });
 
             syncDevLevelButtons();

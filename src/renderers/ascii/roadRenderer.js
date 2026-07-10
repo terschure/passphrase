@@ -1,14 +1,18 @@
 import { hashCell } from "./hash.js";
 import {
+    fillBubbleWallRow,
     fillChainLinkFenceRow,
     fillDigitalFirewallRow,
+    fillVoiceTheftTerminalRow,
+    getBubbleWallCharClass,
     getCurrentFireFrame,
-    getFenceBodyBounds,
     getFenceCharClass,
+    getVoiceTheftCharClass,
     getWallBounds,
     getWallCharClass,
     groundProp,
     renderLevel2CableRoad,
+    renderLevel3SignalField,
     underseaProp,
     WALL_HEIGHT,
     WALL_WORD_ROW,
@@ -58,7 +62,9 @@ export function renderRoadScene({
     });
     const fragment = doc.createDocumentFragment();
     const tick = Math.floor(now / 120);
-    const isFenceLevel = environment === "border-fence";
+    const isBubbleLevel = environment === "bubble-wall" || environment === "border-fence";
+    const isFenceLevel = environment === "chain-link";
+    const isVoiceTheft = environment === "voice-theft";
 
     rows.forEach((row, r) => {
         const mid = row.slice(laneLeft - 1, laneRight + 2);
@@ -70,9 +76,9 @@ export function renderRoadScene({
             createSpan(doc, "ground", row.slice(0, laneLeft - 1)),
             isGateRow
                 ? createSpan(doc, `gate-${(tick + r) % 4}`, mid)
-                : isObstacleRow
-                  ? isFenceLevel
-                      ? renderChainLinkFence({
+                  : isObstacleRow
+                  ? isBubbleLevel
+                      ? renderBubbleWall({
                             doc,
                             row,
                             rowIndex: r,
@@ -80,7 +86,25 @@ export function renderRoadScene({
                             wallRow,
                             metrics,
                         })
-                      : renderBurningWall({
+                      : isFenceLevel
+                        ? renderChainLinkFence({
+                            doc,
+                            row,
+                            rowIndex: r,
+                            word,
+                            wallRow,
+                            metrics,
+                        })
+                        : isVoiceTheft
+                        ? renderVoiceTheftTerminal({
+                              doc,
+                              row,
+                              rowIndex: r,
+                              word,
+                              wallRow,
+                              metrics,
+                          })
+                        : renderBurningWall({
                             doc,
                             row,
                             rowIndex: r,
@@ -115,13 +139,21 @@ export function buildRoadRows({
     now = Date.now(),
 }) {
     const { width, height, laneLeft, laneRight } = metrics;
-    const isUndersea = environment === "undersea-cable";
+    const hasUnderseaBackground =
+        environment === "undersea-cable" || environment === "chain-link";
+    const isBubbleLevel = environment === "bubble-wall" || environment === "border-fence";
+    const isFenceLevel = environment === "chain-link";
+    const isVoiceTheft = environment === "voice-theft";
+    const isVoiceFirewall = environment === "voice-firewall";
+    const isFirewallLevel = environment === "undersea-cable" || isVoiceFirewall;
     const rows = [];
     const scroll = Math.floor(now / 400);
     const wallBounds = word
         ? getWallBounds(word.toUpperCase(), laneLeft, laneRight)
         : null;
-    const labelRow = wallRow + WALL_WORD_ROW;
+    const labelLines = wallBounds ? formatWallLabelLines(word, wallBounds) : [];
+    const labelStartRow =
+        wallRow + WALL_WORD_ROW - Math.floor((labelLines.length - 1) / 2);
     const fireFrame = wallBounds
         ? getCurrentFireFrame(wallBounds.wallRight - wallBounds.wallLeft + 1, now)
         : null;
@@ -132,13 +164,15 @@ export function buildRoadRows({
 
         for (let c = 0; c < width; c += 1) {
             if (c < laneLeft - 2 || c > laneRight + 2) {
-                row[c] = isUndersea
+                row[c] = hasUnderseaBackground
                     ? underseaProp(worldRow, c)
                     : groundProp(worldRow, c);
             }
         }
 
-        if (isUndersea) {
+        if (isVoiceTheft || isVoiceFirewall) {
+            renderLevel3SignalField(row, r, metrics, now);
+        } else if (hasUnderseaBackground) {
             renderLevel2CableRoad(row, r, metrics, now);
         } else {
             row[laneLeft - 1] = "|";
@@ -151,7 +185,9 @@ export function buildRoadRows({
 
         if (word && r >= wallRow && r < wallRow + WALL_HEIGHT && wallBounds) {
             const rowOffset = r - wallRow;
-            if (isUndersea) {
+            if (isVoiceTheft) {
+                fillVoiceTheftTerminalRow(row, r, rowOffset, wallBounds, word);
+            } else if (isVoiceFirewall) {
                 fillDigitalFirewallRow(
                     row,
                     r,
@@ -161,16 +197,43 @@ export function buildRoadRows({
                     scroll,
                     fireFrame,
                 );
+            } else if (hasUnderseaBackground) {
+                if (isFenceLevel) {
+                    fillChainLinkFenceRow(row, rowOffset, wallBounds, {
+                        pressure: Math.min(
+                            1,
+                            Math.max(0, wallRow / Math.max(1, metrics.carRow - 1)),
+                        ),
+                        now,
+                    });
+                } else {
+                    fillDigitalFirewallRow(
+                        row,
+                        r,
+                        rowOffset,
+                        wallBounds,
+                        word,
+                        scroll,
+                        fireFrame,
+                    );
+                }
             } else {
-                fillChainLinkFenceRow(row, rowOffset, wallBounds);
+                fillBubbleWallRow(row, rowOffset, wallBounds);
             }
         }
 
-        if (word && r === labelRow && wallBounds) {
+        if (
+            word &&
+            wallBounds &&
+            r >= labelStartRow &&
+            r < labelStartRow + labelLines.length
+        ) {
             renderWallLabel(row, {
-                word,
+                label: labelLines[r - labelStartRow],
                 wallBounds,
-                isUndersea,
+                isUndersea: isFirewallLevel,
+                isVoiceTheft,
+                isBubbleLevel,
             });
         }
 
@@ -201,16 +264,73 @@ export function buildRoadRows({
     return rows;
 }
 
-function renderWallLabel(row, { word, wallBounds, isUndersea }) {
-    const labelBounds = isUndersea
-        ? wallBounds
-        : getFenceBodyBounds(wallBounds);
-    const rawLabel = word.toUpperCase();
+export function formatWallLabelLines(text, wallBounds, maxLines = 2) {
+    const maxWidth = Math.max(8, wallBounds.wallRight - wallBounds.wallLeft - 3);
+    const rawLabel = String(text || "")
+        .toUpperCase()
+        .replace(/\s+/g, " ")
+        .trim();
     const spacedLabel = rawLabel.split("").join(" ");
-    const label =
-        spacedLabel.length <= labelBounds.wallRight - labelBounds.wallLeft - 3
-            ? spacedLabel
-            : rawLabel;
+
+    if (spacedLabel.length <= maxWidth) {
+        return [spacedLabel];
+    }
+
+    if (rawLabel.length <= maxWidth) {
+        return [rawLabel];
+    }
+
+    const words = rawLabel.split(" ");
+    const lines = [];
+    let current = "";
+
+    function truncate(line) {
+        if (line.length <= maxWidth) {
+            return line;
+        }
+
+        return maxWidth <= 3 ? line.slice(0, maxWidth) : `${line.slice(0, maxWidth - 3)}...`;
+    }
+
+    for (let wordIndex = 0; wordIndex < words.length; wordIndex += 1) {
+        const word = words[wordIndex];
+        const next = current ? `${current} ${word}` : word;
+
+        if (next.length <= maxWidth) {
+            current = next;
+            continue;
+        }
+
+        if (current) {
+            lines.push(current);
+        }
+
+        current = word.length > maxWidth ? truncate(word) : word;
+
+        if (lines.length === maxLines - 1) {
+            const remaining = [current, ...words.slice(wordIndex + 1)]
+                .filter(Boolean)
+                .join(" ");
+            lines.push(truncate(remaining));
+            return lines;
+        }
+    }
+
+    if (current) {
+        lines.push(current);
+    }
+
+    if (lines.length > maxLines) {
+        const kept = lines.slice(0, maxLines - 1);
+        kept.push(truncate(lines.slice(maxLines - 1).join(" ")));
+        return kept;
+    }
+
+    return lines;
+}
+
+function renderWallLabel(row, { label, wallBounds, isUndersea, isVoiceTheft, isBubbleLevel }) {
+    const labelBounds = wallBounds;
     const start = Math.min(
         labelBounds.wallRight - label.length - 1,
         Math.max(
@@ -227,7 +347,11 @@ function renderWallLabel(row, { word, wallBounds, isUndersea }) {
             c === labelBounds.wallLeft || c === labelBounds.wallRight
                 ? isUndersea
                     ? "#"
-                    : "|"
+                    : isVoiceTheft
+                      ? "|"
+                      : isBubbleLevel
+                        ? "O"
+                        : "|"
                 : " ";
     }
 
@@ -238,6 +362,42 @@ function renderWallLabel(row, { word, wallBounds, isUndersea }) {
     ) {
         row[start + i] = label[i];
     }
+}
+
+function renderBubbleWall({ doc, row, rowIndex, word, wallRow, metrics }) {
+    const { laneLeft, laneRight } = metrics;
+    const bounds = getWallBounds(word, laneLeft, laneRight);
+    const rowOffset = rowIndex - wallRow;
+    const fragment = doc.createDocumentFragment();
+    let currentClass = null;
+    let buffer = "";
+
+    function flush() {
+        if (!buffer) {
+            return;
+        }
+
+        appendClassedText(fragment, doc, currentClass, buffer);
+        buffer = "";
+    }
+
+    for (let col = laneLeft - 1; col <= laneRight + 1; col += 1) {
+        const char = row[col] || " ";
+        const className =
+            col >= bounds.wallLeft && col <= bounds.wallRight
+                ? getBubbleWallCharClass(char, rowOffset, col, bounds)
+                : "";
+
+        if (className !== currentClass) {
+            flush();
+            currentClass = className;
+        }
+
+        buffer += char;
+    }
+
+    flush();
+    return fragment;
 }
 
 function renderGateGap(row, { rowIndex, wallBounds, gateProgress, now }) {
@@ -365,6 +525,42 @@ function renderChainLinkFence({ doc, row, rowIndex, word, wallRow, metrics }) {
         const className =
             col >= bounds.wallLeft && col <= bounds.wallRight
                 ? getFenceCharClass(char, rowOffset, col, bounds)
+                : "";
+
+        if (className !== currentClass) {
+            flush();
+            currentClass = className;
+        }
+
+        buffer += char;
+    }
+
+    flush();
+    return fragment;
+}
+
+function renderVoiceTheftTerminal({ doc, row, rowIndex, word, wallRow, metrics }) {
+    const { laneLeft, laneRight } = metrics;
+    const bounds = getWallBounds(word, laneLeft, laneRight);
+    const rowOffset = rowIndex - wallRow;
+    const fragment = doc.createDocumentFragment();
+    let currentClass = null;
+    let buffer = "";
+
+    function flush() {
+        if (!buffer) {
+            return;
+        }
+
+        appendClassedText(fragment, doc, currentClass, buffer);
+        buffer = "";
+    }
+
+    for (let col = laneLeft - 1; col <= laneRight + 1; col += 1) {
+        const char = row[col] || " ";
+        const className =
+            col >= bounds.wallLeft && col <= bounds.wallRight
+                ? getVoiceTheftCharClass(char, rowOffset, col, bounds)
                 : "";
 
         if (className !== currentClass) {

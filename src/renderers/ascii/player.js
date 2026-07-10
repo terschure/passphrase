@@ -7,19 +7,21 @@ const PASSPORT_WIDTH = 15;
 const PASSPORT_HEIGHT = 14;
 const PASSWORD_KEY_WIDTH = 19;
 const PASSWORD_KEY_HEIGHT = 13;
+const UNICODE_WIDTH = 17;
+const UNICODE_HEIGHT = 14;
+const PLAYER_OPTICAL_CENTER_OFFSET_COLS = -1;
 const KEYGEN_PARTICLES = ["'", ".", "0", "x", "%", ":", "?"];
 
 export const KEYGEN_SIGNAL_ROWS = 3;
 export const KEYGEN_HIT_COOLDOWN_MS = 1000;
 
 export function getPlayerBounds(metrics, environment) {
-    const center = Math.floor((metrics.laneLeft + metrics.laneRight) / 2);
-    const isPasswordKey = environment === "undersea-cable";
-    const width = isPasswordKey ? PASSWORD_KEY_WIDTH : PASSPORT_WIDTH;
-    const height = isPasswordKey ? PASSWORD_KEY_HEIGHT : PASSPORT_HEIGHT;
-    const bottom = isPasswordKey
-        ? Math.min(metrics.height - 3, metrics.carRow + 5)
-        : metrics.carRow - 3 + height - 1;
+    const center =
+        Math.floor((metrics.laneLeft + metrics.laneRight) / 2) +
+        PLAYER_OPTICAL_CENTER_OFFSET_COLS;
+    const width = UNICODE_WIDTH;
+    const height = UNICODE_HEIGHT;
+    const bottom = Math.min(metrics.height - 3, metrics.carRow + 5);
 
     return {
         left: center - Math.floor(width / 2),
@@ -193,15 +195,57 @@ export function createPasswordKeyLines({
     });
 }
 
+export function createUnicodeLines({
+    state,
+    distortion,
+    now = Date.now(),
+}) {
+    const tick = Math.floor(now / 150);
+    const lines = [
+        "^",
+        "      \\\\",
+        "       \\\\_",
+        '      ,"  "-.',
+        "      o ,- .,",
+        '     /." / ./',
+        '    // ," ..|',
+        "      / /.. ///",
+        "     / /.../--",
+        "    |  |...|\\\\\\",
+        "    |  |../",
+        '     \\ \\./    ,".',
+        '      \\_"-,__ _/',
+        '        "-.,.-"',
+    ];
+    return lines.map((line, rowIndex) => {
+        const chars = padPlayerLine(line, UNICODE_WIDTH).split("");
+
+        if (distortion > 0.18 && (tick + rowIndex) % 7 === 0) {
+            const col = hashCell(tick + rowIndex, rowIndex * 31) % chars.length;
+
+            if (chars[col] === " ") {
+                chars[col] =
+                    KEYGEN_PARTICLES[(tick + rowIndex) % KEYGEN_PARTICLES.length];
+            }
+        }
+
+        return chars.join("");
+    });
+}
+
+function getUnicodeEffectClass(playerRow, playerCol) {
+    const phase = ((playerRow * 3 + playerCol * 5) % 7) + 1;
+
+    return `unicode-player unicode-player-iridescent unicode-gleam-${phase}`;
+}
+
 export function createPlayerLines({
     environment,
     state,
     distortion,
     now = Date.now(),
 }) {
-    return environment === "undersea-cable"
-        ? createPasswordKeyLines({ state, distortion, now })
-        : createPassportLines({ state, distortion, now });
+    return createUnicodeLines({ state, distortion, now });
 }
 
 export function createVoiceSignalLines({
@@ -265,10 +309,6 @@ export function drawPlayerCharacter(
         return;
     }
 
-    for (let i = 0; i < bounds.width; i += 1) {
-        row[bounds.left + i] = " ";
-    }
-
     const tokenLine =
         createPlayerLines({
             environment,
@@ -319,7 +359,16 @@ export function getPlayerCharClass({
     ) {
         const cableTop = getLevel2CableRoadTop(metrics);
 
-        return environment === "undersea-cable" &&
+        if (
+            environment === "voice-firewall" &&
+            rowIndex >= 0 &&
+            col >= metrics.laneLeft - 2 &&
+            col <= metrics.laneRight + 2
+        ) {
+            return "level3-signal-road";
+        }
+
+        return (environment === "undersea-cable" || environment === "chain-link") &&
             rowIndex >= cableTop &&
             col >= metrics.laneLeft - 2 &&
             col <= metrics.laneRight + 2
@@ -330,6 +379,20 @@ export function getPlayerCharClass({
     const isPasswordKey = environment === "undersea-cable";
     const playerRow = rowIndex - bounds.top;
     const playerCol = col - bounds.left;
+    const tokenLine =
+        createPlayerLines({
+            environment,
+            state,
+            distortion: 0,
+            now,
+        })[playerRow] || "";
+    const playerToken = tokenLine[playerCol] || " ";
+
+    if (playerToken === " ") {
+        return "player-background-dim";
+    }
+
+    const unicodeEffect = getUnicodeEffectClass(playerRow, playerCol);
 
     if (
         !isPasswordKey &&
@@ -338,22 +401,24 @@ export function getPlayerCharClass({
         playerCol >= 3 &&
         playerCol <= 10
     ) {
-        return "passport-character-emblem";
+        return `passport-character-emblem ${unicodeEffect}`;
     }
 
     if (/[A-Z0-9?]/.test(char)) {
-        return isPasswordKey ? "password-key-code" : "passport-character-code";
+        return isPasswordKey
+            ? `password-key-code ${unicodeEffect}`
+            : `passport-character-code ${unicodeEffect}`;
     }
 
     if (/[.%'x#]/i.test(char)) {
         return isPasswordKey
-            ? "password-key-character"
-            : "passport-character-particle";
+            ? `password-key-character ${unicodeEffect}`
+            : `passport-character-particle ${unicodeEffect}`;
     }
 
     if (isPasswordKey) {
-        return "password-key-character password-key-character--" + state;
+        return `password-key-character password-key-character--${state} ${unicodeEffect}`;
     }
 
-    return "passport-character passport-character--" + state;
+    return `passport-character passport-character--${state} ${unicodeEffect}`;
 }

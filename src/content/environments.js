@@ -4,10 +4,28 @@
 // consistently, regardless of its position in the script:
 //   - character:     which avatar the player is drawn as
 //   - bodyClass:     the <body> class that themes the page background/waveform
-//   - memoryEnemies: whether the Level 2 floating memory-phrase swarm runs
+//   - memoryEnemies: whether the floating hostile phrase swarm runs
 //
 // To add a new theme, add an entry here and the matching CSS/renderer support.
 export const ENVIRONMENTS = {
+    "bubble-wall": {
+        id: "bubble-wall",
+        character: "unicode",
+        bodyClass: "environment-border-fence",
+        memoryEnemies: false,
+    },
+    "chain-link": {
+        id: "chain-link",
+        character: "unicode",
+        bodyClass: "environment-undersea",
+        memoryEnemies: false,
+    },
+    "voice-firewall": {
+        id: "voice-firewall",
+        character: "unicode",
+        bodyClass: "environment-voice-theft",
+        memoryEnemies: true,
+    },
     "border-fence": {
         id: "border-fence",
         character: "passport",
@@ -18,6 +36,12 @@ export const ENVIRONMENTS = {
         id: "undersea-cable",
         character: "password-key",
         bodyClass: "environment-undersea",
+        memoryEnemies: true,
+    },
+    "voice-theft": {
+        id: "voice-theft",
+        character: "unicode",
+        bodyClass: "environment-voice-theft",
         memoryEnemies: true,
     },
 };

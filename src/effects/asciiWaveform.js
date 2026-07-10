@@ -74,7 +74,6 @@ export function updateAsciiWaveformBackground({
 
 export function updateGameOverFire({
     element,
-    createScaryFireFrames,
     wallFireFrameCount,
     lastFrameIndex,
     force = false,
@@ -92,8 +91,48 @@ export function updateGameOverFire({
     }
 
     const width = Math.max(28, Math.min(48, Math.floor((viewportWidth - 40) / 7)));
-    element.textContent = createScaryFireFrames(width)[frameIndex].join("\n");
+    const frames = createGameOverFireFrames(width);
+    element.textContent = frames[frameIndex % frames.length].join("\n");
     return frameIndex;
+}
+
+export function createGameOverFireFrames(width) {
+    const frames = [
+        [
+            "    ^     `     ^      '    ^   ",
+            "   /|\\    ^    /|\\    /\\   /|\\  ",
+            "  //|\\\\  /|\\  //|\\\\  /  \\ //|\\\\ ",
+            " / /| \\\\//|\\\\ / | \\\\// /\\ \\/ | \\",
+            "/__/ \\__\\/ \\\\/__/ \\__\\/  \\__/ \\",
+        ],
+        [
+            "  `    ^     .     ^     `    ^ ",
+            "      /|\\         /|\\   /\\   /|\\",
+            " /\\  //|\\\\   ^   //|\\\\ /  \\ //|",
+            "/  \\/ /| \\\\ /|\\ / /| \\\\/ /\\ \\/ ",
+            "\\__/__/ \\__\\/ \\\\__/ \\__\\/  \\__",
+        ],
+        [
+            " ^     '    ^     `     ^     . ",
+            "/|\\        /|\\         /|\\   /\\ ",
+            "||\\\\  /\\  //|\\\\  /\\  //|\\\\ /  \\",
+            "| \\\\ /  \\/ /| \\\\/  \\/ /| \\\\/ /\\",
+            "|__\\/ /\\ \\/ \\__\\/\\__\\/ \\__\\/  ",
+        ],
+    ];
+
+    return frames.map((frame) =>
+        frame.map((line, rowIndex) => {
+            let expanded = line;
+
+            while (expanded.length < width + line.length) {
+                expanded += line;
+            }
+
+            const sway = (rowIndex * 7) % line.length;
+            return expanded.slice(sway, sway + width);
+        }),
+    );
 }
 
 export function updateGameOverWaveform({
@@ -108,7 +147,6 @@ export function updateGameOverWaveform({
 }) {
     const nextFireFrameIndex = updateGameOverFire({
         element: fireElement,
-        createScaryFireFrames,
         wallFireFrameCount,
         lastFrameIndex: lastFireFrameIndex,
         now: Date.now(),

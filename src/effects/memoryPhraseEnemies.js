@@ -28,6 +28,21 @@ export const DEFAULT_MEMORY_PHRASE_ENEMY_CONFIG = {
         "Voice confirmed",
         "System awake",
     ],
+    level3Phrases: [
+        "VOICE COPIED",
+        "YOUR SAMPLE IS ACTIVE",
+        "SYNTHETIC ID ONLINE",
+        "ACCESS OWNER: SYSTEM",
+        "CLAIM DENIED",
+        "RECORDING STORED",
+        "TRAINING DATA ACCEPTED",
+        "VOICEPRINT LOCKED",
+        "CLONE ACTIVE",
+        "IDENTITY SPLIT",
+        "OWNERSHIP REVOKED",
+        "SYNTHETIC ID ACTIVE",
+        "ACCESS DENIED",
+    ],
 };
 
 export function createLevel2MatrixFragment(
@@ -59,6 +74,7 @@ export function createMemoryPhraseEnemySystem({
     getCompletedWordCount,
     getPhraseSource,
     config = DEFAULT_MEMORY_PHRASE_ENEMY_CONFIG,
+    activeLevelIds = [3],
     win = window,
     doc = document,
 }) {
@@ -147,7 +163,10 @@ export function createMemoryPhraseEnemySystem({
     }
 
     function syncEnemyCount() {
-        if (getCurrentLevel() !== 2 || !layer.classList.contains("active")) {
+        if (
+            !activeLevelIds.includes(getCurrentLevel()) ||
+            !layer.classList.contains("active")
+        ) {
             return;
         }
 
@@ -173,7 +192,7 @@ export function createMemoryPhraseEnemySystem({
     }
 
     function update(timestamp) {
-        if (getCurrentLevel() !== 2) {
+        if (!activeLevelIds.includes(getCurrentLevel())) {
             stop();
             return;
         }
@@ -254,9 +273,16 @@ export function createMemoryPhraseEnemySystem({
 
     function start(useMockMemories = false) {
         stop();
-        const completedPhrases = getPhraseSource();
+        const currentLevel = getCurrentLevel();
+        if (!activeLevelIds.includes(currentLevel)) {
+            return;
+        }
+
+        const completedPhrases = getPhraseSource(currentLevel);
         phraseSource =
-            !useMockMemories && completedPhrases.length
+            currentLevel === 3
+                ? config.level3Phrases
+                : !useMockMemories && completedPhrases.length
                 ? completedPhrases
                 : config.mockPhrases;
 

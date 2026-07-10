@@ -70,7 +70,10 @@ import {
 } from "../src/renderers/ascii/roadScene.js";
 import { createRoadAnimation } from "../src/renderers/ascii/roadAnimation.js";
 import { createTimelineRenderState } from "../src/renderers/ascii/timelineState.js";
-import { buildRoadRows } from "../src/renderers/ascii/roadRenderer.js";
+import {
+    buildRoadRows,
+    formatWallLabelLines,
+} from "../src/renderers/ascii/roadRenderer.js";
 import {
     echoAllows,
     pickEchoRate,
@@ -1019,10 +1022,10 @@ test("level intro controller drives overlay lifecycle", () => {
 
     controller.show({ name: "Level 2", subtitle: "UNDERSEA CABLE" });
     assert.equal(levelIntroTitle.textContent, "LEVEL 2");
-    assert.equal(levelIntroSubtitle.textContent, "UNDERSEA CABLE");
+    assert.equal(levelIntroSubtitle.textContent, "");
     assert.deepEqual(levelIntro.classList.values(), ["visible"]);
     assert.equal(levelIntro.attributes["aria-hidden"], "false");
-    assert.equal(timers[0].delay, 1380);
+    assert.equal(timers[0].delay, 1480);
     assert.deepEqual(calls, ["render"]);
 
     timers.shift().callback();
@@ -1030,13 +1033,30 @@ test("level intro controller drives overlay lifecycle", () => {
     assert.equal(timers[0].delay, 420);
 
     timers.shift().callback();
+    assert.equal(levelIntroTitle.textContent, "UNDERSEA CABLE");
+    assert.equal(levelIntroSubtitle.textContent, "");
+    assert.deepEqual(levelIntro.classList.values(), [
+        "level-intro--message",
+        "visible",
+    ]);
+    assert.equal(levelIntro.attributes["aria-hidden"], "false");
+    assert.deepEqual(calls, ["render", "render"]);
+
+    timers.shift().callback();
+    assert.deepEqual(levelIntro.classList.values(), [
+        "leaving",
+        "level-intro--message",
+        "visible",
+    ]);
+
+    timers.shift().callback();
     assert.deepEqual(levelIntro.classList.values(), []);
     assert.equal(levelIntro.attributes["aria-hidden"], "true");
-    assert.deepEqual(calls, ["render", "complete"]);
+    assert.deepEqual(calls, ["render", "render", "complete"]);
 
     controller.show({ name: "Level 1", subtitle: "BORDER" });
     controller.clear();
-    assert.deepEqual(cleared, [3]);
+    assert.deepEqual(cleared, [5]);
     assert.equal(levelIntro.attributes["aria-hidden"], "true");
 });
 
@@ -1095,9 +1115,9 @@ test("road renderer builds stable rows with player and obstacle content", () => 
     };
     const rows = buildRoadRows({
         word: "Alpha",
-        wallRow: 4,
+        wallRow: 0,
         metrics,
-        environment: "border-fence",
+        environment: "bubble-wall",
         playerState: {
             state: "idle",
             distortion: 0,
@@ -1109,10 +1129,11 @@ test("road renderer builds stable rows with player and obstacle content", () => 
     assert.equal(rows.length, metrics.height);
     assert.equal(rows.every((row) => row.length === metrics.width), true);
     assert.equal(rows.join("\n").includes("A L P H A"), true);
-    assert.equal(rows.join("\n").includes("PASSPORT"), true);
+    assert.equal(rows.join("\n").includes("○"), true);
+    assert.equal(rows.join("\n").includes("\\_\"-,__ _/"), true);
 });
 
-test("road renderer draws the key avatar for the undersea environment", () => {
+test("road renderer draws distinct chain-link and firewall environments", () => {
     const metrics = {
         width: 80,
         height: 32,
@@ -1120,17 +1141,61 @@ test("road renderer draws the key avatar for the undersea environment", () => {
         laneRight: 60,
         carRow: 24,
     };
-    const rows = buildRoadRows({
+    const chainRows = buildRoadRows({
         word: "Monkey",
-        wallRow: 4,
+        wallRow: 0,
         metrics,
-        environment: "undersea-cable",
+        environment: "chain-link",
         playerState: { state: "idle", distortion: 0, signalUntil: 0 },
         now: 1000,
     });
-    // avatar is environment-driven: undersea shows the password key, not passport
-    assert.equal(rows.join("\n").includes("PVV1234"), true);
-    assert.equal(rows.join("\n").includes("PASSPORT"), false);
+    const firewallRows = buildRoadRows({
+        word: "Monkey",
+        wallRow: 0,
+        metrics,
+        environment: "voice-firewall",
+        playerState: { state: "idle", distortion: 0, signalUntil: 0 },
+        now: 1000,
+    });
+    assert.equal(chainRows.join("\n").includes("@-@-@"), true);
+    assert.equal(firewallRows.join("\n").includes("==="), true);
+    assert.equal(firewallRows.join("\n").includes("\\_\"-,__ _/"), true);
+    assert.equal(firewallRows.join("\n").includes("PVV1234"), false);
+    assert.equal(firewallRows.join("\n").includes("PASSPORT"), false);
+});
+
+test("road renderer wraps long wall labels inside shared bounds", () => {
+    const metrics = {
+        width: 84,
+        height: 32,
+        laneLeft: 20,
+        laneRight: 62,
+        carRow: 24,
+    };
+    const phrase =
+        "ACCEPT CHANGES TO TERMS AND CONDITIONS BEFORE SYSTEM ACCESS";
+    const bounds = getWallBounds(phrase, metrics.laneLeft, metrics.laneRight);
+    const lines = formatWallLabelLines(phrase, bounds);
+
+    assert.equal(lines.length, 2);
+    assert.equal(
+        lines.every((line) => line.length <= bounds.wallRight - bounds.wallLeft - 3),
+        true,
+    );
+
+    const rows = buildRoadRows({
+        word: phrase,
+        wallRow: 0,
+        metrics,
+        environment: "voice-firewall",
+        playerState: { state: "idle", distortion: 0, signalUntil: 0 },
+        now: 1000,
+    });
+    const wallRows = rows.slice(0, WALL_HEIGHT);
+
+    assert.equal(wallRows.some((row) => row.includes("ACCEPT CHANGES")), true);
+    assert.equal(wallRows.some((row) => row.includes("SYSTEM")), true);
+    assert.equal(wallRows.every((row) => row.length === metrics.width), true);
 });
 
 test("road animation throttles render frames and cancels cleanly", () => {
@@ -1277,7 +1342,8 @@ test("player renderer exposes bounds, art, and class names", () => {
     };
     const passportBounds = getPlayerBounds(metrics, "border-fence");
     const passwordBounds = getPlayerBounds(metrics, "undersea-cable");
-    assert.ok(passportBounds.width < passwordBounds.width);
+    assert.equal(passportBounds.width, passwordBounds.width);
+    assert.equal(passportBounds.height, passwordBounds.height);
     assert.ok(passportBounds.top < passportBounds.bottom);
 
     const passportLines = createPlayerLines({
@@ -1293,11 +1359,41 @@ test("player renderer exposes bounds, art, and class names", () => {
         now: 0,
     });
     assert.equal(passportLines.length, 14);
-    assert.equal(passwordLines.length, 13);
+    assert.equal(passwordLines.length, 14);
+    assert.equal(passportLines[0].trim(), "^");
+    assert.ok(passportLines.some((line) => line.includes('"-,')));
+    assert.deepEqual(
+        createPlayerLines({
+            environment: "border-fence",
+            state: "idle",
+            distortion: 0,
+            now: 0,
+        }),
+        createPlayerLines({
+            environment: "undersea-cable",
+            state: "idle",
+            distortion: 0,
+            now: 0,
+        }),
+    );
 
     assert.equal(
         getPlayerCharClass({
-            char: "A",
+            char: "^",
+            rowIndex: passportBounds.top,
+            col: passportBounds.left + 8,
+            metrics,
+            environment: "border-fence",
+            state: "idle",
+            signalUntil: 0,
+            now: 100,
+        }),
+        "passport-character passport-character--idle unicode-player unicode-player-iridescent unicode-gleam-6",
+    );
+
+    assert.equal(
+        getPlayerCharClass({
+            char: ":",
             rowIndex: passportBounds.top,
             col: passportBounds.left,
             metrics,
@@ -1306,7 +1402,7 @@ test("player renderer exposes bounds, art, and class names", () => {
             signalUntil: 0,
             now: 100,
         }),
-        "passport-character-code",
+        "player-background-dim",
     );
 });
 

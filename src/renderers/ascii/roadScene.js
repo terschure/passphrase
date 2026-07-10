@@ -6,9 +6,19 @@ const WALL_BRICK_SIDE_WIDTH = 12;
 const WALL_MIN_WIDTH = 48;
 const WALL_WORD_PADDING = 28;
 const FENCE_WIRE_HEIGHT = 4;
-const FENCE_WIRE_OVERHANG = 3;
-const FENCE_MESH_PATTERNS = ["/  \\", "\\  /"];
+const FENCE_WIRE_OVERHANG = 0;
+const FENCE_PRESSURE_CHARS = ["*", "'", ".", "#", "!"];
+const BUBBLE_WALL_CHARS = ["o", "O", "0", "°", ".", "○", "o", "O"];
 const LEVEL_2_CABLE_PATTERNS = ["|:", ":|", "#|", "0|", "~|", "+|"];
+const LEVEL_3_ALERT_FRAGMENTS = [
+    "VOICE DUPLICATED",
+    "OWNERSHIP REVOKED",
+    "SYNTHETIC ID ACTIVE",
+    "ACCESS DENIED",
+    "VOICEPRINT LOCKED",
+    "CLONE ACTIVE",
+    "IDENTITY SPLIT",
+];
 
 export const WALL_FIRE_FRAMES = [
     [
@@ -103,6 +113,26 @@ export function renderLevel2CableRoad(row, rowIndex, metrics, now = Date.now()) 
     }
 }
 
+export function renderLevel3SignalField(row, rowIndex, metrics, now = Date.now()) {
+    const movement = Math.floor(now / 300);
+
+    for (let col = metrics.laneLeft - 2; col <= metrics.laneRight + 2; col += 1) {
+        const h = hashCell(rowIndex * 23 + movement, col * 37);
+
+        if (h % 13 === 0) {
+            row[col] = h % 2 ? "1" : "0";
+        } else if (h % 29 === 0) {
+            row[col] = "/";
+        } else if (h % 31 === 0) {
+            row[col] = "\\";
+        } else if (col % 9 === movement % 9) {
+            row[col] = "|";
+        } else {
+            row[col] = " ";
+        }
+    }
+}
+
 export function getWallBounds(word, laneLeft, laneRight) {
     const laneWidth = laneRight - laneLeft + 1;
     const wallWidth = Math.min(
@@ -173,10 +203,10 @@ function repeatObstaclePattern(pattern, width, offset = 0) {
 
 function createBarbedWireLine(width, rowOffset) {
     const patterns = [
-        "     .----.      ",
-        "  __/      \\__  ",
-        "-/   *  *     \\-",
-        " \\__*____*___/  ",
+        "  __o__    __o__ ",
+        "_/     \\__/     \\",
+        "  @-@-@-@-@-@-@  ",
+        "\\__   __/\\__   __",
     ];
     return repeatObstaclePattern(patterns[rowOffset % patterns.length], width, 0);
 }
@@ -194,22 +224,66 @@ export function getFenceBodyBounds(bounds) {
     };
 }
 
-export function fillChainLinkFenceRow(row, rowOffset, bounds) {
+export function fillBubbleWallRow(row, rowOffset, bounds) {
     const width = bounds.wallRight - bounds.wallLeft + 1;
     const bodyBounds = getFenceBodyBounds(bounds);
-    const wireLine =
-        rowOffset < FENCE_WIRE_HEIGHT ? createBarbedWireLine(width, rowOffset) : "";
 
     for (let col = bounds.wallLeft; col <= bounds.wallRight; col += 1) {
         const localCol = col - bounds.wallLeft;
+        const h = hashCell(rowOffset * 41 + localCol * 17, col * 13);
         const isSide =
             col === bodyBounds.wallLeft || col === bodyBounds.wallRight;
         const isRail =
             rowOffset === FENCE_WIRE_HEIGHT || rowOffset === WALL_HEIGHT - 1;
         const cleanWordBand = Math.abs(rowOffset - WALL_WORD_ROW) <= 1;
 
+        if (col < bodyBounds.wallLeft || col > bodyBounds.wallRight) {
+            row[col] = " ";
+        } else if (isRail) {
+            row[col] = isSide ? "O" : BUBBLE_WALL_CHARS[(localCol + rowOffset) % BUBBLE_WALL_CHARS.length];
+        } else if (isSide) {
+            row[col] = "O";
+        } else if (cleanWordBand) {
+            row[col] = " ";
+        } else {
+            row[col] = BUBBLE_WALL_CHARS[
+                (h + localCol + rowOffset) % BUBBLE_WALL_CHARS.length
+            ];
+        }
+    }
+}
+
+export function fillChainLinkFenceRow(row, rowOffset, bounds, { pressure = 0, now = Date.now() } = {}) {
+    const width = bounds.wallRight - bounds.wallLeft + 1;
+    const bodyBounds = getFenceBodyBounds(bounds);
+    const wireLine =
+        rowOffset < FENCE_WIRE_HEIGHT ? createBarbedWireLine(width, rowOffset) : "";
+    const pressureStep = Math.floor(now / 110);
+
+    for (let col = bounds.wallLeft; col <= bounds.wallRight; col += 1) {
+        const localCol = col - bounds.wallLeft;
+        const h = hashCell(rowOffset * 53 + localCol * 19, pressureStep);
+        const isSide =
+            col === bodyBounds.wallLeft || col === bodyBounds.wallRight;
+        const isRail =
+            rowOffset === FENCE_WIRE_HEIGHT || rowOffset === WALL_HEIGHT - 1;
+        const cleanWordBand = Math.abs(rowOffset - WALL_WORD_ROW) <= 1;
+        const localStatic =
+            pressure > 0.18 &&
+            !cleanWordBand &&
+            h % Math.max(4, Math.round(16 - pressure * 9)) === 0;
+        const checkpointStamp =
+            pressure > 0.45 &&
+            (rowOffset === WALL_WORD_ROW - 3 || rowOffset === WALL_WORD_ROW + 3) &&
+            localCol > 2 &&
+            localCol < width - 3 &&
+            localCol % 9 === pressureStep % 9;
+
         if (rowOffset < FENCE_WIRE_HEIGHT) {
-            row[col] = wireLine[localCol] || " ";
+            row[col] =
+                localStatic && h % 3 === 0
+                    ? FENCE_PRESSURE_CHARS[h % FENCE_PRESSURE_CHARS.length]
+                    : wireLine[localCol] || " ";
         } else if (col < bodyBounds.wallLeft || col > bodyBounds.wallRight) {
             row[col] = " ";
         } else if (isRail) {
@@ -218,9 +292,14 @@ export function fillChainLinkFenceRow(row, rowOffset, bounds) {
             row[col] = "|";
         } else if (cleanWordBand) {
             row[col] = " ";
+        } else if (checkpointStamp) {
+            row[col] = h % 2 ? "X" : "!";
+        } else if (localStatic) {
+            row[col] = FENCE_PRESSURE_CHARS[h % FENCE_PRESSURE_CHARS.length];
         } else {
-            const pattern = FENCE_MESH_PATTERNS[rowOffset % FENCE_MESH_PATTERNS.length];
-            row[col] = pattern[(localCol + rowOffset) % pattern.length];
+            const shake = pressure > 0.35 && h % 11 === 0 ? 1 : 0;
+            const mesh = (localCol + rowOffset + shake) % 4;
+            row[col] = mesh === 0 ? "/" : mesh === 2 ? "\\" : " ";
         }
     }
 }
@@ -263,7 +342,12 @@ export function fillDigitalFirewallRow(
         } else if (isFireSpot) {
             row[col] = WALL_FIRE_SPOT_CHARS[(h >>> 9) % WALL_FIRE_SPOT_CHARS.length];
         } else if (isBorder) {
-            row[col] = "#";
+            row[col] =
+                rowOffset === WALL_FIRE_HEIGHT || rowOffset === WALL_HEIGHT - 1
+                    ? rowOffset === WALL_FIRE_HEIGHT
+                        ? "="
+                        : "#"
+                    : "#";
         } else if (isLeftBrick && sideBrickWidth > 0) {
             row[col] =
                 createBrickSidePattern(rowOffset, sideBrickWidth, false)[
@@ -280,12 +364,55 @@ export function fillDigitalFirewallRow(
     }
 }
 
+export function fillVoiceTheftTerminalRow(row, rowIndex, rowOffset, bounds, word) {
+    const width = bounds.wallRight - bounds.wallLeft + 1;
+    const cleanWordBand = Math.abs(rowOffset - WALL_WORD_ROW) <= 1;
+    const fragment =
+        LEVEL_3_ALERT_FRAGMENTS[rowOffset % LEVEL_3_ALERT_FRAGMENTS.length];
+
+    for (let col = bounds.wallLeft; col <= bounds.wallRight; col += 1) {
+        const localCol = col - bounds.wallLeft;
+        const h = hashCell(rowIndex * 47 + localCol * 11, word.length * 19);
+        const isLeft = col === bounds.wallLeft;
+        const isRight = col === bounds.wallRight;
+        const isTop = rowOffset === 0;
+        const isBottom = rowOffset === WALL_HEIGHT - 1;
+        const isHeader = rowOffset === 2 || rowOffset === WALL_HEIGHT - 3;
+
+        if (isTop || isBottom) {
+            row[col] = isLeft || isRight ? "+" : h % 7 === 0 ? "=" : "-";
+        } else if (isLeft || isRight) {
+            row[col] = "|";
+        } else if (cleanWordBand) {
+            row[col] = " ";
+        } else if (isHeader) {
+            const label = ` ${fragment} `;
+            const start = Math.max(1, Math.floor((width - label.length) / 2));
+            const labelIndex = localCol - start;
+            row[col] =
+                labelIndex >= 0 && labelIndex < label.length
+                    ? label[labelIndex]
+                    : h % 5 === 0
+                      ? "#"
+                      : "=";
+        } else if (h % 17 === 0) {
+            row[col] = h % 2 ? "1" : "0";
+        } else if (h % 23 === 0) {
+            row[col] = h % 3 ? "/" : "\\";
+        } else if (h % 11 === 0) {
+            row[col] = "_";
+        } else {
+            row[col] = " ";
+        }
+    }
+}
+
 export function getFenceCharClass(char, rowOffset, col, bounds) {
     if (char === " ") {
         return "";
     }
 
-    if (rowOffset === WALL_WORD_ROW && /[A-Z0-9']/.test(char)) {
+    if (Math.abs(rowOffset - WALL_WORD_ROW) <= 1 && /[A-Z0-9'.]/.test(char)) {
         return "fence-word";
     }
 
@@ -307,12 +434,64 @@ export function getFenceCharClass(char, rowOffset, col, bounds) {
     return "fence-mesh";
 }
 
+export function getBubbleWallCharClass(char, rowOffset, col, bounds) {
+    if (char === " ") {
+        return "";
+    }
+
+    if (Math.abs(rowOffset - WALL_WORD_ROW) <= 1 && /[A-Z0-9'.]/.test(char)) {
+        return "bubble-word";
+    }
+
+    const bodyBounds = getFenceBodyBounds(bounds);
+
+    if (
+        col === bodyBounds.wallLeft ||
+        col === bodyBounds.wallRight ||
+        rowOffset === 0 ||
+        rowOffset === WALL_HEIGHT - 1
+    ) {
+        return "bubble-border";
+    }
+
+    return "bubble-mesh";
+}
+
+export function getVoiceTheftCharClass(char, rowOffset, col, bounds) {
+    if (char === " ") {
+        return "";
+    }
+
+    if (Math.abs(rowOffset - WALL_WORD_ROW) <= 1 && /[A-Z0-9'. ]/.test(char)) {
+        return "terminal-word";
+    }
+
+    if (
+        col === bounds.wallLeft ||
+        col === bounds.wallRight ||
+        rowOffset === 0 ||
+        rowOffset === WALL_HEIGHT - 1
+    ) {
+        return "terminal-border";
+    }
+
+    if (/[A-Z]/.test(char)) {
+        return "terminal-alert";
+    }
+
+    if (/[01#/_=+\\-]/.test(char)) {
+        return "terminal-noise";
+    }
+
+    return "terminal-body";
+}
+
 export function getWallCharClass(char, rowOffset, col, bounds) {
     if (char === " ") {
         return "";
     }
 
-    if (rowOffset === WALL_WORD_ROW && /[A-Z0-9' ]/.test(char)) {
+    if (Math.abs(rowOffset - WALL_WORD_ROW) <= 1 && /[A-Z0-9'. ]/.test(char)) {
         return "wall-word";
     }
 

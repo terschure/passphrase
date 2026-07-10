@@ -6,8 +6,9 @@
 >   "# Level name"      starts a new level (the name shows on the intro card).
 >   "subtitle: ..."     optional; the smaller line under the level name.
 >   "environment: ..."  optional; the visual style. One of:
->                          border-fence   (fence walls, passport avatar, land)
->                          undersea-cable (firewall, key avatar, dark sea, swarm)
+>                          bubble-wall    (soft bubble walls, land)
+>                          chain-link     (rabitz fence, data swarm)
+>                          voice-firewall (final firewall, stolen voice alerts)
 >   "## Round name"     starts a round within the current level.
 >   any other line      is a phrase to say out loud.
 >   "*hmmm*"            a wordless SOUND target: cleared by making a sustained
@@ -25,31 +26,24 @@
 > Lines starting with ">" are comments and are ignored.
 
 # Level 1
-subtitle: THE VOICE / MICROPHONE
-environment: border-fence
+subtitle: Help Unicode find a way through
+environment: bubble-wall
 
 ## Talkback
 
 
 ## Round 1
-*Mmm*
-*Ahhh*
-*Ooo*
 Mama
 Papa
 Lala
 Nom nom nom
 *Mjam mjam*
-Hey. Hello?
-Are you there?
-Can you hear me?
-Allow access to microphone
 
 
 
 # Level 2
 subtitle: Unpronounceables
-environment: undersea-cable
+environment: chain-link
 
 ## Talkback
 Taking a break?
@@ -79,7 +73,7 @@ Hippopotomonstrosesquippedaliophobia
 
 # Level 3
 subtitle: Getting access to the server / Removing your data from the server
-environment: undersea-cable
+environment: voice-firewall
 
 ## Talkback
 Incorrect password. Try again.

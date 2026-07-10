@@ -12,17 +12,15 @@
                 id="onboarding-screen"
                 role="dialog"
                 aria-modal="true"
-                aria-labelledby="onboarding-title"
+                aria-labelledby="onboarding-subtitle"
             >
-                <div id="onboarding-card" class="onboarding-card">
-                    <h2 id="onboarding-title" class="onboarding-title">
-                        Passphrase
-                    </h2>
+                <div
+                    id="onboarding-card"
+                    class="onboarding-card onboarding-card--start"
+                >
                     <div id="onboarding-copy" class="onboarding-copy">
-                        <p class="onboarding-subtitle">
-                            Say
-                            <i><strong>"start"</strong></i>
-                            to play
+                        <p id="onboarding-subtitle" class="onboarding-subtitle">
+                            Talk to Play
                         </p>
                     </div>
                     <canvas
@@ -55,13 +53,20 @@
                         </p>
                     </div>
                     <button id="mic-init-action" type="button">
-                        Allow microphone
+                        initialize microphone
                     </button>
                 </div>
             </div>
             <div class="top-ui" aria-label="Game status">
                 <div id="score-display">SCORE 0</div>
-                <h1>PASSPHRASE</h1>
+                <h1
+                    id="about-title-button"
+                    role="button"
+                    tabindex="0"
+                    aria-controls="about-screen"
+                >
+                    PASSPHRASE
+                </h1>
                 <div id="lives-display"></div>
             </div>
             <pre
@@ -70,6 +75,7 @@
                 aria-hidden="true"
             ></pre>
             <div id="memory-phrase-layer" aria-hidden="true"></div>
+            <div id="unicode-feedback" aria-live="polite" aria-hidden="true"></div>
             <div id="level-intro" aria-live="assertive" aria-hidden="true">
                 <div class="level-intro-content">
                     <div id="level-intro-title">LEVEL 1</div>
@@ -109,8 +115,7 @@
                         <pre id="timeline">
 //////////////////////////////////////////
 //////////////////////////////////////////
-//////////////////////////////////////////</pre
-                        >
+//////////////////////////////////////////</pre>
                         <div id="timer-display">--.-</div>
                     </div>
                     <div id="side-panel-stack">
@@ -169,11 +174,11 @@
                             class="game-over-fire game-over-fire--top"
                             aria-hidden="true"
                         >
-   ^    ' /\   W    ^^    ' /\
-  /|\    /V \  |   /||\    /M \
- //|\\  / /\ \ |  //||\\  / /\ \
-/\/ \/\/ /  \ \|/\/ /||\ \/\~ \</pre
-                        >
+    ^     `     ^      '    ^
+   /|\    ^    /|\    /\   /|\
+  //|\\  /|\  //|\\  /  \ //|\\
+ / /| \\//|\\ / | \\// /\ \/ | \
+/__/ \__\/ \\/__/ \__\/  \__/ \</pre>
                         <div id="game-over-title" class="game-over-title">
                             game over
                         </div>
@@ -190,6 +195,96 @@
                         aria-label="Game over microphone audio visualizer"
                     ></pre>
                     <div id="game-over-transcript" aria-live="polite"></div>
+                </div>
+            </div>
+            <div
+                id="level-complete-screen"
+                class="modal-screen modal-screen--complete"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="level-complete-title"
+                aria-hidden="true"
+            >
+                <div class="modal-panel modal-panel--complete">
+                    <pre class="level-complete-sparkles" aria-hidden="true">
+  * . + . * . + . *
+ .  R A I N B O W  .
+  + . * . + . * . +</pre
+                    >
+                    <div
+                        id="level-complete-title"
+                        class="modal-title modal-title--complete"
+                    >
+                        LEVEL COMPLETE
+                    </div>
+                    <div
+                        id="level-complete-copy"
+                        class="modal-copy modal-copy--complete"
+                    >
+                        Unicode passed through.
+                    </div>
+                    <div
+                        id="level-complete-next"
+                        class="modal-subcopy modal-subcopy--complete"
+                    >
+                        Moving to the next level.
+                    </div>
+                </div>
+            </div>
+            <div
+                id="about-screen"
+                class="modal-screen modal-screen--about"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="about-title"
+                aria-hidden="true"
+            >
+                <div class="modal-panel modal-panel--about">
+                    <h2 id="about-title" class="modal-title">PASSPHRASE</h2>
+                    <div class="about-copy">
+                        <p>
+                            What happens when our voices enter digital systems
+                            and become data? Who governs what that data becomes,
+                            how it is used, and who has the authority to control
+                            it? Our voices can become training data, synthetic
+                            identities, tools for scams, and evidence in
+                            immigration cases, but once a voice is digital, who
+                            has the power to reclaim it?
+                        </p>
+                        <p>
+                            Passphrase challenges you to give away your voice
+                            (if you dare), and you must beat the system to claim
+                            it back. It asks who is privileged enough to do so,
+                            whether access to ownership is equal, and what the
+                            consequences are when it is not.
+                        </p>
+                        <p>
+                            Legislation is essential, but it does not guarantee
+                            agency. Passphrase explores the gap between having
+                            rights over our data and understanding what our data
+                            can become or do in systems of power.
+                        </p>
+                        <p>
+                            Created by:<br />
+                            Demi van Kuijk<br />
+                            Erwin Hoogerwoord<br />
+                            Dmytro Tentiuk<br />
+                            Emily Bernstein<br />
+                            Anneke ter Schure
+                        </p>
+                        <p>
+                            Instagram:<br />
+                            <a
+                                href="https://www.instagram.com/passphrase.denied"
+                                target="_blank"
+                                rel="noreferrer"
+                                >@passphrase.denied</a
+                            >
+                        </p>
+                    </div>
+                    <button id="about-back" class="modal-back" type="button">
+                        BACK
+                    </button>
                 </div>
             </div>
         </div>
