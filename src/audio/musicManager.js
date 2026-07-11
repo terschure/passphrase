@@ -1,3 +1,9 @@
+export const AUDIO_MIX_CONFIG = {
+  musicVolume: 0.32,
+  musicDuckedVolume: 0.08,
+  sfxVolume: 0.4,
+};
+
 export function createMusicManager({
   assetBaseUrl = "assets/audio",
   level2AudioDegradationStart = 0,
@@ -8,9 +14,9 @@ export function createMusicManager({
   AudioCtor = Audio,
   performanceRef = performance,
 } = {}) {
-  const MUSIC_VOLUME = 0.4;
-  const MUSIC_DUCKED_VOLUME = 0.1;
-  const SFX_VOLUME = 0.5;
+  const MUSIC_VOLUME = AUDIO_MIX_CONFIG.musicVolume;
+  const MUSIC_DUCKED_VOLUME = AUDIO_MIX_CONFIG.musicDuckedVolume;
+  const SFX_VOLUME = AUDIO_MIX_CONFIG.sfxVolume;
   const MUSIC_DEGRADATION_ENABLED = true;
   const DUCK_FADE_MS = 120;
   const DUCK_HOLD_MS = 400;

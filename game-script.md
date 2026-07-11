@@ -87,6 +87,7 @@ Request denied
 
 ## Round 1
 Welcome
+~I am now talking with your voice
 Password 00
 Accept changes to terms and conditions
 ~You have no authority

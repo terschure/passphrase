@@ -60,6 +60,7 @@ import {
     discardRecorder,
     startSegmentRecorder,
 } from "../src/audio/segmentRecorder.js";
+import { AUDIO_MIX_CONFIG } from "../src/audio/musicManager.js";
 import { readConfig } from "../src/ui/domRefs.js";
 import { createLevelIntroController } from "../src/ui/levelIntro.js";
 import {
@@ -1694,6 +1695,9 @@ test("echo fx bus creates a stereo reverb impulse", () => {
 });
 
 test("echo and talkback default configs expose runtime tuning", () => {
+    assert.equal(AUDIO_MIX_CONFIG.musicVolume, 0.32);
+    assert.equal(AUDIO_MIX_CONFIG.musicDuckedVolume, 0.08);
+    assert.equal(AUDIO_MIX_CONFIG.sfxVolume, 0.4);
     assert.equal(ECHO_RUNTIME_CONFIG.gain, 0.45);
     assert.equal(ECHO_RUNTIME_CONFIG.probabilities.life, 0.85);
     assert.equal(TALKBACK_RUNTIME_CONFIG.modelId, "qwen3-tts-0.6b-base");
