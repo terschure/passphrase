@@ -14,6 +14,18 @@ export function createDomRefs(documentRef = document) {
         levelCompleteTitle: documentRef.querySelector("#level-complete-title"),
         levelCompleteCopy: documentRef.querySelector("#level-complete-copy"),
         levelCompleteNext: documentRef.querySelector("#level-complete-next"),
+        heroIntroScreen: documentRef.querySelector("#hero-intro-screen"),
+        finalVictoryScreen: documentRef.querySelector("#final-victory-screen"),
+        finalVictoryUnicode: documentRef.querySelector("#final-victory-unicode"),
+        finalVictoryLineOne: documentRef.querySelector(
+            "#final-victory-line-one",
+        ),
+        finalVictoryLineTwo: documentRef.querySelector(
+            "#final-victory-line-two",
+        ),
+        finalVictoryPlayAgain: documentRef.querySelector(
+            "#final-victory-play-again",
+        ),
         unicodeFeedback: documentRef.querySelector("#unicode-feedback"),
         onboardingSpectrum: documentRef.querySelector("#onboarding-spectrum"),
         micInitScreen: documentRef.querySelector("#mic-init-screen"),

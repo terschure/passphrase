@@ -55,6 +55,7 @@ import {
     obstacleIntersectsPlayer,
 } from "../renderers/ascii/hash.js";
 import {
+    createUnicodeLines,
     getPlayerBounds as getPlayerBoundsFromMetrics,
     KEYGEN_HIT_COOLDOWN_MS,
 } from "../renderers/ascii/player.js";
@@ -119,6 +120,12 @@ export function initPassphraseApp() {
                 levelCompleteTitle,
                 levelCompleteCopy,
                 levelCompleteNext,
+                heroIntroScreen,
+                finalVictoryScreen,
+                finalVictoryUnicode,
+                finalVictoryLineOne,
+                finalVictoryLineTwo,
+                finalVictoryPlayAgain,
                 unicodeFeedback,
                 onboardingSpectrum,
                 micInitScreen,
@@ -182,6 +189,9 @@ export function initPassphraseApp() {
             const LEVEL_INTRO_DURATION_MS = 1800;
             const LEVEL_3_WARNING_DURATION_MS = 2200;
             const LEVEL_COMPLETE_DURATION_MS = 1900;
+            const HERO_INTRO_DURATION_MS = 3600;
+            const HERO_INTRO_TEXT_SWITCH_MS = 220;
+            const FINAL_VICTORY_FIRST_LINE_MS = 1700;
             const VOCAL_THRESHOLD = 0.18;
             const VOCAL_MIN_MS = 350;
             const vocalizationDetector = createVocalizationDetector({
@@ -212,7 +222,10 @@ export function initPassphraseApp() {
             let gameOverRecorded = false;
             const gameOverCountsByWord = new Map();
             let levelCompleteTimer = null;
+            let heroIntroTimer = null;
+            let finalVictoryTimer = null;
             let pendingLevelAfterComplete = null;
+            let levelCompleteSoundPlayed = false;
             let level3WarningShown = false;
             let unicodeFeedbackTimer = null;
             let wallEchoFiredThisBeat = false;
@@ -255,6 +268,8 @@ export function initPassphraseApp() {
             const playRespawnSound = AudioManager.playRespawnSound;
             const playWallPassSound = AudioManager.playWallPassSound;
             const playLevelCompleteSound = AudioManager.playLevelCompleteSound;
+            const playFinalVictorySound = AudioManager.playFinalVictorySound;
+            const stopFinalVictorySound = AudioManager.stopFinalVictorySound;
             const levelProgressionEffects = createLevelProgressionEffects({
                 getCurrentLevel: () => currentLevel,
                 syncLevel2EnemyCount() {
@@ -357,7 +372,14 @@ export function initPassphraseApp() {
                 const barWidth = (width - gap * (bars - 1)) / bars;
 
                 ctx.clearRect(0, 0, width, height);
-                ctx.fillStyle = "#facc15";
+                const gradient = ctx.createLinearGradient(0, 0, width, height);
+                gradient.addColorStop(0, "#ff70d5");
+                gradient.addColorStop(0.2, "#73e6ff");
+                gradient.addColorStop(0.4, "#fff59a");
+                gradient.addColorStop(0.6, "#a78bfa");
+                gradient.addColorStop(0.8, "#7cffd4");
+                gradient.addColorStop(1, "#ff8ad8");
+                ctx.fillStyle = gradient;
 
                 for (let i = 0; i < bars; i += 1) {
                     let sum = 0;
@@ -443,6 +465,13 @@ export function initPassphraseApp() {
 
                 aboutScreen.classList.add("visible");
                 aboutScreen.setAttribute("aria-hidden", "false");
+                aboutScreen.scrollTop = 0;
+                const aboutPanel = aboutScreen.querySelector(
+                    ".modal-panel--about",
+                );
+                if (aboutPanel) {
+                    aboutPanel.scrollTop = 0;
+                }
                 aboutBackButton?.focus();
             }
 
@@ -467,6 +496,39 @@ export function initPassphraseApp() {
             function hideLevelCompleteModal() {
                 levelCompleteScreen?.classList.remove("visible");
                 levelCompleteScreen?.setAttribute("aria-hidden", "true");
+            }
+
+            function clearHeroIntroTimer() {
+                if (heroIntroTimer) {
+                    clearTimeout(heroIntroTimer);
+                    heroIntroTimer = null;
+                }
+            }
+
+            function clearFinalVictoryTimer() {
+                if (finalVictoryTimer) {
+                    clearTimeout(finalVictoryTimer);
+                    finalVictoryTimer = null;
+                }
+            }
+
+            function hideHeroIntro() {
+                clearHeroIntroTimer();
+                heroIntroScreen?.classList.remove(
+                    "visible",
+                    "hero-intro--text-switching",
+                );
+                heroIntroScreen?.setAttribute("aria-hidden", "true");
+            }
+
+            function hideFinalVictoryScreen() {
+                clearFinalVictoryTimer();
+                stopFinalVictorySound?.();
+                finalVictoryScreen?.classList.remove("visible");
+                finalVictoryScreen?.setAttribute("aria-hidden", "true");
+                finalVictoryLineOne?.classList.remove("visible");
+                finalVictoryLineTwo?.classList.remove("visible");
+                finalVictoryPlayAgain?.classList.remove("visible");
             }
 
             function showUnicodeFeedback(kind) {
@@ -494,7 +556,7 @@ export function initPassphraseApp() {
                 const mouthRow = bounds.top + 4;
                 unicodeFeedback.style.left = `${Math.max(
                     8,
-                    timelineRect.left + mouthCol * charWidth - 98,
+                    timelineRect.left + mouthCol * charWidth - 8,
                 )}px`;
                 unicodeFeedback.style.top = `${Math.max(
                     44,
@@ -502,7 +564,7 @@ export function initPassphraseApp() {
                 )}px`;
                 const comments = kind === "fail" ? FAIL_COMMENTS : SUCCESS_COMMENTS;
                 const index = Math.floor(Math.random() * comments.length);
-                unicodeFeedback.textContent = `${comments[index]} >`;
+                unicodeFeedback.textContent = comments[index];
                 unicodeFeedback.classList.remove("visible", "fail", "success");
                 void unicodeFeedback.offsetWidth;
                 unicodeFeedback.classList.add("visible", kind === "fail" ? "fail" : "success");
@@ -655,10 +717,19 @@ export function initPassphraseApp() {
 
             function setActiveLevel(
                 levelId,
-                { showIntro = true, useMockMemories = false } = {},
+                {
+                    showIntro = true,
+                    useMockMemories = false,
+                    preserveHeroIntro = false,
+                } = {},
             ) {
+                if (!preserveHeroIntro) {
+                    hideHeroIntro();
+                }
+                hideFinalVictoryScreen();
                 clearLevelCompleteTimer();
                 hideLevelCompleteModal();
+                levelCompleteSoundPlayed = false;
                 clearWordGameOverCounts(gameOverCountsByWord);
                 gameOverRecorded = false;
                 const level = getLevelConfig(levelId);
@@ -711,7 +782,37 @@ export function initPassphraseApp() {
                 stopSequenceTimer();
                 levelIntroController.show(level, {
                     cards: getLevelIntroCards(level),
+                    stableBackdrop: true,
                 });
+            }
+
+            function showHeroIntroBeforeLevel(levelId, useMockMemories) {
+                hideFinalVictoryScreen();
+                clearHeroIntroTimer();
+                levelTransitionActive = true;
+                deadline = null;
+                stopSequenceTimer();
+                heroIntroScreen?.classList.remove("hero-intro--text-switching");
+                heroIntroScreen?.classList.add("visible");
+                heroIntroScreen?.setAttribute("aria-hidden", "false");
+                renderSequenceStatus();
+
+                heroIntroTimer = setTimeout(() => {
+                    heroIntroScreen?.classList.add("hero-intro--text-switching");
+                    heroIntroTimer = setTimeout(() => {
+                        heroIntroTimer = null;
+                        levelIntro?.classList.add("level-intro--handoff");
+                        setActiveLevel(levelId, {
+                            showIntro: true,
+                            useMockMemories,
+                            preserveHeroIntro: true,
+                        });
+                        hideHeroIntro();
+                        setTimeout(() => {
+                            levelIntro?.classList.remove("level-intro--handoff");
+                        }, 80);
+                    }, HERO_INTRO_TEXT_SWITCH_MS);
+                }, Math.max(1, HERO_INTRO_DURATION_MS - HERO_INTRO_TEXT_SWITCH_MS));
             }
 
             function getLevelIntroCards(level) {
@@ -816,7 +917,10 @@ export function initPassphraseApp() {
 
                 levelCompleteScreen?.classList.add("visible");
                 levelCompleteScreen?.setAttribute("aria-hidden", "false");
-                playLevelCompleteSound?.();
+                if (!levelCompleteSoundPlayed) {
+                    playLevelCompleteSound?.();
+                    levelCompleteSoundPlayed = true;
+                }
                 renderSequenceStatus();
 
                 levelCompleteTimer = setTimeout(() => {
@@ -834,6 +938,54 @@ export function initPassphraseApp() {
                     renderSequenceStatus();
                     renderWordList();
                 }, LEVEL_COMPLETE_DURATION_MS);
+            }
+
+            function showFinalVictoryScreen() {
+                hideLevelCompleteModal();
+                clearLevelCompleteTimer();
+                clearFinalVictoryTimer();
+                levelTransitionActive = true;
+                deadline = null;
+                stopSequenceTimer();
+                stopRoadAnimation();
+                stopMemoryPhraseSystem();
+                pendingLevelAfterComplete = null;
+
+                if (finalVictoryUnicode) {
+                    finalVictoryUnicode.textContent = createUnicodeLines({
+                        environment: "border-fence",
+                        state: "success",
+                        distortion: 0,
+                        now: Date.now(),
+                    }).join("\n");
+                }
+                if (finalVictoryLineOne) {
+                    finalVictoryLineOne.textContent =
+                        "Woohoo! You deleted your data from the server and beat the system!";
+                }
+                if (finalVictoryLineTwo) {
+                    finalVictoryLineTwo.textContent =
+                        "Now Unicode can roam free in the great digital sea!";
+                }
+                finalVictoryLineOne?.classList.remove("visible");
+                finalVictoryLineTwo?.classList.remove("visible");
+                finalVictoryPlayAgain?.classList.remove("visible");
+                finalVictoryScreen?.classList.add("visible");
+                finalVictoryScreen?.setAttribute("aria-hidden", "false");
+                stopMainTheme();
+                playFinalVictorySound?.();
+                levelCompleteSoundPlayed = true;
+                renderSequenceStatus();
+
+                finalVictoryTimer = setTimeout(() => {
+                    finalVictoryLineOne?.classList.add("visible");
+                    finalVictoryTimer = setTimeout(() => {
+                        finalVictoryLineTwo?.classList.add("visible");
+                        finalVictoryPlayAgain?.classList.add("visible");
+                        finalVictoryPlayAgain?.focus();
+                        finalVictoryTimer = null;
+                    }, FINAL_VICTORY_FIRST_LINE_MS);
+                }, 120);
             }
 
             function triggerVoiceSignal(state = "speaking") {
@@ -1207,8 +1359,13 @@ export function initPassphraseApp() {
                 stopSequenceTimer();
                 const nextLevel = getNextLevel(getLevels(), currentLevel);
 
+                if (!nextLevel) {
+                    showFinalVictoryScreen();
+                    return;
+                }
+
                 showLevelCompleteModal({
-                    final: !nextLevel,
+                    final: false,
                     nextLevel,
                 });
             }
@@ -1868,6 +2025,7 @@ export function initPassphraseApp() {
             async function startGame({
                 levelId = 1,
                 useMockMemories = false,
+                showHeroIntro = levelId === 1,
             } = {}) {
                 if (!speechService.isSupported()) {
                     status.textContent =
@@ -1885,10 +2043,14 @@ export function initPassphraseApp() {
                     onboardingRestartTimer = null;
                 }
                 hideOnboarding();
-                setActiveLevel(levelId, {
-                    showIntro: true,
-                    useMockMemories,
-                });
+                if (showHeroIntro && levelId === 1) {
+                    showHeroIntroBeforeLevel(levelId, useMockMemories);
+                } else {
+                    setActiveLevel(levelId, {
+                        showIntro: true,
+                        useMockMemories,
+                    });
+                }
                 startMainThemeFromGameStart();
 
                 try {
@@ -1939,7 +2101,11 @@ export function initPassphraseApp() {
                         .memoryEnemies && completedPhrasesFromLevel1.length === 0;
 
                 if (!gameStarted) {
-                    startGame({ levelId, useMockMemories });
+                    startGame({
+                        levelId,
+                        useMockMemories,
+                        showHeroIntro: false,
+                    });
                     return;
                 }
 
@@ -2060,6 +2226,23 @@ export function initPassphraseApp() {
                 startGameFromOnboarding();
             }
 
+            function restartGameFromVictory() {
+                hideFinalVictoryScreen();
+                completedPhrasesFromLevel1.length = 0;
+                caughtWords.clear();
+                firedTalkbackCues.clear();
+                clearTranscript();
+                stopSequenceTimer();
+                clearGameOverContinueTimer();
+                clearWordGameOverCounts(gameOverCountsByWord);
+                showHeroIntroBeforeLevel(1, false);
+                AudioManager.setMusicLevel?.(1);
+                startMainThemeFromGameStart();
+                renderGameOverScreen();
+                renderWordList();
+                renderSequenceStatus();
+            }
+
             function normalizeVoiceCommand(text) {
                 return normalizeVoiceCommandText(text);
             }
@@ -2103,6 +2286,10 @@ export function initPassphraseApp() {
             });
             aboutCloseButton?.addEventListener("click", closeAboutModal);
             aboutBackButton?.addEventListener("click", closeAboutModal);
+            finalVictoryPlayAgain?.addEventListener(
+                "click",
+                restartGameFromVictory,
+            );
             aboutScreen?.addEventListener("click", (event) => {
                 if (event.target === aboutScreen) {
                     closeAboutModal();

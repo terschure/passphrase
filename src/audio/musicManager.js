@@ -40,6 +40,7 @@ export function createMusicManager({
   let restoreTimer = null;
   let musicContext = null;
   let musicSource = null;
+  let finalVictoryPlayback = null;
   let currentMusicLevel = 0;
   let currentThemeKey = "";
 
@@ -107,7 +108,18 @@ export function createMusicManager({
 
   const sfx = {
     levelFailed: createSfx(`${assetBaseUrl}/game_fx_level_failed.wav`, "levelFailed"),
-    levelComplete: createSfx(`${assetBaseUrl}/game_fx_level_complete.wav`, "levelComplete"),
+    levelComplete: createSfxWithSources(
+      [
+        ["game_fx_level_complete.ogg", "audio/ogg"],
+        ["game_fx_level_complete.mp3", "audio/mpeg"],
+        ["game_fx_level_complete.wav", "audio/wav"],
+      ],
+      "levelComplete",
+    ),
+    finalVictory: createSfx(
+      `${assetBaseUrl}/game_fx_final_victory_active_heroic.mp3`,
+      "finalVictory",
+    ),
     respawn: createSfx(`${assetBaseUrl}/game_fx_respawn.wav`, "respawn"),
     wallPass: createSfx(`${assetBaseUrl}/game_fx_wall_pass.wav`, "wallPass"),
   };
@@ -119,6 +131,24 @@ export function createMusicManager({
     audio.addEventListener?.("error", () => {
       warnAsset(`Sound effect failed to load: ${name} (${src})`);
     });
+    return audio;
+  }
+
+  function createSfxWithSources(sources, name) {
+    const audio = new AudioCtor();
+    audio.preload = "auto";
+    audio.volume = SFX_VOLUME;
+
+    for (const [filename, type] of sources) {
+      const source = documentRef.createElement("source");
+      source.src = `${assetBaseUrl}/${filename}`;
+      source.type = type;
+      source.addEventListener?.("error", () => {
+        warnAsset(`Sound effect failed to load: ${name} (${filename})`);
+      });
+      audio.append(source);
+    }
+
     return audio;
   }
 
@@ -381,6 +411,19 @@ export function createMusicManager({
     try {
       const instance = audio.cloneNode(true);
       instance.volume = SFX_VOLUME;
+      if (name === "finalVictory") {
+        stopFinalVictorySound();
+        finalVictoryPlayback = instance;
+        instance.addEventListener?.(
+          "ended",
+          () => {
+            if (finalVictoryPlayback === instance) {
+              finalVictoryPlayback = null;
+            }
+          },
+          { once: true },
+        );
+      }
       connectSfxEq(instance);
       const durationMs = Number.isFinite(audio.duration)
         ? audio.duration * 1000
@@ -400,6 +443,16 @@ export function createMusicManager({
     }
   }
 
+  function stopFinalVictorySound() {
+    if (!finalVictoryPlayback) {
+      return;
+    }
+
+    finalVictoryPlayback.pause?.();
+    finalVictoryPlayback.currentTime = 0;
+    finalVictoryPlayback = null;
+  }
+
   return {
     preloadAll,
     unlock,
@@ -413,6 +466,8 @@ export function createMusicManager({
     getAudioContext: () => musicContext,
     playLevelFailedSound: () => playSfx("levelFailed"),
     playLevelCompleteSound: () => playSfx("levelComplete"),
+    playFinalVictorySound: () => playSfx("finalVictory"),
+    stopFinalVictorySound,
     playRespawnSound: () => playSfx("respawn"),
     playWallPassSound: () => playSfx("wallPass"),
   };

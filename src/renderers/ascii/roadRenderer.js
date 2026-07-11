@@ -330,38 +330,43 @@ export function formatWallLabelLines(text, wallBounds, maxLines = 2) {
 }
 
 function renderWallLabel(row, { label, wallBounds, isUndersea, isVoiceTheft, isBubbleLevel }) {
-    const labelBounds = wallBounds;
-    const start = Math.min(
-        labelBounds.wallRight - label.length - 1,
-        Math.max(
-            labelBounds.wallLeft + 1,
-            Math.floor(
-                (labelBounds.wallLeft + labelBounds.wallRight - label.length) /
-                    2,
-            ),
-        ),
-    );
+    const leftBorderChar = isUndersea ? "#" : isVoiceTheft ? "|" : isBubbleLevel ? "O" : "|";
+    const rightBorderChar = leftBorderChar;
+    const wallWidth = wallBounds.wallRight - wallBounds.wallLeft + 1;
+    const labelRow = buildWallLabelRow({
+        wallWidth,
+        leftBorderChar,
+        rightBorderChar,
+        fillChar: " ",
+        label,
+    });
 
-    for (let c = labelBounds.wallLeft; c <= labelBounds.wallRight; c += 1) {
-        row[c] =
-            c === labelBounds.wallLeft || c === labelBounds.wallRight
-                ? isUndersea
-                    ? "#"
-                    : isVoiceTheft
-                      ? "|"
-                      : isBubbleLevel
-                        ? "O"
-                        : "|"
-                : " ";
+    for (let i = 0; i < wallWidth; i += 1) {
+        row[wallBounds.wallLeft + i] = labelRow[i] || " ";
+    }
+}
+
+function buildWallLabelRow({
+    wallWidth,
+    leftBorderChar,
+    rightBorderChar,
+    fillChar,
+    label,
+}) {
+    const width = Math.max(2, Number(wallWidth) || 2);
+    const chars = Array(width).fill(fillChar);
+    const innerWidth = Math.max(0, width - 2);
+    const safeLabel = String(label || "").slice(0, innerWidth);
+    const start = 1 + Math.max(0, Math.floor((innerWidth - safeLabel.length) / 2));
+
+    chars[0] = leftBorderChar;
+    chars[width - 1] = rightBorderChar;
+
+    for (let i = 0; i < safeLabel.length && i < innerWidth; i += 1) {
+        chars[start + i] = safeLabel[i];
     }
 
-    for (
-        let i = 0;
-        i < label.length && start + i <= labelBounds.wallRight;
-        i += 1
-    ) {
-        row[start + i] = label[i];
-    }
+    return chars.join("").slice(0, width).padEnd(width, fillChar);
 }
 
 function renderBubbleWall({ doc, row, rowIndex, word, wallRow, metrics }) {

@@ -12,6 +12,7 @@ export function createLevelIntroController({
     let timer = null;
     let activeCards = [];
     let activeIndex = 0;
+    let stableBackdrop = false;
 
     function clearPendingTimer() {
         if (timer) {
@@ -28,7 +29,7 @@ export function createLevelIntroController({
         } else {
             levelIntro.classList.remove("level-intro--message");
         }
-        levelIntro.classList.remove("leaving");
+        levelIntro.classList.remove("leaving", "level-intro--card-switching");
         levelIntro.classList.add("visible");
         levelIntro.setAttribute("aria-hidden", "false");
         onRender();
@@ -37,6 +38,18 @@ export function createLevelIntroController({
         const cardExitMs = card.exitDurationMs || exitDurationMs;
 
         timer = setTimer(() => {
+            const hasNextCard = activeIndex + 1 < activeCards.length;
+
+            if (stableBackdrop && hasNextCard) {
+                levelIntro.classList.add("level-intro--card-switching");
+                timer = setTimer(() => {
+                    timer = null;
+                    activeIndex += 1;
+                    showCard(activeCards[activeIndex]);
+                }, cardExitMs);
+                return;
+            }
+
             levelIntro.classList.add("leaving");
             timer = setTimer(() => {
                 levelIntro.classList.remove("visible", "leaving");
@@ -56,8 +69,12 @@ export function createLevelIntroController({
     }
 
     return {
-        show(level, { cards = null } = {}) {
+        show(
+            level,
+            { cards = null, stableBackdrop: nextStableBackdrop = false } = {},
+        ) {
             clearPendingTimer();
+            stableBackdrop = Boolean(nextStableBackdrop);
             activeCards =
                 cards ||
                 [
@@ -81,7 +98,13 @@ export function createLevelIntroController({
             clearPendingTimer();
             activeCards = [];
             activeIndex = 0;
-            levelIntro.classList.remove("visible", "leaving", "level-intro--message");
+            stableBackdrop = false;
+            levelIntro.classList.remove(
+                "visible",
+                "leaving",
+                "level-intro--message",
+                "level-intro--card-switching",
+            );
             levelIntro.setAttribute("aria-hidden", "true");
         },
     };

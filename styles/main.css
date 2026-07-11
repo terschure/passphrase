@@ -9,6 +9,19 @@
 
             :root {
                 color-scheme: dark;
+                --app-font:
+                    "Pexico", ui-monospace, SFMono-Regular, Menlo, Consolas,
+                    monospace;
+                --holo-gradient: linear-gradient(
+                    35deg,
+                    #ff70d5,
+                    #73e6ff,
+                    #fff59a,
+                    #a78bfa,
+                    #7cffd4,
+                    #ff8ad8
+                );
+                --holo-text-fallback: #f7d9ff;
                 font-family:
                     "Pexico", ui-monospace, SFMono-Regular, Menlo, Consolas,
                     monospace;
@@ -27,9 +40,27 @@
                 max-width: none;
                 margin: 0 auto;
                 padding: 0;
+                font-family: var(--app-font);
                 line-height: 1.35;
                 background: #0a0a0a;
                 overflow: hidden;
+            }
+
+            body::before {
+                content: "";
+                position: fixed;
+                top: 0;
+                left: 0;
+                right: 0;
+                z-index: 3;
+                height: clamp(92px, 14vh, 130px);
+                background: linear-gradient(
+                    to bottom,
+                    rgba(0, 0, 0, 0.78),
+                    rgba(0, 0, 0, 0.46) 46%,
+                    rgba(0, 0, 0, 0)
+                );
+                pointer-events: none;
             }
 
             .top-ui {
@@ -43,7 +74,7 @@
                 align-items: center;
                 pointer-events: none;
                 color: #ffffff;
-                font-family: "Pexico", monospace;
+                font-family: var(--app-font);
                 text-shadow:
                     0 0 8px rgba(255, 255, 255, 0.18),
                     0 2px 12px #000000;
@@ -53,7 +84,7 @@
                 justify-self: center;
                 margin: 0;
                 color: #ffffff;
-                font-family: "Pexico", monospace;
+                font-family: var(--app-font);
                 font-size: clamp(1rem, 2.2vw, 1.42rem);
                 font-weight: 400;
                 letter-spacing: 0.12em;
@@ -73,9 +104,8 @@
                 filter: brightness(1.16);
                 outline: none;
                 text-shadow:
-                    0 0 8px rgba(255, 255, 255, 0.68),
-                    0 0 18px rgba(103, 232, 249, 0.34),
-                    0 0 26px rgba(196, 181, 253, 0.18);
+                    0 1px 0 rgba(0, 0, 0, 0.9),
+                    0 0 3px rgba(255, 255, 255, 0.35);
             }
 
             .controls {
@@ -88,11 +118,14 @@
                 bottom: 8px;
                 z-index: 50;
                 padding: 4px 7px;
-                border: 1px solid rgba(255, 255, 255, 0.14);
+                border: 1px solid transparent;
                 border-radius: 4px;
-                background: rgba(10, 10, 10, 0.4);
+                background:
+                    linear-gradient(rgba(5, 5, 5, 0.86), rgba(5, 5, 5, 0.86))
+                        padding-box,
+                    var(--holo-gradient) border-box;
                 color: #ffffff;
-                font-family: "Pexico", ui-monospace, monospace;
+                font-family: var(--app-font);
                 font-size: 0.6rem;
                 font-weight: 400;
                 letter-spacing: 0.16em;
@@ -108,9 +141,11 @@
             #open-settings:hover,
             #open-settings:focus-visible {
                 opacity: 1;
-                color: #facc15;
-                background: rgba(20, 20, 20, 0.92);
-                border-color: rgba(250, 204, 21, 0.5);
+                color: #ffffff;
+                background:
+                    linear-gradient(rgba(11, 11, 11, 0.96), rgba(11, 11, 11, 0.96))
+                        padding-box,
+                    var(--holo-gradient) border-box;
             }
 
             main {
@@ -133,7 +168,7 @@
                 margin: 0;
                 padding: 0;
                 color: rgba(255, 255, 255, 0.18);
-                font-family: "Pexico", ui-monospace, monospace;
+                font-family: var(--app-font);
                 font-size: clamp(9px, 1.15vw, 15px);
                 line-height: 1;
                 letter-spacing: 0;
@@ -166,6 +201,12 @@
                 visibility: visible;
             }
 
+            #level-intro.level-intro--handoff {
+                opacity: 1;
+                visibility: visible;
+                transition: none;
+            }
+
             #level-intro.leaving {
                 animation: level-intro-glitch-out 420ms steps(3, end) both;
             }
@@ -174,11 +215,18 @@
                 width: min(920px, calc(100vw - 32px));
                 text-align: center;
                 color: #ffffff;
-                font-family: "Pexico", ui-monospace, monospace;
-                text-shadow:
-                    1px 0 0 rgba(239, 68, 68, 0.58),
-                    -1px 0 0 rgba(255, 255, 255, 0.3),
-                    0 0 18px rgba(255, 255, 255, 0.16);
+                font-family: var(--app-font);
+                text-shadow: none;
+                transition:
+                    opacity 180ms ease,
+                    transform 180ms ease,
+                    filter 180ms ease;
+            }
+
+            #level-intro.level-intro--card-switching .level-intro-content {
+                opacity: 0;
+                transform: translateY(8px);
+                filter: none;
             }
 
             #level-intro-title {
@@ -188,7 +236,7 @@
 
             #level-intro-subtitle {
                 margin-top: 8px;
-                color: #a8a8a8;
+                color: var(--holo-text-fallback);
                 font-size: clamp(0.7rem, 2.5vw, 0.95rem);
                 letter-spacing: 0.1em;
                 white-space: pre-line;
@@ -205,7 +253,7 @@
             #level-intro.level-intro--message #level-intro-subtitle {
                 max-width: min(780px, calc(100vw - 40px));
                 margin: 18px auto 0;
-                color: #ffffff;
+                color: var(--holo-text-fallback);
                 font-size: clamp(0.82rem, 2.35vw, 1.25rem);
                 line-height: 1.55;
                 letter-spacing: 0.06em;
@@ -230,7 +278,7 @@
                 top: 0;
                 max-width: min(72vw, 640px);
                 color: #eeeeee;
-                font-family: "Pexico", ui-monospace, monospace;
+                font-family: var(--app-font);
                 font-size: clamp(0.88rem, 2.1vw, 1.45rem);
                 font-weight: 700;
                 letter-spacing: 0;
@@ -264,17 +312,14 @@
 
             #dev-level-buttons button {
                 padding: 6px 8px;
-                border: 1px solid #555555;
                 border-radius: 3px;
-                background: rgba(8, 8, 8, 0.88);
-                color: #a8a8a8;
-                font-family: "Pexico", ui-monospace, monospace;
+                color: #e9e9e9;
+                font-family: var(--app-font);
                 font-size: 0.64rem;
                 letter-spacing: 0.04em;
             }
 
             #dev-level-buttons button:hover {
-                border-color: #9a9a9a;
                 color: #ffffff;
             }
 
@@ -333,54 +378,51 @@
 
             #unicode-feedback {
                 position: fixed;
-                left: 50%;
+                left: calc(50% - 72px);
                 top: 64%;
                 z-index: 4;
                 display: none;
-                transform: translate(0, -50%);
-                padding: 4px 7px;
-                border: 1px solid rgba(196, 181, 253, 0.58);
+                transform: translate(-100%, -50%);
+                pointer-events: none;
+            }
+
+            .unicode-dialogue-bubble {
+                padding: 6px 9px;
+                border: 1px solid transparent;
                 border-radius: 2px;
                 background:
-                    linear-gradient(rgba(5, 5, 5, 0.22), rgba(5, 5, 5, 0.22))
+                    linear-gradient(rgba(0, 0, 0, 0.9), rgba(0, 0, 0, 0.9))
                         padding-box,
-                    linear-gradient(
-                            110deg,
-                            rgba(103, 232, 249, 0.78),
-                            rgba(196, 181, 253, 0.7),
-                            rgba(134, 239, 172, 0.62),
-                            rgba(244, 114, 182, 0.56),
-                            rgba(103, 232, 249, 0.78)
-                        )
-                        border-box;
+                    var(--holo-gradient) border-box;
                 background-clip: padding-box, border-box;
                 color: #ffffff;
-                font-family: "Pexico", ui-monospace, monospace;
+                font-family: var(--app-font);
                 font-size: clamp(0.62rem, 1.6vw, 0.9rem);
                 letter-spacing: 0.06em;
                 text-transform: uppercase;
-                pointer-events: none;
+                text-shadow: 0 0 2px rgba(255, 255, 255, 0.18);
+                box-shadow: 0 0 10px rgba(115, 230, 255, 0.12);
+            }
+
+            .unicode-dialogue-bubble::after {
+                content: ">";
+                position: absolute;
+                top: 50%;
+                right: -11px;
+                transform: translateY(-50%);
+                color: var(--holo-text-fallback);
                 text-shadow:
-                    0 0 6px rgba(255, 255, 255, 0.72),
-                    0 0 14px rgba(103, 232, 249, 0.32);
-                box-shadow:
-                    inset -1px 0 0 rgba(255, 255, 255, 0.18),
-                    0 0 10px rgba(103, 232, 249, 0.14),
-                    0 0 18px rgba(196, 181, 253, 0.08);
+                    0 0 4px rgba(255, 255, 255, 0.42),
+                    0 0 10px rgba(115, 230, 255, 0.18);
             }
 
             #unicode-feedback.visible {
                 display: block;
-                animation:
-                    unicode-comment-pop 880ms steps(4, end) both,
-                    unicode-bubble-iridescent 2.8s ease-in-out infinite;
+                animation: unicode-comment-pop 880ms steps(4, end) both;
             }
 
             #unicode-feedback.fail {
-                text-shadow:
-                    0 0 6px rgba(255, 255, 255, 0.78),
-                    1px 0 0 rgba(196, 181, 253, 0.46),
-                    -1px 0 0 rgba(103, 232, 249, 0.38);
+                text-shadow: 0 0 2px rgba(255, 255, 255, 0.18);
             }
 
             .modal-screen {
@@ -415,7 +457,7 @@
             .modal-title {
                 margin: 0;
                 color: #ffffff;
-                font-family: "Pexico", ui-monospace, monospace;
+                font-family: var(--app-font);
                 font-size: clamp(1.3rem, 4vw, 2.35rem);
                 font-weight: 700;
                 letter-spacing: 0.1em;
@@ -429,7 +471,7 @@
             .modal-subcopy,
             .about-copy {
                 color: #d8d8d8;
-                font-family: "Pexico", ui-monospace, monospace;
+                font-family: var(--app-font);
                 font-size: clamp(0.78rem, 1.9vw, 1rem);
                 line-height: 1.55;
             }
@@ -446,29 +488,135 @@
             .level-complete-sparkles {
                 margin: 0 0 12px;
                 color: #ffffff;
-                font-family: "Pexico", ui-monospace, monospace;
+                font-family: var(--app-font);
                 font-size: clamp(0.52rem, 1.7vw, 0.9rem);
                 line-height: 1.15;
-                animation: level-complete-glow 1.4s linear infinite;
+                text-shadow:
+                    0 0 8px rgba(255, 255, 255, 0.48),
+                    0 0 18px rgba(115, 230, 255, 0.18);
             }
 
             .modal-panel--complete {
-                border-color: rgba(103, 232, 249, 0.52);
+                border-color: transparent;
+                background:
+                    linear-gradient(rgba(14, 14, 14, 0.95), rgba(14, 14, 14, 0.95))
+                        padding-box,
+                    var(--holo-gradient) border-box;
             }
 
             .modal-title--complete {
                 color: #ffffff;
-                text-shadow:
-                    0 0 8px rgba(255, 255, 255, 0.72),
-                    0 0 24px rgba(52, 211, 153, 0.34);
+                text-shadow: 0 0 2px rgba(255, 255, 255, 0.12);
             }
 
             .modal-panel--about {
+                display: flex;
+                flex-direction: column;
+                align-items: stretch;
+                justify-content: flex-start;
                 text-align: left;
             }
 
             .modal-panel--about .modal-title {
                 text-align: center;
+            }
+
+            .modal-screen--hero-intro,
+            .modal-screen--victory {
+                z-index: 8;
+                background: rgba(3, 3, 5, 0.9);
+            }
+
+            .modal-panel--hero-intro,
+            .modal-panel--victory {
+                width: min(820px, 100%);
+                border-color: transparent;
+                background:
+                    linear-gradient(rgba(10, 10, 12, 0.96), rgba(10, 10, 12, 0.96))
+                        padding-box,
+                    var(--holo-gradient) border-box;
+            }
+
+            .modal-panel--hero-intro {
+                display: grid;
+                justify-items: center;
+                gap: clamp(18px, 4vw, 32px);
+                width: min(880px, calc(100vw - 24px));
+                padding: clamp(18px, 4vw, 34px);
+                border: 0;
+                background: transparent;
+                box-shadow: none;
+                overflow: visible;
+            }
+
+            .final-victory-unicode {
+                margin: 0;
+                color: #ffffff;
+                font-family: var(--app-font);
+                font-size: clamp(0.78rem, 2.2vw, 1.16rem);
+                line-height: 1;
+                letter-spacing: 0;
+                text-align: center;
+                text-shadow:
+                    0 1px 0 rgba(0, 0, 0, 0.92),
+                    0 0 3px rgba(255, 255, 255, 0.28);
+            }
+
+            .hero-intro-copy,
+            .final-victory-line {
+                max-width: 680px;
+                color: #ffffff;
+                font-family: var(--app-font);
+                font-size: clamp(1rem, 2.6vw, 1.55rem);
+                line-height: 1.45;
+                letter-spacing: 0.02em;
+                text-align: center;
+            }
+
+            .hero-intro-copy {
+                max-width: min(860px, 92vw);
+                font-size: clamp(1.35rem, 4.2vw, 2.55rem);
+                line-height: 1.25;
+                transition:
+                    opacity 180ms ease,
+                    transform 180ms ease,
+                    filter 180ms ease;
+            }
+
+            .modal-screen--hero-intro.hero-intro--text-switching
+                .hero-intro-copy {
+                opacity: 0;
+                transform: translateY(8px);
+                filter: none;
+            }
+
+            .final-victory-line {
+                min-height: 2.9em;
+                margin-top: 18px;
+                opacity: 0;
+                transform: translateY(8px);
+                transition:
+                    opacity 220ms ease,
+                    transform 220ms ease;
+            }
+
+            .final-victory-line.visible {
+                opacity: 1;
+                transform: translateY(0);
+            }
+
+            .final-victory-line--second {
+                margin-top: 8px;
+            }
+
+            .final-victory-play-again {
+                display: none;
+                margin: 22px auto 0;
+                padding: 10px 22px;
+            }
+
+            .final-victory-play-again.visible {
+                display: inline-block;
             }
 
             .about-copy {
@@ -487,10 +635,8 @@
 
             .modal-close,
             .modal-back {
-                border: 1px solid rgba(255, 255, 255, 0.28);
-                background: rgba(5, 5, 5, 0.72);
                 color: #ffffff;
-                font-family: "Pexico", ui-monospace, monospace;
+                font-family: var(--app-font);
             }
 
             .modal-close {
@@ -566,7 +712,7 @@
             .game-over-fire {
                 margin: 0 0 4px;
                 color: #f97316;
-                font-family: "Pexico", ui-monospace, monospace;
+                font-family: var(--app-font);
                 font-size: clamp(0.4rem, 1.65vw, 0.88rem);
                 line-height: 0.95;
                 letter-spacing: 0;
@@ -612,7 +758,7 @@
                 border-radius: 6px;
                 background: rgba(10, 10, 10, 0.42);
                 color: rgba(255, 255, 255, 0.72);
-                font-family: "Pexico", ui-monospace, monospace;
+                font-family: var(--app-font);
                 font-size: clamp(0.42rem, 1.55vw, 0.74rem);
                 line-height: 1.05;
                 letter-spacing: 0;
@@ -677,19 +823,48 @@
             }
 
             button {
-                font: inherit;
+                font-family: var(--app-font);
+                font-size: inherit;
+                line-height: inherit;
                 padding: 6px 12px;
-                border: 0;
-                border-radius: 8px;
+                border: 1px solid transparent;
+                border-radius: 6px;
                 cursor: pointer;
-                background: #facc15;
-                color: #111111;
+                background:
+                    linear-gradient(#050505, #050505) padding-box,
+                    var(--holo-gradient) border-box;
+                color: #ffffff;
                 font-weight: 700;
+                text-shadow: 0 0 8px rgba(255, 255, 255, 0.18);
+                box-shadow:
+                    0 0 0 1px rgba(0, 0, 0, 0.8),
+                    0 0 18px rgba(115, 230, 255, 0.08);
+                transition:
+                    color 160ms ease,
+                    filter 160ms ease,
+                    box-shadow 160ms ease,
+                    transform 160ms ease;
+            }
+
+            button:hover,
+            button:focus-visible {
+                color: #ffffff;
+                filter: brightness(1.14);
+                outline: none;
+                box-shadow:
+                    0 0 0 1px rgba(0, 0, 0, 0.9),
+                    0 0 18px rgba(115, 230, 255, 0.18),
+                    0 0 28px rgba(255, 112, 213, 0.1);
+            }
+
+            button:active {
+                transform: translateY(1px);
             }
 
             button:disabled {
                 cursor: not-allowed;
                 opacity: 0.35;
+                filter: grayscale(0.5);
             }
 
             #mic-init-screen {
@@ -711,10 +886,6 @@
                 min-width: 200px;
                 margin-top: 20px;
                 padding: 12px 22px;
-                border: 1px solid rgba(255, 255, 255, 0.35);
-                box-shadow:
-                    0 0 0 1px rgba(0, 0, 0, 0.8),
-                    0 0 24px rgba(255, 255, 255, 0.14);
             }
 
             #onboarding-screen {
@@ -764,15 +935,12 @@
 
             .onboarding-title {
                 margin: 0;
-                color: #facc15;
+                color: var(--holo-text-fallback);
                 font-size: clamp(1.7rem, 5vw, 3rem);
                 line-height: 1.05;
                 letter-spacing: 0.08em;
                 text-transform: uppercase;
-                text-shadow:
-                    0 0 8px rgba(255, 255, 255, 0.3),
-                    0 0 28px rgba(239, 68, 68, 0.24),
-                    0 4px 18px #000000;
+                text-shadow: 0 0 2px rgba(255, 255, 255, 0.12);
             }
 
             .onboarding-copy {
@@ -824,11 +992,6 @@
                 min-width: 148px;
                 margin-top: 24px;
                 padding: 10px 22px;
-                border: 1px solid rgba(255, 255, 255, 0.35);
-                background: #facc15;
-                box-shadow:
-                    0 0 0 1px rgba(0, 0, 0, 0.8),
-                    0 0 24px rgba(255, 255, 255, 0.16);
             }
 
             #status {
@@ -862,7 +1025,7 @@
                 max-width: min(680px, 66vw);
                 transform: translateX(-50%);
                 padding: 0 6px;
-                font-family: "Pexico", ui-monospace, monospace;
+                font-family: var(--app-font);
                 font-size: 0.62rem;
                 line-height: 1.3;
                 letter-spacing: 0.02em;
@@ -1160,7 +1323,7 @@
                 justify-self: end;
                 min-width: 5.5em;
                 max-width: min(42vw, 360px);
-                font-family: "Pexico", monospace;
+                font-family: var(--app-font);
                 font-size: clamp(0.95rem, 1.6vw, 1.18rem);
                 font-weight: 700;
                 letter-spacing: 0.12em;
@@ -1322,6 +1485,7 @@
 
             .wall-word {
                 color: #ffffff;
+                font-family: var(--app-font);
                 font-size: 1.22em;
                 font-weight: 800;
                 letter-spacing: 0.08em;
@@ -1359,6 +1523,7 @@
 
             .terminal-word {
                 color: #ffffff;
+                font-family: var(--app-font);
                 font-size: 1.22em;
                 font-weight: 900;
                 letter-spacing: 0.08em;
@@ -1385,6 +1550,7 @@
 
             .bubble-word {
                 color: #ffffff;
+                font-family: var(--app-font);
                 font-size: 1.22em;
                 font-weight: 900;
                 letter-spacing: 0.08em;
@@ -1421,6 +1587,7 @@
 
             .fence-word {
                 color: #ffffff;
+                font-family: var(--app-font);
                 font-size: 1.22em;
                 font-weight: 800;
                 letter-spacing: 0.08em;
@@ -1628,34 +1795,6 @@
                 --unicode-delay: -3.48s;
             }
 
-            .unicode-rainbow-1 {
-                --unicode-delay: -0.1s;
-            }
-
-            .unicode-rainbow-2 {
-                --unicode-delay: -0.42s;
-            }
-
-            .unicode-rainbow-3 {
-                --unicode-delay: -0.74s;
-            }
-
-            .unicode-rainbow-4 {
-                --unicode-delay: -1.06s;
-            }
-
-            .unicode-rainbow-5 {
-                --unicode-delay: -1.38s;
-            }
-
-            .unicode-rainbow-6 {
-                --unicode-delay: -1.7s;
-            }
-
-            .unicode-rainbow-7 {
-                --unicode-delay: -2.02s;
-            }
-
             .unicode-shard-1 {
                 opacity: 0.95;
             }
@@ -1772,67 +1911,22 @@
             @keyframes unicode-comment-pop {
                 0% {
                     opacity: 0;
-                    transform: translate(-6px, -42%) scale(0.9);
+                    transform: translate(calc(-100% - 6px), -42%) scale(0.9);
                 }
 
                 18% {
                     opacity: 1;
-                    transform: translate(0, -54%) scale(1);
+                    transform: translate(-100%, -54%) scale(1);
                 }
 
                 72% {
                     opacity: 1;
-                    transform: translate(2px, -62%) scale(1);
+                    transform: translate(calc(-100% + 2px), -62%) scale(1);
                 }
 
                 100% {
                     opacity: 0;
-                    transform: translate(-2px, -72%) scale(0.98);
-                }
-            }
-
-            @keyframes unicode-bubble-iridescent {
-                0%,
-                100% {
-                    border-color: rgba(103, 232, 249, 0.6);
-                    box-shadow:
-                        inset -1px 0 0 rgba(255, 255, 255, 0.18),
-                        0 0 10px rgba(103, 232, 249, 0.14),
-                        0 0 18px rgba(196, 181, 253, 0.08);
-                }
-
-                35% {
-                    border-color: rgba(196, 181, 253, 0.62);
-                    box-shadow:
-                        inset -1px 0 0 rgba(255, 255, 255, 0.18),
-                        0 0 10px rgba(196, 181, 253, 0.14),
-                        0 0 18px rgba(134, 239, 172, 0.08);
-                }
-
-                68% {
-                    border-color: rgba(134, 239, 172, 0.58);
-                    box-shadow:
-                        inset -1px 0 0 rgba(255, 255, 255, 0.18),
-                        0 0 10px rgba(134, 239, 172, 0.12),
-                        0 0 18px rgba(244, 114, 182, 0.08);
-                }
-            }
-
-            @keyframes level-complete-glow {
-                0%,
-                100% {
-                    color: #ffffff;
-                    text-shadow: 0 0 8px rgba(255, 255, 255, 0.64);
-                }
-
-                33% {
-                    color: #facc15;
-                    text-shadow: 0 0 12px rgba(250, 204, 21, 0.7);
-                }
-
-                66% {
-                    color: #67e8f9;
-                    text-shadow: 0 0 12px rgba(103, 232, 249, 0.7);
+                    transform: translate(calc(-100% - 2px), -72%) scale(0.98);
                 }
             }
 
@@ -1972,34 +2066,15 @@
                 }
             }
 
-            /* ==========================================================
-               Rainbow accent — replaces the yellow (#facc15) highlight
-               with a slowly animating rainbow gradient. CSS-only: these
-               rules simply override the former yellow declarations.
-               ========================================================== */
-            :root {
-                --rainbow: repeating-linear-gradient(
-                    90deg,
-                    #ff5f6d 0px,
-                    #ff9f45 40px,
-                    #ffe14d 80px,
-                    #5cff9d 120px,
-                    #4dc3ff 160px,
-                    #b06bff 200px,
-                    #ff5f6d 240px
-                );
-            }
-
-            @keyframes rainbow-shift {
-                to {
-                    background-position: 240px 0;
-                }
-            }
-
-            /* Text highlights: paint the animated gradient through the glyphs. */
+            /* Static holographic accent used for all colorful UI highlights. */
             .game-over-round,
             #game-over-transcript .hit,
             #transcript .hit,
+            .level-complete-sparkles,
+            .modal-title--complete,
+            .modal-panel--victory .modal-title,
+            .hero-intro-copy,
+            .final-victory-line,
             .onboarding-title,
             #about-title-button,
             #level-intro-title,
@@ -2014,61 +2089,19 @@
             li.current,
             li.word-heading,
             .warn,
-            #open-settings:hover,
-            #open-settings:focus-visible {
-                background-image: var(--rainbow);
-                background-clip: text;
-                -webkit-background-clip: text;
-                -webkit-text-fill-color: transparent;
-                color: transparent;
-                animation: rainbow-shift 14s linear infinite;
+            .unicode-player-iridescent {
+                color: var(--holo-text-fallback);
             }
 
-            #about-title-button,
-            #level-intro-title,
-            #level-intro-subtitle {
-                text-shadow:
-                    0 0 6px rgba(255, 255, 255, 0.32),
-                    0 0 18px rgba(103, 232, 249, 0.18),
-                    0 0 28px rgba(196, 181, 253, 0.12),
-                    0 3px 16px rgba(0, 0, 0, 0.9);
-            }
-
-            #level-intro-title,
-            #level-intro-subtitle {
-                filter: brightness(0.98);
-            }
-
-            /* Filled highlights (buttons): animated gradient fill. */
-            button,
-            #onboarding-action {
-                background-image: var(--rainbow);
-                animation: rainbow-shift 14s linear infinite;
-            }
-
-            /* Road glyphs that were yellow: solid, legible, non-yellow
-               (they are rebuilt each frame, so keep them simple). */
-            .gate-2,
-            .wall-fire-spot {
-                color: #ff9f45;
-            }
-
-            /* The mic spectrum bars are canvas-drawn, so CSS can only recolor
-               them by cycling their hue — turning the yellow into rainbow. */
-            @keyframes rainbow-hue {
-                to {
-                    filter: hue-rotate(360deg);
-                }
-            }
-
-            #onboarding-spectrum {
-                animation: rainbow-hue 14s linear infinite;
-            }
-
-            @media (prefers-reduced-motion: reduce) {
+            @supports ((background-clip: text) or (-webkit-background-clip: text)) {
                 .game-over-round,
                 #game-over-transcript .hit,
                 #transcript .hit,
+                .level-complete-sparkles,
+                .modal-title--complete,
+                .modal-panel--victory .modal-title,
+                .hero-intro-copy,
+                .final-victory-line,
                 .onboarding-title,
                 #about-title-button,
                 #level-intro-title,
@@ -2083,11 +2116,75 @@
                 li.current,
                 li.word-heading,
                 .warn,
-                #open-settings:hover,
-                #open-settings:focus-visible,
-                button,
-                #onboarding-action,
-                #onboarding-spectrum {
+                .unicode-player-iridescent {
+                    background: var(--holo-gradient);
+                    background-clip: text;
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    color: transparent;
+                }
+            }
+
+            .level-complete-sparkles,
+            .modal-title--complete,
+            .modal-panel--victory .modal-title,
+            .hero-intro-copy,
+            .final-victory-line,
+            .onboarding-title,
+            #about-title-button,
+            #level-intro-title,
+            #level-intro-subtitle,
+            #current-level,
+            .echo-header,
+            .echo-badge.init,
+            .echo-badge.play,
+            .talkback-header,
+            .talkback-value.warn,
+            .settings-header,
+            li.current,
+            li.word-heading,
+            .warn,
+            .unicode-player-iridescent {
+                opacity: 1;
+                filter: none;
+                mix-blend-mode: normal;
+                text-shadow: 0 0 2px rgba(255, 255, 255, 0.12);
+            }
+
+            #about-title-button,
+            #level-intro-title,
+            #level-intro-subtitle {
+                text-shadow: 0 0 2px rgba(255, 255, 255, 0.12);
+            }
+
+            #level-intro-title,
+            #level-intro-subtitle {
+                filter: none;
+            }
+
+            #about-title-button:hover,
+            #about-title-button:focus-visible {
+                filter: none;
+                text-shadow: 0 0 2px rgba(255, 255, 255, 0.12);
+            }
+
+            .unicode-player-iridescent {
+                animation: none;
+                text-shadow:
+                    0 0 4px rgba(255, 255, 255, 0.56),
+                    0 0 10px rgba(115, 230, 255, 0.16);
+            }
+
+            /* Road glyphs that were yellow: solid, legible, non-yellow
+               (they are rebuilt each frame, so keep them simple). */
+            .gate-2,
+            .wall-fire-spot {
+                color: #ff9f45;
+            }
+
+            @media (prefers-reduced-motion: reduce) {
+                .unicode-player-iridescent,
+                #unicode-feedback.visible {
                     animation: none;
                 }
             }

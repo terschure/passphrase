@@ -233,7 +233,11 @@ export function createUnicodeLines({
     });
 }
 
-function getUnicodeEffectClass(playerRow, playerCol) {
+function getUnicodeEffectClass(playerRow, playerCol, active) {
+    if (!active) {
+        return "";
+    }
+
     const phase = ((playerRow * 3 + playerCol * 5) % 7) + 1;
 
     return `unicode-player unicode-player-iridescent unicode-gleam-${phase}`;
@@ -392,7 +396,13 @@ export function getPlayerCharClass({
         return "player-background-dim";
     }
 
-    const unicodeEffect = getUnicodeEffectClass(playerRow, playerCol);
+    const eventActive = state !== "idle" || now < signalUntil;
+    const unicodeEffect = getUnicodeEffectClass(
+        playerRow,
+        playerCol,
+        eventActive,
+    );
+    const effectSuffix = unicodeEffect ? ` ${unicodeEffect}` : "";
 
     if (
         !isPasswordKey &&
@@ -401,24 +411,24 @@ export function getPlayerCharClass({
         playerCol >= 3 &&
         playerCol <= 10
     ) {
-        return `passport-character-emblem ${unicodeEffect}`;
+        return `passport-character-emblem${effectSuffix}`;
     }
 
     if (/[A-Z0-9?]/.test(char)) {
         return isPasswordKey
-            ? `password-key-code ${unicodeEffect}`
-            : `passport-character-code ${unicodeEffect}`;
+            ? `password-key-code${effectSuffix}`
+            : `passport-character-code${effectSuffix}`;
     }
 
     if (/[.%'x#]/i.test(char)) {
         return isPasswordKey
-            ? `password-key-character ${unicodeEffect}`
-            : `passport-character-particle ${unicodeEffect}`;
+            ? `password-key-character${effectSuffix}`
+            : `passport-character-particle${effectSuffix}`;
     }
 
     if (isPasswordKey) {
-        return `password-key-character password-key-character--${state} ${unicodeEffect}`;
+        return `password-key-character password-key-character--${state}${effectSuffix}`;
     }
 
-    return `passport-character passport-character--${state} ${unicodeEffect}`;
+    return `passport-character passport-character--${state}${effectSuffix}`;
 }

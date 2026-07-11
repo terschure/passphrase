@@ -82,11 +82,30 @@
                 aria-hidden="true"
             ></pre>
             <div id="memory-phrase-layer" aria-hidden="true"></div>
-            <div id="unicode-feedback" aria-live="polite" aria-hidden="true"></div>
+            <div
+                id="unicode-feedback"
+                class="unicode-dialogue-bubble"
+                aria-live="polite"
+                aria-hidden="true"
+            ></div>
             <div id="level-intro" aria-live="assertive" aria-hidden="true">
                 <div class="level-intro-content">
                     <div id="level-intro-title">LEVEL 1</div>
                     <div id="level-intro-subtitle">BORDER CHECKPOINT</div>
+                </div>
+            </div>
+            <div
+                id="hero-intro-screen"
+                class="modal-screen modal-screen--hero-intro"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="hero-intro-copy"
+                aria-hidden="true"
+            >
+                <div class="modal-panel modal-panel--hero-intro">
+                    <div id="hero-intro-copy" class="hero-intro-copy">
+                        Join Unicode the uniseahorse in a thrilling voice adventure!
+                    </div>
                 </div>
             </div>
             <div
@@ -215,7 +234,7 @@
                 <div class="modal-panel modal-panel--complete">
                     <pre class="level-complete-sparkles" aria-hidden="true">
   * . + . * . + . *
- .  R A I N B O W  .
+ .  H O L O G R A M .
   + . * . + . * . +</pre
                     >
                     <div
@@ -236,6 +255,53 @@
                     >
                         Moving to the next level.
                     </div>
+                </div>
+            </div>
+            <div
+                id="final-victory-screen"
+                class="modal-screen modal-screen--victory"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="final-victory-title"
+                aria-hidden="true"
+            >
+                <div class="modal-panel modal-panel--victory">
+                    <pre
+                        id="final-victory-unicode"
+                        class="final-victory-unicode"
+                        aria-hidden="true"
+                    >       \\
+        \\_
+       ,"  "-.
+       o ,- .,
+      /." / ./
+     // ," ..|
+       / /.. ///
+      / /.../--
+     |  |...|\\\
+     |  |../
+      \ \./    ,".
+       \_"-,__ _/
+         "-.,.-"</pre
+                    >
+                    <h2 id="final-victory-title" class="modal-title">
+                        VOICE FREE
+                    </h2>
+                    <div
+                        id="final-victory-line-one"
+                        class="final-victory-line"
+                    ></div>
+                    <div
+                        id="final-victory-line-two"
+                        class="final-victory-line final-victory-line--second"
+                    ></div>
+                    <button
+                        id="final-victory-play-again"
+                        class="final-victory-play-again"
+                        type="button"
+                    >
+                        PLAY AGAIN
+                    </button>
                 </div>
             </div>
             <div

@@ -1071,6 +1071,23 @@ test("music manager resumes a changed theme without reloading level three", () =
         windowRef: {},
     });
     const mainTheme = audioInstances[0];
+    const levelCompleteSfx = audioInstances[2];
+    const finalVictorySfx = audioInstances[3];
+
+    assert.deepEqual(
+        levelCompleteSfx.children.map((source) => [source.src, source.type]),
+        [
+            ["assets/audio/game_fx_level_complete.ogg", "audio/ogg"],
+            ["assets/audio/game_fx_level_complete.mp3", "audio/mpeg"],
+            ["assets/audio/game_fx_level_complete.wav", "audio/wav"],
+        ],
+    );
+    assert.equal(
+        finalVictorySfx.src,
+        "assets/audio/game_fx_final_victory_active_heroic.mp3",
+    );
+    assert.equal(typeof manager.playFinalVictorySound, "function");
+    assert.equal(typeof manager.stopFinalVictorySound, "function");
 
     manager.unlock();
     manager.setMusicLevel(2);
@@ -1374,6 +1391,42 @@ test("level intro controller drives overlay lifecycle", () => {
     controller.clear();
     assert.deepEqual(cleared, [5]);
     assert.equal(levelIntro.attributes["aria-hidden"], "true");
+});
+
+test("level intro controller keeps the backdrop stable between cards", () => {
+    const levelIntro = createElementFake();
+    const levelIntroTitle = createElementFake();
+    const levelIntroSubtitle = createElementFake();
+    const timers = [];
+    const controller = createLevelIntroController({
+        levelIntro,
+        levelIntroTitle,
+        levelIntroSubtitle,
+        introDurationMs: 1800,
+        exitDurationMs: 420,
+        setTimer(callback, delay) {
+            timers.push({ callback, delay });
+            return timers.length;
+        },
+        clearTimer() {},
+    });
+
+    controller.show(
+        { name: "Level 2", subtitle: "UNDERSEA CABLE" },
+        { stableBackdrop: true },
+    );
+    timers.shift().callback();
+    assert.deepEqual(levelIntro.classList.values(), [
+        "level-intro--card-switching",
+        "visible",
+    ]);
+
+    timers.shift().callback();
+    assert.equal(levelIntroTitle.textContent, "UNDERSEA CABLE");
+    assert.deepEqual(levelIntro.classList.values(), [
+        "level-intro--message",
+        "visible",
+    ]);
 });
 
 test("renderer helpers compute road metrics and collision", () => {
@@ -1740,7 +1793,21 @@ test("player renderer exposes bounds, art, and class names", () => {
             signalUntil: 0,
             now: 100,
         }),
-        "passport-character passport-character--idle unicode-player unicode-player-iridescent unicode-gleam-6",
+        "passport-character passport-character--idle",
+    );
+
+    assert.equal(
+        getPlayerCharClass({
+            char: "^",
+            rowIndex: passportBounds.top,
+            col: passportBounds.left + 8,
+            metrics,
+            environment: "border-fence",
+            state: "success",
+            signalUntil: 0,
+            now: 100,
+        }),
+        "passport-character passport-character--success unicode-player unicode-player-iridescent unicode-gleam-6",
     );
 
     assert.equal(

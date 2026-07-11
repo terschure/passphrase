@@ -35,6 +35,8 @@ shared audio-buffer logic.
   keygen/memory-enemy side-effect policy for level progression.
 - `game/sequenceText.js` consumes transcript text against the current sequence
   and returns pure progression results for the app to decorate with effects.
+- `ui/levelIntro.js` drives the timed level cards; the app coordinator owns
+  the opening hero narrative and final-victory/replay lifecycle.
 - `audio/bufferUtils.js` contains shared audio-buffer utilities.
 - `audio/musicManager.js` owns music playback, lightweight EQ, SFX, and ducking.
 - `audio/segmentRecorder.js` owns reusable MediaRecorder segment capture
