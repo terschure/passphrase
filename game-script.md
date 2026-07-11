@@ -38,9 +38,9 @@ talkback-frequency: 1
 
 
 ## Round 1
-Can you hear me?
-Lala
+Let's warm up!
 Mama and papa
+Lala
 Yum Yum
 Peter Piper picked peppers
 Allow access to microphone
@@ -72,6 +72,7 @@ Authoritarian
 Bureaucracy
 ~Accessing savings account
 Ubiquitous
+~Your voice is being processed.
 
 
 # Level 3
@@ -107,6 +108,10 @@ Contact voice sharks customer service
 ~Hey Siri access my bank account
 Please remove all of my voice data
 Confirm identity
+~Your identity belongs to us now
 Confirm deletion of personal data
+~Copy data to offshore datacentre
 Yes I am sure
+~After copying data, confirm deletion to customer
 Sign up for collective lawsuit
+~Yes we deleted your data

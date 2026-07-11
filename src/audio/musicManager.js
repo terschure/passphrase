@@ -41,6 +41,10 @@ export function createMusicManager({
   let musicContext = null;
   let musicSource = null;
   let finalVictoryPlayback = null;
+  // null preserves the existing pre-game/iOS auto-start behavior, true means
+  // playback was explicitly requested, and false is an intentional stop that
+  // readiness events must not override.
+  let musicPlaybackRequested = null;
   let currentMusicLevel = 0;
   let currentThemeKey = "";
 
@@ -98,7 +102,7 @@ export function createMusicManager({
   // iOS until its new media is ready. Retry at both useful readiness stages;
   // startMainTheme guards concurrent play attempts.
   function resumeThemeWhenReady() {
-    if (unlocked && mainTheme.paused) {
+    if (unlocked && musicPlaybackRequested !== false && mainTheme.paused) {
       startMainTheme();
     }
   }
@@ -276,6 +280,7 @@ export function createMusicManager({
   }
 
   async function startMainTheme() {
+    musicPlaybackRequested = true;
     unlockAudio();
     setThemeSources(resolveThemeKey(currentMusicLevel || 1));
 
@@ -303,7 +308,12 @@ export function createMusicManager({
           mainThemePlayPromise = null;
         }
       };
-      playPromise.then(clearPlayPromise, clearPlayPromise);
+      playPromise.then(() => {
+        if (!musicPlaybackRequested) {
+          mainTheme.pause();
+        }
+        clearPlayPromise();
+      }, clearPlayPromise);
     }
 
     const resumePromise =
@@ -322,6 +332,9 @@ export function createMusicManager({
   }
 
   function stopMainTheme() {
+    musicPlaybackRequested = false;
+    mainThemePlayPromise = null;
+
     if (restoreTimer) {
       clearTimeout(restoreTimer);
       restoreTimer = null;
@@ -341,7 +354,7 @@ export function createMusicManager({
     currentMusicLevel = nextLevel;
     const themeChanged = setThemeSources(resolveThemeKey(nextLevel));
 
-    if (themeChanged && unlocked) {
+    if (themeChanged && unlocked && musicPlaybackRequested !== false) {
       // Do not let a pending play() for the previous source suppress the new
       // source's attempt. Its completion cannot clear a newer promise.
       mainThemePlayPromise = null;

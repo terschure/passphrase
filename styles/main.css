@@ -1485,10 +1485,10 @@
 
             .wall-word {
                 color: #ffffff;
-                font-family: var(--app-font);
-                font-size: 1.22em;
+                font-family: inherit;
+                font-size: inherit;
                 font-weight: 800;
-                letter-spacing: 0.08em;
+                letter-spacing: inherit;
                 text-shadow:
                     0 1px 0 #000000,
                     0 0 4px rgba(0, 0, 0, 0.95),
@@ -1523,10 +1523,10 @@
 
             .terminal-word {
                 color: #ffffff;
-                font-family: var(--app-font);
-                font-size: 1.22em;
+                font-family: inherit;
+                font-size: inherit;
                 font-weight: 900;
-                letter-spacing: 0.08em;
+                letter-spacing: inherit;
                 text-shadow:
                     0 1px 0 #000000,
                     0 0 6px #000000,
@@ -1550,10 +1550,10 @@
 
             .bubble-word {
                 color: #ffffff;
-                font-family: var(--app-font);
-                font-size: 1.22em;
+                font-family: inherit;
+                font-size: inherit;
                 font-weight: 900;
-                letter-spacing: 0.08em;
+                letter-spacing: inherit;
                 text-shadow:
                     0 1px 0 #001015,
                     0 0 5px #001015,
@@ -1587,10 +1587,10 @@
 
             .fence-word {
                 color: #ffffff;
-                font-family: var(--app-font);
-                font-size: 1.22em;
+                font-family: inherit;
+                font-size: inherit;
                 font-weight: 800;
-                letter-spacing: 0.08em;
+                letter-spacing: inherit;
                 text-shadow:
                     0 1px 0 #001015,
                     0 0 5px #001015,

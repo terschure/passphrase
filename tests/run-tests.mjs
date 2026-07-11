@@ -1106,6 +1106,16 @@ test("music manager resumes a changed theme without reloading level three", () =
 
     manager.setMusicLevel(3);
     assert.equal(mainTheme.loadCount, level2LoadCount);
+
+    manager.stopMainTheme();
+    const playCountAfterStop = mainTheme.playCount;
+    mainTheme.listeners.get("canplay")();
+    mainTheme.listeners.get("loadeddata")();
+    assert.equal(mainTheme.paused, true);
+    assert.equal(mainTheme.playCount, playCountAfterStop);
+
+    manager.startMainTheme();
+    assert.equal(mainTheme.playCount, playCountAfterStop + 1);
 });
 
 test("segment recorder wraps MediaRecorder lifecycle", () => {
