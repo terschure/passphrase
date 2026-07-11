@@ -1,5 +1,6 @@
 export const ECHO_RUNTIME_CONFIG = {
   gain: 0.45,
+  playbackRateScale: 0.7,
   prerollMs: 600,
   cooldownMs: 4000,
   progressBoost: 1.5,

@@ -1,7 +1,21 @@
 export const AUDIO_MIX_CONFIG = {
-  musicVolume: 0.25,
-  musicDuckedVolume: 0.06,
-  sfxVolume: 0.32,
+  musicVolume: 0.2,
+  musicDuckedVolume: 0.05,
+  sfxVolume: 0.26,
+  musicEq: {
+    enabled: true,
+    type: "highshelf",
+    frequencyHz: 3200,
+    gainDb: -5,
+    q: 0.7,
+  },
+  sfxEq: {
+    enabled: true,
+    type: "highshelf",
+    frequencyHz: 4000,
+    gainDb: -2.5,
+    q: 0.7,
+  },
 };
 
 export function createMusicManager({
@@ -25,6 +39,7 @@ export function createMusicManager({
   let musicFadeFrame = null;
   let restoreTimer = null;
   let musicContext = null;
+  let musicSource = null;
   let currentMusicLevel = 0;
   let currentThemeKey = "";
 
@@ -143,8 +158,16 @@ export function createMusicManager({
     unlockAudio();
 
     if (ensurePlaybackContext() && musicContext) {
+      ensureMusicEqGraph();
       musicContext.resume().catch(() => {});
     }
+  }
+
+  function configureEqNode(node, settings) {
+    node.type = settings.type;
+    node.frequency.value = settings.frequencyHz;
+    node.gain.value = settings.gainDb;
+    node.Q.value = settings.q;
   }
 
   function ensurePlaybackContext() {
@@ -167,11 +190,67 @@ export function createMusicManager({
     }
   }
 
+  function ensureMusicEqGraph() {
+    const settings = AUDIO_MIX_CONFIG.musicEq;
+
+    if (!settings.enabled || musicSource) {
+      return Boolean(musicSource) || !settings.enabled;
+    }
+
+    if (!ensurePlaybackContext()) {
+      return false;
+    }
+
+    let source = null;
+
+    try {
+      const eqNode = musicContext.createBiquadFilter();
+      configureEqNode(eqNode, settings);
+      source = musicContext.createMediaElementSource(mainTheme);
+      source.connect(eqNode).connect(musicContext.destination);
+      musicSource = source;
+      return true;
+    } catch (error) {
+      // If the media source was created before a later graph operation failed,
+      // reconnect it directly so music cannot become silent.
+      source?.connect?.(musicContext.destination);
+      warn("Music EQ could not initialize; playing without EQ.", error);
+      return false;
+    }
+  }
+
+  function connectSfxEq(audio) {
+    const settings = AUDIO_MIX_CONFIG.sfxEq;
+
+    if (!settings.enabled || !ensurePlaybackContext()) {
+      return;
+    }
+
+    let source = null;
+
+    try {
+      const eqNode = musicContext.createBiquadFilter();
+      configureEqNode(eqNode, settings);
+      source = musicContext.createMediaElementSource(audio);
+      source.connect(eqNode).connect(musicContext.destination);
+
+      const disconnect = () => {
+        source.disconnect();
+        eqNode.disconnect();
+      };
+      audio.addEventListener?.("ended", disconnect, { once: true });
+    } catch (error) {
+      source?.connect?.(musicContext.destination);
+      warn("Sound effect EQ could not initialize; playing without EQ.", error);
+    }
+  }
+
   async function startMainTheme() {
     unlockAudio();
     setThemeSources(resolveThemeKey(currentMusicLevel || 1));
 
     const contextReady = ensurePlaybackContext();
+    ensureMusicEqGraph();
 
     // iOS Safari only permits media playback and AudioContext.resume()
     // that are *initiated synchronously* inside the user gesture — before
@@ -302,6 +381,7 @@ export function createMusicManager({
     try {
       const instance = audio.cloneNode(true);
       instance.volume = SFX_VOLUME;
+      connectSfxEq(instance);
       const durationMs = Number.isFinite(audio.duration)
         ? audio.duration * 1000
         : DUCK_HOLD_MS;

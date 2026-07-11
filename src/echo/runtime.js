@@ -276,7 +276,7 @@ export function createEchoRuntime({
         }
 
         lastEchoAt = now();
-        snippet.rate = pickEchoRate();
+        snippet.rate = pickEchoRate() * settings.playbackRateScale;
         snippet.state = "initiating";
 
         const entry = { snippet, source: null, prerollTimer: null };

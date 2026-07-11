@@ -36,7 +36,7 @@ shared audio-buffer logic.
 - `game/sequenceText.js` consumes transcript text against the current sequence
   and returns pure progression results for the app to decorate with effects.
 - `audio/bufferUtils.js` contains shared audio-buffer utilities.
-- `audio/musicManager.js` owns clean music playback, SFX, and ducking.
+- `audio/musicManager.js` owns music playback, lightweight EQ, SFX, and ducking.
 - `audio/segmentRecorder.js` owns reusable MediaRecorder segment capture
   setup, stop, and discard behavior.
 - `speech/speechService.js` wraps the Web Speech API.

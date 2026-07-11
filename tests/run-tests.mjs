@@ -1880,10 +1880,25 @@ test("echo fx bus creates a stereo reverb impulse", () => {
 });
 
 test("echo and talkback default configs expose runtime tuning", () => {
-    assert.equal(AUDIO_MIX_CONFIG.musicVolume, 0.25);
-    assert.equal(AUDIO_MIX_CONFIG.musicDuckedVolume, 0.06);
-    assert.equal(AUDIO_MIX_CONFIG.sfxVolume, 0.32);
+    assert.equal(AUDIO_MIX_CONFIG.musicVolume, 0.2);
+    assert.equal(AUDIO_MIX_CONFIG.musicDuckedVolume, 0.05);
+    assert.equal(AUDIO_MIX_CONFIG.sfxVolume, 0.26);
+    assert.deepEqual(AUDIO_MIX_CONFIG.musicEq, {
+        enabled: true,
+        type: "highshelf",
+        frequencyHz: 3200,
+        gainDb: -5,
+        q: 0.7,
+    });
+    assert.deepEqual(AUDIO_MIX_CONFIG.sfxEq, {
+        enabled: true,
+        type: "highshelf",
+        frequencyHz: 4000,
+        gainDb: -2.5,
+        q: 0.7,
+    });
     assert.equal(ECHO_RUNTIME_CONFIG.gain, 0.45);
+    assert.equal(ECHO_RUNTIME_CONFIG.playbackRateScale, 0.7);
     assert.equal(ECHO_RUNTIME_CONFIG.probabilities.life, 0.85);
     assert.equal(TALKBACK_RUNTIME_CONFIG.modelId, "qwen3-tts-0.6b-base");
     assert.equal(TALKBACK_RUNTIME_CONFIG.probabilities.random, 0.12);
