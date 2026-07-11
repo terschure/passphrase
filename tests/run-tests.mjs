@@ -472,6 +472,45 @@ test("matching handles fuzzy multi-word phrases", () => {
     );
 });
 
+test("matching treats common British and US spellings as equivalent", () => {
+    assert.equal(
+        textMatchesTarget(
+            "my favourite character is Unicode",
+            "My favorite character is Unicode",
+            { fuzzyThreshold: 1 },
+        ),
+        true,
+    );
+    assert.equal(
+        textMatchesTarget("choose your favorite", "Choose your favourite", {
+            fuzzyThreshold: 1,
+        }),
+        true,
+    );
+    assert.equal(
+        textMatchesTarget(
+            "recognise the colour at the centre",
+            "Recognize the color at the center",
+            { fuzzyThreshold: 1 },
+        ),
+        true,
+    );
+    assert.equal(
+        textMatchesTarget(
+            "the traveller organised the programme",
+            "The traveler organized the program",
+            { fuzzyThreshold: 1 },
+        ),
+        true,
+    );
+    assert.equal(
+        textMatchesTarget("favorite color", "favorite character", {
+            fuzzyThreshold: 1,
+        }),
+        false,
+    );
+});
+
 test("matching handles fuzzy single-word targets conservatively", () => {
     assert.equal(textMatchesTarget("the squirl escaped", "Squirrel"), true);
     assert.equal(textMatchesTarget("take the exits", "Exit"), true);
@@ -1020,17 +1059,58 @@ test("audio utilities compute rms, peaks, trim, and wav header", () => {
     assert.equal(view.getUint32(24, true), 1000);
 });
 
-test("music manager resumes a changed theme without reloading level three", () => {
+test("music manager primes direct effects and coordinates audio transitions", () => {
     const audioInstances = [];
+    const mediaSourceElements = [];
+    const blockedEvents = [];
+    const eventLog = [];
+    let clock = 1000;
+
+    function createNode() {
+        return {
+            type: "",
+            frequency: { value: 0 },
+            gain: { value: 0 },
+            Q: { value: 0 },
+            connect(target) {
+                return target;
+            },
+            disconnect() {},
+        };
+    }
+
+    class FakeAudioContext {
+        constructor() {
+            this.state = "suspended";
+            this.destination = createNode();
+        }
+
+        createBiquadFilter() {
+            return createNode();
+        }
+
+        createMediaElementSource(audio) {
+            mediaSourceElements.push(audio);
+            return createNode();
+        }
+
+        resume() {
+            this.state = "running";
+            return Promise.resolve();
+        }
+    }
 
     class FakeAudio {
-        constructor(src = "") {
-            this.src = src;
+        constructor() {
             this.paused = true;
+            this.ended = false;
             this.children = [];
             this.listeners = new Map();
             this.playCount = 0;
             this.loadCount = 0;
+            this.currentTime = 0;
+            this.label = "unlabeled";
+            this.blockNextPlay = false;
             audioInstances.push(this);
         }
 
@@ -1051,12 +1131,26 @@ test("music manager resumes a changed theme without reloading level three", () =
         }
 
         play() {
+            if (this.blockNextPlay) {
+                this.blockNextPlay = false;
+                const error = new Error("blocked");
+                error.name = "NotAllowedError";
+                throw error;
+            }
+
             this.playCount += 1;
             this.paused = false;
+            this.ended = false;
+            eventLog.push(`play:${this.label}`);
         }
 
         pause() {
             this.paused = true;
+            eventLog.push(`pause:${this.label}`);
+        }
+
+        cloneNode() {
+            throw new Error("effects must reuse primed media elements");
         }
     }
 
@@ -1069,11 +1163,30 @@ test("music manager resumes a changed theme without reloading level three", () =
                 };
             },
         },
-        windowRef: {},
+        windowRef: {
+            AudioContext: FakeAudioContext,
+            requestAnimationFrame: () => 1,
+            cancelAnimationFrame() {},
+        },
+        now: () => clock,
+        onPlaybackBlocked(blocked, name) {
+            blockedEvents.push({ blocked, name });
+        },
     });
     const mainTheme = audioInstances[0];
+    const levelFailedSfx = audioInstances[1];
     const levelCompleteSfx = audioInstances[2];
     const finalVictorySfx = audioInstances[3];
+    const respawnSfx = audioInstances[4];
+    const wallPassPool = audioInstances.slice(5, 8);
+    mainTheme.label = "theme";
+    levelFailedSfx.label = "failed";
+    levelCompleteSfx.label = "complete";
+    finalVictorySfx.label = "victory";
+    respawnSfx.label = "respawn";
+    wallPassPool.forEach((audio, index) => {
+        audio.label = `wall-${index}`;
+    });
 
     assert.deepEqual(
         levelCompleteSfx.children.map((source) => [source.src, source.type]),
@@ -1083,14 +1196,24 @@ test("music manager resumes a changed theme without reloading level three", () =
             ["assets/audio/game_fx_level_complete.wav", "audio/wav"],
         ],
     );
-    assert.equal(
-        finalVictorySfx.src,
-        "assets/audio/game_fx_final_victory_active_heroic.mp3",
+    assert.deepEqual(
+        finalVictorySfx.children.map((source) => [source.src, source.type]),
+        [
+            [
+                "assets/audio/game_fx_final_victory_active_heroic.mp3",
+                "audio/mpeg",
+            ],
+        ],
     );
-    assert.equal(typeof manager.playFinalVictorySound, "function");
-    assert.equal(typeof manager.stopFinalVictorySound, "function");
+    assert.equal(audioInstances.length, 8);
 
     manager.unlock();
+    assert.deepEqual(
+        audioInstances.slice(1).map((audio) => audio.playCount),
+        [1, 1, 1, 1, 1, 1, 1],
+    );
+    assert.deepEqual(mediaSourceElements, [mainTheme]);
+
     manager.setMusicLevel(2);
     const level2LoadCount = mainTheme.loadCount;
 
@@ -1117,6 +1240,50 @@ test("music manager resumes a changed theme without reloading level three", () =
 
     manager.startMainTheme();
     assert.equal(mainTheme.playCount, playCountAfterStop + 1);
+
+    eventLog.length = 0;
+    clock += 1000;
+    manager.playLevelCompleteTransition();
+    assert.equal(mainTheme.paused, true);
+    assert.equal(levelCompleteSfx.playCount, 2);
+    assert.ok(
+        eventLog.indexOf("pause:theme") < eventLog.indexOf("play:complete"),
+    );
+
+    manager.startMainTheme();
+    eventLog.length = 0;
+    clock += 1000;
+    manager.playFinalVictoryTransition();
+    assert.equal(mainTheme.paused, true);
+    assert.equal(levelCompleteSfx.paused, true);
+    assert.equal(finalVictorySfx.playCount, 2);
+    assert.ok(
+        eventLog.indexOf("pause:theme") < eventLog.indexOf("play:victory"),
+    );
+
+    clock += 1000;
+    manager.playLevelFailedSound();
+    clock += 1000;
+    manager.playRespawnSound();
+    clock += 1000;
+    manager.playWallPassSound();
+    clock += 1000;
+    manager.playWallPassSound();
+    assert.equal(levelFailedSfx.playCount, 2);
+    assert.equal(respawnSfx.playCount, 2);
+    assert.equal(wallPassPool[0].playCount, 2);
+    assert.equal(wallPassPool[1].playCount, 2);
+    assert.deepEqual(mediaSourceElements, [mainTheme]);
+
+    finalVictorySfx.blockNextPlay = true;
+    clock += 1000;
+    manager.playFinalVictoryTransition();
+    assert.deepEqual(blockedEvents.at(-1), {
+        blocked: true,
+        name: "finalVictory",
+    });
+    manager.retryPendingAudioFromGesture();
+    assert.equal(finalVictorySfx.playCount, 3);
 });
 
 test("segment recorder wraps MediaRecorder lifecycle", () => {
@@ -1968,13 +2135,7 @@ test("echo and talkback default configs expose runtime tuning", () => {
         gainDb: -5,
         q: 0.7,
     });
-    assert.deepEqual(AUDIO_MIX_CONFIG.sfxEq, {
-        enabled: true,
-        type: "highshelf",
-        frequencyHz: 4000,
-        gainDb: -2.5,
-        q: 0.7,
-    });
+    assert.equal("sfxEq" in AUDIO_MIX_CONFIG, false);
     assert.equal(ECHO_RUNTIME_CONFIG.gain, 0.45);
     assert.equal(ECHO_RUNTIME_CONFIG.playbackRateScale, 0.7);
     assert.equal(ECHO_RUNTIME_CONFIG.probabilities.life, 0.85);

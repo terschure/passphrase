@@ -64,6 +64,26 @@
                     </button>
                 </div>
             </div>
+            <div
+                id="audio-resume-screen"
+                class="modal-screen modal-screen--audio-resume"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="audio-resume-title"
+                aria-hidden="true"
+            >
+                <div class="modal-panel modal-panel--audio-resume">
+                    <h2 id="audio-resume-title" class="modal-title">
+                        Audio paused
+                    </h2>
+                    <p class="modal-copy">
+                        Tap to restore game audio.
+                    </p>
+                    <button id="audio-resume-action" type="button">
+                        Enable audio
+                    </button>
+                </div>
+            </div>
             <div class="top-ui" aria-label="Game status">
                 <div id="score-display">SCORE 0</div>
                 <h1
@@ -234,7 +254,7 @@
                 <div class="modal-panel modal-panel--complete">
                     <pre class="level-complete-sparkles" aria-hidden="true">
   * . + . * . + . *
- .  H O L O G R A M .
+ .                  .
   + . * . + . * . +</pre
                     >
                     <div

@@ -9,13 +9,6 @@ export const AUDIO_MIX_CONFIG = {
     gainDb: -5,
     q: 0.7,
   },
-  sfxEq: {
-    enabled: true,
-    type: "highshelf",
-    frequencyHz: 4000,
-    gainDb: -2.5,
-    q: 0.7,
-  },
 };
 
 export function createMusicManager({
@@ -24,6 +17,8 @@ export function createMusicManager({
   documentRef = document,
   AudioCtor = Audio,
   performanceRef = performance,
+  now = Date.now,
+  onPlaybackBlocked = () => {},
 } = {}) {
   const MUSIC_VOLUME = AUDIO_MIX_CONFIG.musicVolume;
   const MUSIC_DUCKED_VOLUME = AUDIO_MIX_CONFIG.musicDuckedVolume;
@@ -41,6 +36,8 @@ export function createMusicManager({
   let musicContext = null;
   let musicSource = null;
   let finalVictoryPlayback = null;
+  let mainThemeGeneration = 0;
+  let pendingEffectName = "";
   // null preserves the existing pre-game/iOS auto-start behavior, true means
   // playback was explicitly requested, and false is an intentional stop that
   // readiness events must not override.
@@ -110,35 +107,28 @@ export function createMusicManager({
   mainTheme.addEventListener?.("loadeddata", resumeThemeWhenReady);
   mainTheme.addEventListener?.("canplay", resumeThemeWhenReady);
 
-  const sfx = {
-    levelFailed: createSfx(`${assetBaseUrl}/game_fx_level_failed.wav`, "levelFailed"),
-    levelComplete: createSfxWithSources(
-      [
-        ["game_fx_level_complete.ogg", "audio/ogg"],
-        ["game_fx_level_complete.mp3", "audio/mpeg"],
-        ["game_fx_level_complete.wav", "audio/wav"],
-      ],
-      "levelComplete",
-    ),
-    finalVictory: createSfx(
-      `${assetBaseUrl}/game_fx_final_victory_active_heroic.mp3`,
-      "finalVictory",
-    ),
-    respawn: createSfx(`${assetBaseUrl}/game_fx_respawn.wav`, "respawn"),
-    wallPass: createSfx(`${assetBaseUrl}/game_fx_wall_pass.wav`, "wallPass"),
+  const effectSources = {
+    levelFailed: [["game_fx_level_failed.wav", "audio/wav"]],
+    levelComplete: [
+      ["game_fx_level_complete.ogg", "audio/ogg"],
+      ["game_fx_level_complete.mp3", "audio/mpeg"],
+      ["game_fx_level_complete.wav", "audio/wav"],
+    ],
+    finalVictory: [
+      ["game_fx_final_victory_active_heroic.mp3", "audio/mpeg"],
+    ],
+    respawn: [["game_fx_respawn.wav", "audio/wav"]],
+    wallPass: [["game_fx_wall_pass.wav", "audio/wav"]],
+  };
+  const effectPoolSizes = {
+    levelFailed: 1,
+    levelComplete: 1,
+    finalVictory: 1,
+    respawn: 1,
+    wallPass: 3,
   };
 
-  function createSfx(src, name) {
-    const audio = new AudioCtor(src);
-    audio.preload = "auto";
-    audio.volume = SFX_VOLUME;
-    audio.addEventListener?.("error", () => {
-      warnAsset(`Sound effect failed to load: ${name} (${src})`);
-    });
-    return audio;
-  }
-
-  function createSfxWithSources(sources, name) {
+  function createEffectPlayer(sources, name, index) {
     const audio = new AudioCtor();
     audio.preload = "auto";
     audio.volume = SFX_VOLUME;
@@ -148,13 +138,30 @@ export function createMusicManager({
       source.src = `${assetBaseUrl}/${filename}`;
       source.type = type;
       source.addEventListener?.("error", () => {
-        warnAsset(`Sound effect failed to load: ${name} (${filename})`);
+        warnAsset(
+          `Sound effect failed to load: ${name}[${index}] (${filename})`,
+        );
       });
       audio.append(source);
     }
 
-    return audio;
+    return {
+      audio,
+      generation: 0,
+      lastStartedAt: 0,
+      primed: false,
+      priming: false,
+    };
   }
+
+  const effectPools = Object.fromEntries(
+    Object.entries(effectSources).map(([name, sources]) => [
+      name,
+      Array.from({ length: effectPoolSizes[name] || 1 }, (_, index) =>
+        createEffectPlayer(sources, name, index),
+      ),
+    ]),
+  );
 
   function warn(message, error = null) {
     if (!warningShown) {
@@ -177,8 +184,10 @@ export function createMusicManager({
   function preloadAll() {
     mainTheme.load();
 
-    for (const audio of Object.values(sfx)) {
-      audio.load();
+    for (const pool of Object.values(effectPools)) {
+      for (const player of pool) {
+        player.audio.load();
+      }
     }
   }
 
@@ -186,10 +195,63 @@ export function createMusicManager({
     unlocked = true;
   }
 
+  function primeEffectPlayer(player) {
+    if (player.primed || player.priming) {
+      return;
+    }
+
+    const audio = player.audio;
+    const generation = ++player.generation;
+    player.priming = true;
+    audio.muted = true;
+    audio.volume = 0;
+
+    let playResult;
+
+    try {
+      // This call must remain synchronous with the user's tap on iOS. Promise
+      // handling may be asynchronous, but invoking play() may not be deferred.
+      playResult = audio.play();
+    } catch (error) {
+      player.priming = false;
+      audio.muted = false;
+      audio.volume = SFX_VOLUME;
+      return;
+    }
+
+    Promise.resolve(playResult).then(
+      () => {
+        player.primed = true;
+        player.priming = false;
+
+        if (player.generation === generation) {
+          audio.pause();
+          audio.currentTime = 0;
+          audio.muted = false;
+          audio.volume = SFX_VOLUME;
+        }
+      },
+      () => {
+        player.priming = false;
+        audio.muted = false;
+        audio.volume = SFX_VOLUME;
+      },
+    );
+  }
+
+  function primeEffectPlayers() {
+    for (const pool of Object.values(effectPools)) {
+      for (const player of pool) {
+        primeEffectPlayer(player);
+      }
+    }
+  }
+
   // Prime a shared context inside the user gesture for generated talkback on
   // iOS. Music itself stays on the HTMLAudioElement and is not processed.
   function unlock() {
     unlockAudio();
+    primeEffectPlayers();
 
     if (ensurePlaybackContext() && musicContext) {
       ensureMusicEqGraph();
@@ -253,35 +315,10 @@ export function createMusicManager({
     }
   }
 
-  function connectSfxEq(audio) {
-    const settings = AUDIO_MIX_CONFIG.sfxEq;
-
-    if (!settings.enabled || !ensurePlaybackContext()) {
-      return;
-    }
-
-    let source = null;
-
-    try {
-      const eqNode = musicContext.createBiquadFilter();
-      configureEqNode(eqNode, settings);
-      source = musicContext.createMediaElementSource(audio);
-      source.connect(eqNode).connect(musicContext.destination);
-
-      const disconnect = () => {
-        source.disconnect();
-        eqNode.disconnect();
-      };
-      audio.addEventListener?.("ended", disconnect, { once: true });
-    } catch (error) {
-      source?.connect?.(musicContext.destination);
-      warn("Sound effect EQ could not initialize; playing without EQ.", error);
-    }
-  }
-
   async function startMainTheme() {
     musicPlaybackRequested = true;
     unlockAudio();
+    const generation = mainThemeGeneration;
     setThemeSources(resolveThemeKey(currentMusicLevel || 1));
 
     const contextReady = ensurePlaybackContext();
@@ -309,6 +346,16 @@ export function createMusicManager({
         }
       };
       playPromise.then(() => {
+        // A stale promise belongs to the same media element as any newer
+        // request. Only pause it when playback is still intentionally stopped;
+        // otherwise it may be the newly requested level theme now playing.
+        if (generation !== mainThemeGeneration) {
+          if (!musicPlaybackRequested) {
+            mainTheme.pause();
+          }
+          return;
+        }
+
         if (!musicPlaybackRequested) {
           mainTheme.pause();
         }
@@ -323,16 +370,23 @@ export function createMusicManager({
 
     try {
       await Promise.all([mainThemePlayPromise, resumePromise].filter(Boolean));
+      if (pendingEffectName === "mainTheme") {
+        clearPendingEffect();
+      }
+      return true;
     } catch (error) {
+      markPlaybackBlocked("mainTheme", error);
       warn(
         "Main theme could not play. It may need a user click or a supported audio codec.",
         error,
       );
+      return false;
     }
   }
 
   function stopMainTheme() {
     musicPlaybackRequested = false;
+    mainThemeGeneration += 1;
     mainThemePlayPromise = null;
 
     if (restoreTimer) {
@@ -347,6 +401,11 @@ export function createMusicManager({
 
     mainTheme.pause();
     mainTheme.currentTime = 0;
+    mainTheme.volume = MUSIC_VOLUME;
+
+    if (pendingEffectName === "mainTheme") {
+      clearPendingEffect();
+    }
   }
 
   function setMusicLevel(level) {
@@ -355,6 +414,7 @@ export function createMusicManager({
     const themeChanged = setThemeSources(resolveThemeKey(nextLevel));
 
     if (themeChanged && unlocked && musicPlaybackRequested !== false) {
+      mainThemeGeneration += 1;
       // Do not let a pending play() for the previous source suppress the new
       // source's attempt. Its completion cannot clear a newer promise.
       mainThemePlayPromise = null;
@@ -401,69 +461,185 @@ export function createMusicManager({
     restoreTimer = setTimeout(restoreMusic, Math.max(DUCK_HOLD_MS, durationMs));
   }
 
-  function playSfx(name) {
+  function selectEffectPlayer(name) {
+    const pool = effectPools[name] || [];
+
+    return (
+      pool.find(
+        (player) =>
+          player.audio.paused || player.audio.ended || !player.lastStartedAt,
+      ) ||
+      pool.slice().sort((a, b) => a.lastStartedAt - b.lastStartedAt)[0] ||
+      null
+    );
+  }
+
+  function stopEffectPlayer(player) {
+    if (!player) {
+      return;
+    }
+
+    player.generation += 1;
+    player.audio.pause?.();
+    player.audio.currentTime = 0;
+    player.audio.muted = false;
+    player.audio.volume = SFX_VOLUME;
+    player.lastStartedAt = 0;
+  }
+
+  function stopEffect(name) {
+    for (const player of effectPools[name] || []) {
+      stopEffectPlayer(player);
+    }
+
+    if (name === "finalVictory") {
+      finalVictoryPlayback = null;
+    }
+  }
+
+  function stopAllEffects() {
+    for (const name of Object.keys(effectPools)) {
+      stopEffect(name);
+    }
+  }
+
+  function markPlaybackBlocked(name, error) {
+    if (error?.name !== "NotAllowedError") {
+      return;
+    }
+
+    pendingEffectName = name;
+    onPlaybackBlocked(true, name);
+  }
+
+  function clearPendingEffect() {
+    if (!pendingEffectName) {
+      return;
+    }
+
+    pendingEffectName = "";
+    onPlaybackBlocked(false, "");
+  }
+
+  function playEffect(name, { ignoreCooldown = false } = {}) {
     if (!unlocked) {
-      return;
+      pendingEffectName = name;
+      onPlaybackBlocked(true, name);
+      return Promise.resolve(false);
     }
 
-    const audio = sfx[name];
+    const player = selectEffectPlayer(name);
 
-    if (!audio) {
-      return;
+    if (!player) {
+      return Promise.resolve(false);
     }
 
-    const now = Date.now();
+    const timestamp = now();
     const previous = lastSfxAt.get(name) || 0;
 
-    if (now - previous < SFX_COOLDOWN_MS) {
-      return;
+    if (!ignoreCooldown && timestamp - previous < SFX_COOLDOWN_MS) {
+      return Promise.resolve(false);
     }
 
-    lastSfxAt.set(name, now);
+    lastSfxAt.set(name, timestamp);
+    const audio = player.audio;
+    const generation = ++player.generation;
+    player.lastStartedAt = timestamp;
+    player.primed = true;
+    player.priming = false;
+    audio.pause?.();
+    audio.currentTime = 0;
+    audio.muted = false;
+    audio.volume = SFX_VOLUME;
+
+    if (name === "finalVictory") {
+      finalVictoryPlayback = player;
+    }
+
+    let playResult;
 
     try {
-      const instance = audio.cloneNode(true);
-      instance.volume = SFX_VOLUME;
-      if (name === "finalVictory") {
-        stopFinalVictorySound();
-        finalVictoryPlayback = instance;
-        instance.addEventListener?.(
-          "ended",
-          () => {
-            if (finalVictoryPlayback === instance) {
-              finalVictoryPlayback = null;
-            }
-          },
-          { once: true },
-        );
+      playResult = audio.play();
+    } catch (error) {
+      markPlaybackBlocked(name, error);
+      if (error?.name !== "NotAllowedError") {
+        warnAsset("Sound effect " + name + " could not start.");
+        console.warn("[audio] Sound effect start error:", error);
       }
-      connectSfxEq(instance);
+      return Promise.resolve(false);
+    }
+
+    if (name !== "levelComplete" && name !== "finalVictory") {
       const durationMs = Number.isFinite(audio.duration)
         ? audio.duration * 1000
         : DUCK_HOLD_MS;
       duckMusic(durationMs);
-      instance.play().catch((error) => {
-        warnAsset("Sound effect " + name + " could not play.");
-        if (error) {
+    }
+
+    return Promise.resolve(playResult).then(
+      () => {
+        if (player.generation !== generation) {
+          return false;
+        }
+
+        clearPendingEffect();
+        return true;
+      },
+      (error) => {
+        markPlaybackBlocked(name, error);
+        if (error?.name !== "NotAllowedError") {
+          warnAsset("Sound effect " + name + " could not play.");
           console.warn("[audio] Sound effect playback error:", error);
         }
-      });
-    } catch (error) {
-      warnAsset("Sound effect " + name + " could not start.");
-      if (error) {
-        console.warn("[audio] Sound effect start error:", error);
-      }
-    }
+        return false;
+      },
+    );
   }
 
   function stopFinalVictorySound() {
-    if (!finalVictoryPlayback) {
-      return;
+    stopEffect("finalVictory");
+  }
+
+  function stopTransitionAudio() {
+    stopEffect("levelComplete");
+    stopEffect("finalVictory");
+
+    if (
+      pendingEffectName === "levelComplete" ||
+      pendingEffectName === "finalVictory"
+    ) {
+      clearPendingEffect();
+    }
+  }
+
+  function playLevelCompleteTransition() {
+    stopMainTheme();
+    stopAllEffects();
+    clearPendingEffect();
+    return playEffect("levelComplete", { ignoreCooldown: true });
+  }
+
+  function playFinalVictoryTransition() {
+    stopMainTheme();
+    stopAllEffects();
+    clearPendingEffect();
+    return playEffect("finalVictory", { ignoreCooldown: true });
+  }
+
+  function retryPendingAudioFromGesture() {
+    unlock();
+    const name = pendingEffectName;
+
+    if (!name) {
+      clearPendingEffect();
+      return Promise.resolve(false);
     }
 
-    finalVictoryPlayback.pause?.();
-    finalVictoryPlayback.currentTime = 0;
-    finalVictoryPlayback = null;
+    if (name === "mainTheme") {
+      return startMainTheme();
+    }
+
+    return playEffect(name, { ignoreCooldown: true });
   }
 
   return {
@@ -475,13 +651,17 @@ export function createMusicManager({
     restoreMusic,
     fadeMusicVolume,
     setMusicLevel,
+    playLevelCompleteTransition,
+    playFinalVictoryTransition,
+    stopTransitionAudio,
+    retryPendingAudioFromGesture,
     ensureMusicPlaying: startMainTheme,
     getAudioContext: () => musicContext,
-    playLevelFailedSound: () => playSfx("levelFailed"),
-    playLevelCompleteSound: () => playSfx("levelComplete"),
-    playFinalVictorySound: () => playSfx("finalVictory"),
+    playLevelFailedSound: () => playEffect("levelFailed"),
+    playLevelCompleteSound: playLevelCompleteTransition,
+    playFinalVictorySound: playFinalVictoryTransition,
     stopFinalVictorySound,
-    playRespawnSound: () => playSfx("respawn"),
-    playWallPassSound: () => playSfx("wallPass"),
+    playRespawnSound: () => playEffect("respawn"),
+    playWallPassSound: () => playEffect("wallPass"),
   };
 }

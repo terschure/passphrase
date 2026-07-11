@@ -130,6 +130,8 @@ export function initPassphraseApp() {
                 onboardingSpectrum,
                 micInitScreen,
                 micInitAction,
+                audioResumeScreen,
+                audioResumeAction,
                 stopButton,
                 clearButton,
                 openSettingsButton,
@@ -261,16 +263,28 @@ export function initPassphraseApp() {
 
             const AudioManager = createMusicManager({
                 assetBaseUrl: "assets/audio",
+                onPlaybackBlocked(blocked) {
+                    audioResumeScreen?.classList.toggle("visible", blocked);
+                    audioResumeScreen?.setAttribute(
+                        "aria-hidden",
+                        blocked ? "false" : "true",
+                    );
+
+                    if (blocked) {
+                        audioResumeAction?.focus();
+                    }
+                },
             });
 
             const startMainTheme = AudioManager.startMainTheme;
-            const stopMainTheme = AudioManager.stopMainTheme;
             const playLevelFailedSound = AudioManager.playLevelFailedSound;
             const playRespawnSound = AudioManager.playRespawnSound;
             const playWallPassSound = AudioManager.playWallPassSound;
-            const playLevelCompleteSound = AudioManager.playLevelCompleteSound;
-            const playFinalVictorySound = AudioManager.playFinalVictorySound;
-            const stopFinalVictorySound = AudioManager.stopFinalVictorySound;
+            const playLevelCompleteTransition =
+                AudioManager.playLevelCompleteTransition;
+            const playFinalVictoryTransition =
+                AudioManager.playFinalVictoryTransition;
+            const stopTransitionAudio = AudioManager.stopTransitionAudio;
             const levelProgressionEffects = createLevelProgressionEffects({
                 getCurrentLevel: () => currentLevel,
                 syncLevel2EnemyCount() {
@@ -524,7 +538,7 @@ export function initPassphraseApp() {
 
             function hideFinalVictoryScreen() {
                 clearFinalVictoryTimer();
-                stopFinalVictorySound?.();
+                stopTransitionAudio?.();
                 finalVictoryScreen?.classList.remove("visible");
                 finalVictoryScreen?.setAttribute("aria-hidden", "true");
                 finalVictoryLineOne?.classList.remove("visible");
@@ -920,7 +934,7 @@ export function initPassphraseApp() {
                 levelCompleteScreen?.classList.add("visible");
                 levelCompleteScreen?.setAttribute("aria-hidden", "false");
                 if (!levelCompleteSoundPlayed) {
-                    playLevelCompleteSound?.();
+                    playLevelCompleteTransition?.();
                     levelCompleteSoundPlayed = true;
                 }
                 renderSequenceStatus();
@@ -933,6 +947,7 @@ export function initPassphraseApp() {
                         const level = pendingLevelAfterComplete;
                         pendingLevelAfterComplete = null;
                         setActiveLevel(level.id, { showIntro: true });
+                        startMainThemeFromGameStart();
                         return;
                     }
 
@@ -974,8 +989,7 @@ export function initPassphraseApp() {
                 finalVictoryPlayAgain?.classList.remove("visible");
                 finalVictoryScreen?.classList.add("visible");
                 finalVictoryScreen?.setAttribute("aria-hidden", "false");
-                stopMainTheme();
-                playFinalVictorySound?.();
+                playFinalVictoryTransition?.();
                 levelCompleteSoundPlayed = true;
                 renderSequenceStatus();
 
@@ -2123,6 +2137,7 @@ export function initPassphraseApp() {
                     showIntro: true,
                     useMockMemories,
                 });
+                startMainThemeFromGameStart();
             }
 
             function syncDevLevelButtons() {
@@ -2390,4 +2405,9 @@ export function initPassphraseApp() {
             // later start even from a spoken "start". This gate shows once per
             // page load — game-over / restart never bring it back.
             micInitAction.addEventListener("click", initializeMicAndAudio);
+            audioResumeAction?.addEventListener("click", () => {
+                // Keep the retry call directly inside the click handler so
+                // iOS Safari sees it as user-initiated media playback.
+                AudioManager.retryPendingAudioFromGesture();
+            });
 }

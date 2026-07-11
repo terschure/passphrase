@@ -527,6 +527,25 @@
                 background: rgba(3, 3, 5, 0.9);
             }
 
+            .modal-screen--audio-resume {
+                z-index: 30;
+                background: rgba(3, 3, 5, 0.92);
+            }
+
+            .modal-panel--audio-resume {
+                width: min(480px, 100%);
+                border-color: transparent;
+                background:
+                    linear-gradient(rgba(10, 10, 12, 0.98), rgba(10, 10, 12, 0.98))
+                        padding-box,
+                    var(--holo-gradient) border-box;
+                text-align: center;
+            }
+
+            #audio-resume-action {
+                margin-top: 18px;
+            }
+
             .modal-panel--hero-intro,
             .modal-panel--victory {
                 width: min(820px, 100%);

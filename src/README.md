@@ -38,7 +38,8 @@ shared audio-buffer logic.
 - `ui/levelIntro.js` drives the timed level cards; the app coordinator owns
   the opening hero narrative and final-victory/replay lifecycle.
 - `audio/bufferUtils.js` contains shared audio-buffer utilities.
-- `audio/musicManager.js` owns music playback, lightweight EQ, SFX, and ducking.
+- `audio/musicManager.js` owns level music/EQ, persistent direct-output SFX
+  pools, iOS audio priming, ducking, and completion/victory transitions.
 - `audio/segmentRecorder.js` owns reusable MediaRecorder segment capture
   setup, stop, and discard behavior.
 - `speech/speechService.js` wraps the Web Speech API.

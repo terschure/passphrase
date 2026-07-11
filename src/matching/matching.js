@@ -6,6 +6,79 @@ export function isSentenceTarget(target) {
     return String(target).trim().split(/\s+/).length > 1;
 }
 
+const ENGLISH_SPELLING_VARIANT_PAIRS = [
+    ["favorite", "favourite"],
+    ["favorites", "favourites"],
+    ["favor", "favour"],
+    ["favored", "favoured"],
+    ["favoring", "favouring"],
+    ["favorable", "favourable"],
+    ["color", "colour"],
+    ["colors", "colours"],
+    ["colored", "coloured"],
+    ["coloring", "colouring"],
+    ["honor", "honour"],
+    ["honored", "honoured"],
+    ["honoring", "honouring"],
+    ["behavior", "behaviour"],
+    ["neighbor", "neighbour"],
+    ["labor", "labour"],
+    ["center", "centre"],
+    ["centers", "centres"],
+    ["centered", "centred"],
+    ["centering", "centring"],
+    ["theater", "theatre"],
+    ["meter", "metre"],
+    ["liter", "litre"],
+    ["fiber", "fibre"],
+    ["organize", "organise"],
+    ["organized", "organised"],
+    ["organizing", "organising"],
+    ["recognize", "recognise"],
+    ["recognized", "recognised"],
+    ["recognizing", "recognising"],
+    ["realize", "realise"],
+    ["realized", "realised"],
+    ["realizing", "realising"],
+    ["analyze", "analyse"],
+    ["analyzed", "analysed"],
+    ["analyzing", "analysing"],
+    ["defense", "defence"],
+    ["offense", "offence"],
+    ["license", "licence"],
+    ["traveled", "travelled"],
+    ["traveling", "travelling"],
+    ["traveler", "traveller"],
+    ["canceled", "cancelled"],
+    ["canceling", "cancelling"],
+    ["labeled", "labelled"],
+    ["labeling", "labelling"],
+    ["catalog", "catalogue"],
+    ["catalogs", "catalogues"],
+    ["cataloged", "catalogued"],
+    ["gray", "grey"],
+    ["jewelry", "jewellery"],
+    ["mold", "mould"],
+    ["plow", "plough"],
+    ["program", "programme"],
+    ["tire", "tyre"],
+    ["aluminum", "aluminium"],
+    ["pediatric", "paediatric"],
+    ["archeology", "archaeology"],
+];
+
+const ENGLISH_SPELLING_CANONICAL = new Map(
+    ENGLISH_SPELLING_VARIANT_PAIRS.flatMap(([american, british]) => [
+        [american, american],
+        [british, american],
+    ]),
+);
+
+export function normalizeEnglishSpelling(word) {
+    const value = String(word || "").toLowerCase();
+    return ENGLISH_SPELLING_CANONICAL.get(value) || value;
+}
+
 export function tokenizeForFuzzy(text) {
     const tokens = [];
     const matcher = /[a-z0-9]+(?:'[a-z0-9]+)?/gi;
@@ -20,6 +93,40 @@ export function tokenizeForFuzzy(text) {
     }
 
     return tokens;
+}
+
+export function findEnglishSpellingVariantMatch(text, target, fromIndex = 0) {
+    const targetTokens = tokenizeForFuzzy(target);
+
+    if (!targetTokens.length) {
+        return null;
+    }
+
+    const sourceTokens = tokenizeForFuzzy(text).filter(
+        (token) => token.end > fromIndex,
+    );
+
+    for (
+        let start = 0;
+        start + targetTokens.length <= sourceTokens.length;
+        start += 1
+    ) {
+        const window = sourceTokens.slice(start, start + targetTokens.length);
+        const equivalent = targetTokens.every(
+            (token, index) =>
+                normalizeEnglishSpelling(token.value) ===
+                normalizeEnglishSpelling(window[index].value),
+        );
+
+        if (equivalent) {
+            return {
+                start: window[0].start,
+                end: window[window.length - 1].end,
+            };
+        }
+    }
+
+    return null;
 }
 
 function joinTokenValues(tokens) {
@@ -382,6 +489,16 @@ export function findTargetEnd(
 
     if (match) {
         return match.index + match[0].length;
+    }
+
+    const spellingVariantMatch = findEnglishSpellingVariantMatch(
+        source,
+        rawTarget,
+        fromIndex,
+    );
+
+    if (spellingVariantMatch) {
+        return spellingVariantMatch.end;
     }
 
     const joinedMatch = findJoinedTargetMatch(source, rawTarget, fromIndex);

@@ -30,6 +30,8 @@ export function createDomRefs(documentRef = document) {
         onboardingSpectrum: documentRef.querySelector("#onboarding-spectrum"),
         micInitScreen: documentRef.querySelector("#mic-init-screen"),
         micInitAction: documentRef.querySelector("#mic-init-action"),
+        audioResumeScreen: documentRef.querySelector("#audio-resume-screen"),
+        audioResumeAction: documentRef.querySelector("#audio-resume-action"),
         stopButton: documentRef.querySelector("#stop"),
         clearButton: documentRef.querySelector("#clear"),
         openSettingsButton: documentRef.querySelector("#open-settings"),
