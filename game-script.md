@@ -62,7 +62,7 @@ Send €10,000 from Grandma’s account
 
 ## Round 1
 Squirrel
-~Taking a break?
+~Is there anything else I can assist you with?
 Rural
 ~Can you recognize who is speaking right now?
 Thorough
