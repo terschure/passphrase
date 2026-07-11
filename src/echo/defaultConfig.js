@@ -1,5 +1,5 @@
 export const ECHO_RUNTIME_CONFIG = {
-  gain: 0.55,
+  gain: 0.45,
   prerollMs: 600,
   cooldownMs: 4000,
   progressBoost: 1.5,
@@ -12,7 +12,7 @@ export const ECHO_RUNTIME_CONFIG = {
   trimRms: 0.02,
   trimPadMs: 60,
   waveBuckets: 40,
-  probabilities: { beat: 0.45, wall: 0.5, life: 1, random: 0.35 },
+  probabilities: { beat: 0.4, wall: 0.45, life: 0.85, random: 0.3 },
 };
 
 export function getPreferredEchoMimeType(MediaRecorderClass) {

@@ -15,7 +15,13 @@ export function echoAllows(mode, kind) {
 }
 
 export function pickEchoRate(random = Math.random) {
-    return random() < 0.5
+    const rateMode = random();
+
+    if (rateMode < 0.5) {
+        return 1;
+    }
+
+    return rateMode < 0.75
         ? 0.7 + random() * 0.15
         : 1.15 + random() * 0.25;
 }

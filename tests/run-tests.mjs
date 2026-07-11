@@ -1694,8 +1694,8 @@ test("echo fx bus creates a stereo reverb impulse", () => {
 });
 
 test("echo and talkback default configs expose runtime tuning", () => {
-    assert.equal(ECHO_RUNTIME_CONFIG.gain, 0.55);
-    assert.equal(ECHO_RUNTIME_CONFIG.probabilities.life, 1);
+    assert.equal(ECHO_RUNTIME_CONFIG.gain, 0.45);
+    assert.equal(ECHO_RUNTIME_CONFIG.probabilities.life, 0.85);
     assert.equal(TALKBACK_RUNTIME_CONFIG.modelId, "qwen3-tts-0.6b-base");
     assert.equal(TALKBACK_RUNTIME_CONFIG.probabilities.random, 0.12);
     assert.equal(
@@ -1837,7 +1837,9 @@ test("echo policy handles modes, rates, snippet filtering, and trigger gating", 
     assert.equal(echoAllows("both", "random"), true);
     assert.equal(echoAllows("random", "wall"), false);
     assert.equal(echoAllows("key", "life"), true);
-    assert.equal(pickEchoRate(() => 0), 0.7);
+    assert.equal(pickEchoRate(() => 0), 1);
+    assert.ok(Math.abs(pickEchoRate(() => 0.5) - 0.775) < 0.0001);
+    assert.ok(Math.abs(pickEchoRate(() => 0.75) - 1.3375) < 0.0001);
 
     const snippet = selectEchoSnippet({
         snippets: [
