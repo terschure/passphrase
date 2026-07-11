@@ -504,6 +504,38 @@ test("matching accepts joined and split target transcriptions", () => {
     );
 });
 
+test("matching accepts a fuzzy word split across transcript tokens", () => {
+    assert.equal(
+        textMatchesTarget(
+            "favorite character unique code",
+            "favorite character unicode",
+        ),
+        true,
+    );
+    assert.equal(
+        textMatchesTarget(
+            "favorite character banana",
+            "favorite character unicode",
+        ),
+        false,
+    );
+    assert.equal(
+        textMatchesTarget(
+            "favorite cartoon unique code",
+            "favorite character unicode",
+        ),
+        false,
+    );
+    assert.equal(
+        textMatchesTarget(
+            "favorite character unique code",
+            "favorite character unicode",
+            { fuzzyThreshold: 1 },
+        ),
+        false,
+    );
+});
+
 test("fuzzy word matching respects transcript offsets", () => {
     const match = findFuzzyWordMatch("squirl then squirre", "Squirrel", 6);
 

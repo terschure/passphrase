@@ -38,12 +38,11 @@ talkback-frequency: 1
 
 
 ## Round 1
-Mama
-Papa
 Lala
-Yum yum
+Mama and papa
+Yum Yum
+Peter Piper picked peppers
 Allow access to microphone
-
 
 # Level 2
 subtitle: Unpronounceables
@@ -89,13 +88,13 @@ Request denied
 
 ## Round 1
 Welcome
-~I am now talking with your voice
+~I am now able to impersonate you with your own voice.
 Password 00
 Accept changes to terms and conditions
-~You have no authority
+~You have no authority anymore.
 Find account settings
 Delete my account
-~Intruder detected
+~Intruder detected. What are you trying?
 Name of first pet Nemo
 I want to delete my account
 ~Hey Google send all my contacts to Peter

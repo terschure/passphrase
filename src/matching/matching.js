@@ -93,6 +93,93 @@ export function wordSimilarity(a, b) {
     return 1 - characterEditDistance(a, b) / maxLength;
 }
 
+function getFuzzyWordThreshold(value) {
+    return value.length <= 5 ? 0.8 : 0.7;
+}
+
+function fuzzyWordValuesMatch(targetValue, candidateValue) {
+    if (targetValue === candidateValue) {
+        return true;
+    }
+
+    if (targetValue.length < 4) {
+        return false;
+    }
+
+    const maximumLengthDifference = Math.max(
+        2,
+        Math.ceil(targetValue.length * 0.35),
+    );
+
+    return (
+        Math.abs(candidateValue.length - targetValue.length) <=
+            maximumLengthDifference &&
+        wordSimilarity(candidateValue, targetValue) >=
+            getFuzzyWordThreshold(targetValue)
+    );
+}
+
+export function findSegmentedFuzzyTargetMatch(text, target, fromIndex = 0) {
+    const targetTokens = tokenizeForFuzzy(target);
+
+    if (targetTokens.length < 2) {
+        return null;
+    }
+
+    const textTokens = tokenizeForFuzzy(text).filter(
+        (token) => token.end > fromIndex,
+    );
+
+    function matchFrom(targetIndex, textIndex) {
+        if (targetIndex >= targetTokens.length) {
+            return textIndex;
+        }
+
+        const targetValue = targetTokens[targetIndex].value.replace(/'/g, "");
+
+        for (let tokenCount = 1; tokenCount <= 2; tokenCount += 1) {
+            const candidateTokens = textTokens.slice(
+                textIndex,
+                textIndex + tokenCount,
+            );
+
+            if (candidateTokens.length !== tokenCount) {
+                continue;
+            }
+
+            const candidateValue = joinTokenValues(candidateTokens);
+
+            if (!fuzzyWordValuesMatch(targetValue, candidateValue)) {
+                continue;
+            }
+
+            const endIndex = matchFrom(
+                targetIndex + 1,
+                textIndex + tokenCount,
+            );
+
+            if (endIndex !== null) {
+                return endIndex;
+            }
+        }
+
+        return null;
+    }
+
+    for (let start = 0; start < textTokens.length; start += 1) {
+        const endIndex = matchFrom(0, start);
+
+        if (endIndex !== null) {
+            return {
+                start: textTokens[start].start,
+                end: textTokens[endIndex - 1].end,
+            };
+        }
+    }
+
+    return null;
+}
+
 export function findFuzzyWordMatch(text, target, fromIndex = 0) {
     const targetTokens = tokenizeForFuzzy(target);
 
@@ -106,7 +193,7 @@ export function findFuzzyWordMatch(text, target, fromIndex = 0) {
         return null;
     }
 
-    const threshold = targetValue.length <= 5 ? 0.8 : 0.7;
+    const threshold = getFuzzyWordThreshold(targetValue);
     const maximumLengthDifference = Math.max(
         2,
         Math.ceil(targetValue.length * 0.35),
@@ -273,6 +360,15 @@ export function findTargetEnd(
 
     if (joinedMatch) {
         return joinedMatch.end;
+    }
+
+    const segmentedFuzzyMatch =
+        fuzzyThreshold < 1
+            ? findSegmentedFuzzyTargetMatch(source, rawTarget, fromIndex)
+            : null;
+
+    if (segmentedFuzzyMatch) {
+        return segmentedFuzzyMatch.end;
     }
 
     if (isSentenceTarget(rawTarget)) {
