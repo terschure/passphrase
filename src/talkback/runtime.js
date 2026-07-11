@@ -13,6 +13,7 @@ import {
     uploadTalkbackReference,
 } from "./client.js";
 import {
+    analyzeTalkbackSegmentQuality,
     fetchWithTimeout,
     selectTalkbackReference,
     talkbackUrl,
@@ -60,6 +61,7 @@ export function createTalkbackRuntime({
     const generationCache = createTalkbackGenerationCache(
         settings.maxGeneratedCacheEntries,
     );
+    const prefetchPromises = new Map();
     const HEALTH_BASE_MS = 8000;
     const HEALTH_MAX_MS = 60000;
     let recorder = null;
@@ -76,6 +78,7 @@ export function createTalkbackRuntime({
     let activePrompt = "";
     let lastRandomQueuedAt = 0;
     let sessionId = 0;
+    let segmentSequence = 0;
 
     function render() {
         const selectedReference = getSelectedReference();
@@ -169,6 +172,7 @@ export function createTalkbackRuntime({
 
     function stopCapture() {
         sessionId += 1;
+        prefetchPromises.clear();
 
         if (recorder) {
             discardRecorder(recorder, "_talkbackDiscard");
@@ -273,20 +277,37 @@ export function createTalkbackRuntime({
             return;
         }
 
+        const transcript = label.trim();
+        const quality = analyzeTalkbackSegmentQuality({
+            buffer,
+            transcript,
+            trimRms: settings.trimRms,
+            frameMs: settings.qualityFrameMs,
+            weights: settings.qualityWeights,
+        });
+
+        const createdAt = now();
         segments.push({
             blob,
             buffer,
-            transcript: label.trim(),
+            transcript,
             duration: buffer.duration,
-            createdAt: now(),
+            createdAt,
+            signatureKey: `${createdAt}-${(segmentSequence += 1)}`,
+            wordCount: quality.wordCount,
+            quality,
         });
 
         while (segments.length > settings.maxSegments) {
             segments.shift();
         }
 
-        reference = null;
-        referenceSignature = "";
+        const selected = getSelectedReference();
+
+        if (!selected || referenceSignature !== selected.signature) {
+            reference = null;
+            referenceSignature = "";
+        }
         render();
         maybeTrigger("random");
     }
@@ -296,6 +317,10 @@ export function createTalkbackRuntime({
             segments,
             minRefSeconds: settings.minRefSeconds,
             targetRefSeconds: settings.targetRefSeconds,
+            minVoiceActiveRatio: settings.minVoiceActiveRatio,
+            maxClippedRatio: settings.maxClippedRatio,
+            usableQualityScore: settings.usableQualityScore,
+            highQualityScore: settings.highQualityScore,
             encodeWavFromBuffers,
         });
     }
@@ -390,6 +415,71 @@ export function createTalkbackRuntime({
         queuePrompt(prompt);
     }
 
+    function generationKey(endpoint, prompt) {
+        return `${endpoint}\n${settings.modelId}\n${prompt}`;
+    }
+
+    // Prepare a scripted cue without adding it to the playback queue. When
+    // the cue becomes due, generate() waits for any in-flight prefetch and
+    // then plays the cached result immediately.
+    function prefetchSpecific(prompt) {
+        if (!prompt || !getEnabled() || !ready) {
+            return Promise.resolve(false);
+        }
+
+        const endpoint = getEndpoint();
+        const key = generationKey(endpoint, prompt);
+
+        if (generationCache.get(endpoint, settings.modelId, prompt)) {
+            return Promise.resolve(true);
+        }
+
+        if (prefetchPromises.has(key)) {
+            return prefetchPromises.get(key);
+        }
+
+        const activeSession = sessionId;
+        const promise = (async () => {
+            const ref = await ensureReference();
+
+            if (!ref || activeSession !== sessionId) {
+                return false;
+            }
+
+            const record = await generateTalkbackAudioRecord({
+                generateUrl: talkbackUrl(endpoint, "/api/generate"),
+                fetchWithTimeout,
+                timeoutMs: settings.generateTimeoutMs,
+                modelId: settings.modelId,
+                prompt,
+                refId: ref.ref_id,
+            });
+
+            if (activeSession !== sessionId) {
+                return false;
+            }
+
+            generationCache.set(
+                endpoint,
+                settings.modelId,
+                prompt,
+                record.audio_url,
+            );
+            return true;
+        })()
+            .catch(() => false)
+            .finally(() => {
+                if (prefetchPromises.get(key) === promise) {
+                    prefetchPromises.delete(key);
+                }
+                render();
+            });
+
+        prefetchPromises.set(key, promise);
+        render();
+        return promise;
+    }
+
     function queuePrompt(prompt) {
         if (
             !prompt ||
@@ -435,9 +525,10 @@ export function createTalkbackRuntime({
     async function generate(prompt) {
         const activeSession = sessionId;
         const endpoint = getEndpoint();
+        const key = generationKey(endpoint, prompt);
 
         try {
-            const cachedAudioUrl = generationCache.get(
+            let cachedAudioUrl = generationCache.get(
                 endpoint,
                 settings.modelId,
                 prompt,
@@ -447,6 +538,23 @@ export function createTalkbackRuntime({
                 setTalkbackStatus(lastStatus, "cached", "ok");
                 await play(cachedAudioUrl, prompt);
                 return;
+            }
+
+            const prefetchPromise = prefetchPromises.get(key);
+
+            if (prefetchPromise) {
+                await prefetchPromise;
+                cachedAudioUrl = generationCache.get(
+                    endpoint,
+                    settings.modelId,
+                    prompt,
+                );
+
+                if (cachedAudioUrl) {
+                    setTalkbackStatus(lastStatus, "cached", "ok");
+                    await play(cachedAudioUrl, prompt);
+                    return;
+                }
             }
 
             const ref = await ensureReference();
@@ -525,6 +633,7 @@ export function createTalkbackRuntime({
 
     function resetEndpoint() {
         sessionId += 1;
+        prefetchPromises.clear();
         ready = false;
         reference = null;
         referenceSignature = "";
@@ -541,6 +650,7 @@ export function createTalkbackRuntime({
 
     function clear() {
         sessionId += 1;
+        prefetchPromises.clear();
         segments.length = 0;
         queue.length = 0;
         reference = null;
@@ -565,6 +675,7 @@ export function createTalkbackRuntime({
         cutSegment,
         maybeTrigger,
         triggerSpecific,
+        prefetchSpecific,
         resetEndpoint,
         markEndpointChecking,
         clear,

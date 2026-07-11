@@ -242,6 +242,7 @@ export function initPassphraseApp() {
             let lastGameOverFireFrame = -1;
             let lastKeygenHitAt = 0;
             const firedTalkbackCues = new Set();
+            const prefetchedTalkbackCues = new Set();
             const keygenCharacter = createKeygenCharacter();
             const SUCCESS_COMMENTS = [
                 "ok!",
@@ -757,6 +758,7 @@ export function initPassphraseApp() {
                 level3WarningShown = false;
                 caughtWords.clear();
                 firedTalkbackCues.clear();
+                prefetchedTalkbackCues.clear();
                 vocalizationDetector.reset();
                 lastKeygenHitAt = activationState.lastKeygenHitAt;
                 keygenCharacter.reset();
@@ -1316,6 +1318,7 @@ export function initPassphraseApp() {
                 gateOpenedAt = 0;
                 refillAnimationUntil = 0;
                 firedTalkbackCues.clear();
+                prefetchedTalkbackCues.clear();
                 vocalizationDetector.reset();
                 levelProgressionEffects.reset(currentLevel);
                 level3WarningShown = currentLevel !== 3;
@@ -1904,6 +1907,13 @@ export function initPassphraseApp() {
                     ) {
                         firedTalkbackCues.add(i);
                         talkbackRuntime.triggerSpecific(cues[i].text);
+                    } else if (
+                        !firedTalkbackCues.has(i) &&
+                        !prefetchedTalkbackCues.has(i) &&
+                        cues[i].afterIndex === currentWordIndex
+                    ) {
+                        prefetchedTalkbackCues.add(i);
+                        talkbackRuntime.prefetchSpecific(cues[i].text);
                     }
                 }
             }
@@ -2231,6 +2241,7 @@ export function initPassphraseApp() {
                 completedPhrasesFromLevel1.length = 0;
                 caughtWords.clear();
                 firedTalkbackCues.clear();
+                prefetchedTalkbackCues.clear();
                 clearTranscript();
                 stopSequenceTimer();
                 clearGameOverContinueTimer();

@@ -117,6 +117,7 @@ import {
     encodeWavFromBuffers,
 } from "../src/talkback/runtime.js";
 import {
+    analyzeTalkbackSegmentQuality,
     selectTalkbackReference,
     talkbackUrl,
 } from "../src/talkback/reference.js";
@@ -1979,6 +1980,10 @@ test("echo and talkback default configs expose runtime tuning", () => {
     assert.equal(ECHO_RUNTIME_CONFIG.probabilities.life, 0.85);
     assert.equal(TALKBACK_RUNTIME_CONFIG.modelId, "qwen3-tts-0.6b-base");
     assert.equal(TALKBACK_RUNTIME_CONFIG.probabilities.random, 0.12);
+    assert.equal(TALKBACK_RUNTIME_CONFIG.minVoiceActiveRatio, 0.25);
+    assert.equal(TALKBACK_RUNTIME_CONFIG.maxClippedRatio, 0.05);
+    assert.equal(TALKBACK_RUNTIME_CONFIG.usableQualityScore, 0.45);
+    assert.equal(TALKBACK_RUNTIME_CONFIG.highQualityScore, 0.7);
     assert.equal(
         getTalkbackTriggerProbability(
             TALKBACK_RUNTIME_CONFIG.probabilities,
@@ -2192,6 +2197,159 @@ test("talkback helpers build urls and select reference segments", () => {
     assert.equal(combined.transcript, "long segment long segment");
 });
 
+test("talkback quality analysis measures voice activity and clipping", () => {
+    const clearSamples = Array.from({ length: 1000 }, (_, index) => {
+        if (index < 200) {
+            return index % 2 ? 0.004 : -0.004;
+        }
+
+        return index % 2 ? 0.12 : -0.12;
+    });
+    const clear = analyzeTalkbackSegmentQuality({
+        buffer: makeBuffer([clearSamples], 1000),
+        transcript: "a clearly spoken phrase",
+    });
+    const clipped = analyzeTalkbackSegmentQuality({
+        buffer: makeBuffer([Array(1000).fill(1)], 1000),
+        transcript: "clipped phrase",
+    });
+
+    assert.equal(clear.wordCount, 4);
+    assert.ok(clear.voiceActiveRatio > 0.7);
+    assert.equal(clear.clippedRatio, 0);
+    assert.ok(clear.clarityDb > 15);
+    assert.equal(clipped.clippedRatio, 1);
+    assert.ok(clipped.score < clear.score);
+});
+
+test("talkback reference selection prefers clear multi-word phrases", () => {
+    const makeSegment = ({
+        id,
+        transcript,
+        duration = 6,
+        createdAt,
+        score,
+        clippedRatio = 0,
+        voiceActiveRatio = 0.8,
+    }) => ({
+        blob: { id },
+        buffer: { id },
+        transcript,
+        duration,
+        createdAt,
+        quality: {
+            score,
+            clippedRatio,
+            voiceActiveRatio,
+            wordCount: transcript.split(/\s+/).length,
+        },
+    });
+    const clearSingle = makeSegment({
+        id: "single",
+        transcript: "welcome",
+        createdAt: 1,
+        score: 0.95,
+    });
+    const clearMulti = makeSegment({
+        id: "multi",
+        transcript: "welcome to passphrase",
+        createdAt: 2,
+        score: 0.8,
+    });
+    const noisyMulti = makeSegment({
+        id: "noisy",
+        transcript: "this phrase is noisy",
+        createdAt: 3,
+        score: 0.4,
+    });
+
+    const preferred = selectTalkbackReference({
+        segments: [clearSingle, clearMulti],
+        encodeWavFromBuffers: () => ({ id: "combined" }),
+    });
+    assert.equal(preferred.blob.id, "multi");
+
+    const qualityFirst = selectTalkbackReference({
+        segments: [clearSingle, noisyMulti],
+        encodeWavFromBuffers: () => ({ id: "combined" }),
+    });
+    assert.equal(qualityFirst.blob.id, "single");
+});
+
+test("talkback reference combines the best eligible clips chronologically", () => {
+    const encoded = [];
+    const segment = (id, duration, createdAt, score, transcript) => ({
+        blob: { id },
+        buffer: { id },
+        transcript,
+        duration,
+        createdAt,
+        quality: {
+            score,
+            clippedRatio: 0,
+            voiceActiveRatio: 0.8,
+            wordCount: transcript.split(/\s+/).length,
+        },
+    });
+    const first = segment("first", 2, 1, 0.8, "first clear phrase");
+    const second = segment("second", 3.5, 2, 0.86, "second clear phrase");
+    const rejected = segment("rejected", 8, 3, 0.3, "poor phrase");
+    const reference = selectTalkbackReference({
+        segments: [first, second, rejected],
+        encodeWavFromBuffers(buffers) {
+            encoded.push(...buffers.map((buffer) => buffer.id));
+            return { id: "combined" };
+        },
+    });
+
+    assert.deepEqual(encoded, ["first", "second"]);
+    assert.equal(reference.duration, 5.5);
+    assert.equal(reference.signature, "1:2");
+
+    const unchanged = selectTalkbackReference({
+        segments: [first, second, rejected],
+        encodeWavFromBuffers: () => ({ id: "combined-again" }),
+    });
+    assert.equal(unchanged.signature, reference.signature);
+
+    assert.equal(
+        selectTalkbackReference({
+            segments: [first, rejected],
+            encodeWavFromBuffers: () => ({ id: "too-short" }),
+        }),
+        null,
+    );
+});
+
+test("talkback reference avoids unnecessary audio beyond its target", () => {
+    const segment = (id, duration, score) => ({
+        blob: { id },
+        buffer: { id },
+        transcript: `${id} clear phrase`,
+        duration,
+        createdAt: id.charCodeAt(0),
+        quality: {
+            score,
+            clippedRatio: 0,
+            voiceActiveRatio: 0.8,
+            wordCount: 3,
+        },
+    });
+    const reference = selectTalkbackReference({
+        segments: [
+            segment("a", 3.5, 0.9),
+            segment("b", 4, 0.85),
+            segment("c", 2, 0.8),
+        ],
+        minRefSeconds: 5,
+        targetRefSeconds: 6,
+        encodeWavFromBuffers: () => ({ id: "combined" }),
+    });
+
+    assert.equal(reference.duration, 5.5);
+    assert.equal(reference.transcript.includes("b clear phrase"), false);
+});
+
 test("talkback runtime encodes references and renders status state", () => {
     class FakeBlob {
         constructor(parts, options) {
@@ -2239,7 +2397,9 @@ test("talkback runtime encodes references and renders status state", () => {
 
     // a specific narrative cue is a safe no-op while the endpoint is not ready
     assert.equal(typeof runtime.triggerSpecific, "function");
+    assert.equal(typeof runtime.prefetchSpecific, "function");
     assert.doesNotThrow(() => runtime.triggerSpecific("narrative line"));
+    assert.doesNotThrow(() => runtime.prefetchSpecific("narrative line"));
 
     runtime.clear();
     assert.equal(lastStatus.textContent, "cleared");
