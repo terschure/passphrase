@@ -55,7 +55,6 @@ Send €10,000 from Grandma’s account
 
 
 ## Round 1
-Welcome
 Squirrel
 Rural
 Thorough

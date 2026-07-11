@@ -93,6 +93,9 @@ asynchronously and only play if talk-back is enabled and the TTS endpoint is
 ready. The endpoint URL, on/off, and random-frequency threshold remain in the
 settings panel.
 
+To run the local Qwen backend through an HTTPS tunnel for the deployed game,
+follow the [Qwen TTS tunnel quick start](documentation/qwen-tts-tunnel-guide.md).
+
 **Dev override.** The settings panel has a *game script* editor pre-filled from
 `game-script.md`. Edits apply live and persist in `localStorage` for playtesting
 across reloads; **[ reset to file ]** discards the override and reloads the
