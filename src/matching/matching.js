@@ -97,13 +97,13 @@ function getFuzzyWordThreshold(value) {
     return value.length <= 5 ? 0.8 : 0.7;
 }
 
-function fuzzyWordValuesMatch(targetValue, candidateValue) {
+function getFuzzyWordValueScore(targetValue, candidateValue) {
     if (targetValue === candidateValue) {
-        return true;
+        return 1;
     }
 
     if (targetValue.length < 4) {
-        return false;
+        return null;
     }
 
     const maximumLengthDifference = Math.max(
@@ -111,15 +111,23 @@ function fuzzyWordValuesMatch(targetValue, candidateValue) {
         Math.ceil(targetValue.length * 0.35),
     );
 
-    return (
-        Math.abs(candidateValue.length - targetValue.length) <=
-            maximumLengthDifference &&
-        wordSimilarity(candidateValue, targetValue) >=
-            getFuzzyWordThreshold(targetValue)
-    );
+    if (
+        Math.abs(candidateValue.length - targetValue.length) >
+        maximumLengthDifference
+    ) {
+        return null;
+    }
+
+    const score = wordSimilarity(candidateValue, targetValue);
+    return score >= 0.5 ? score : null;
 }
 
-export function findSegmentedFuzzyTargetMatch(text, target, fromIndex = 0) {
+export function findSegmentedFuzzyTargetMatch(
+    text,
+    target,
+    fromIndex = 0,
+    threshold = 0.78,
+) {
     const targetTokens = tokenizeForFuzzy(target);
 
     if (targetTokens.length < 2) {
@@ -130,9 +138,11 @@ export function findSegmentedFuzzyTargetMatch(text, target, fromIndex = 0) {
         (token) => token.end > fromIndex,
     );
 
-    function matchFrom(targetIndex, textIndex) {
+    function matchFrom(targetIndex, textIndex, scoreTotal, weakMatchCount) {
         if (targetIndex >= targetTokens.length) {
-            return textIndex;
+            return scoreTotal / targetTokens.length >= threshold
+                ? textIndex
+                : null;
         }
 
         const targetValue = targetTokens[targetIndex].value.replace(/'/g, "");
@@ -148,14 +158,32 @@ export function findSegmentedFuzzyTargetMatch(text, target, fromIndex = 0) {
             }
 
             const candidateValue = joinTokenValues(candidateTokens);
+            const score = getFuzzyWordValueScore(
+                targetValue,
+                candidateValue,
+            );
 
-            if (!fuzzyWordValuesMatch(targetValue, candidateValue)) {
+            if (score === null) {
+                continue;
+            }
+
+            const isWeak = score < getFuzzyWordThreshold(targetValue);
+
+            // A longer phrase supplies enough context for one uncertain ASR
+            // substitution. Multiple weak words, or one in a two-word phrase,
+            // remain too ambiguous.
+            if (
+                isWeak &&
+                (targetTokens.length < 3 || weakMatchCount >= 1)
+            ) {
                 continue;
             }
 
             const endIndex = matchFrom(
                 targetIndex + 1,
                 textIndex + tokenCount,
+                scoreTotal + score,
+                weakMatchCount + (isWeak ? 1 : 0),
             );
 
             if (endIndex !== null) {
@@ -167,7 +195,7 @@ export function findSegmentedFuzzyTargetMatch(text, target, fromIndex = 0) {
     }
 
     for (let start = 0; start < textTokens.length; start += 1) {
-        const endIndex = matchFrom(0, start);
+        const endIndex = matchFrom(0, start, 0, 0);
 
         if (endIndex !== null) {
             return {
@@ -364,7 +392,12 @@ export function findTargetEnd(
 
     const segmentedFuzzyMatch =
         fuzzyThreshold < 1
-            ? findSegmentedFuzzyTargetMatch(source, rawTarget, fromIndex)
+            ? findSegmentedFuzzyTargetMatch(
+                  source,
+                  rawTarget,
+                  fromIndex,
+                  fuzzyThreshold,
+              )
             : null;
 
     if (segmentedFuzzyMatch) {

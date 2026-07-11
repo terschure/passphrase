@@ -521,6 +521,27 @@ test("matching accepts a fuzzy word split across transcript tokens", () => {
     );
     assert.equal(
         textMatchesTarget(
+            "favorite character unique coat",
+            "favorite character unicode",
+        ),
+        true,
+    );
+    assert.equal(
+        textMatchesTarget(
+            "contact voice charge customer service",
+            "contact voice sharks customer service",
+        ),
+        true,
+    );
+    assert.equal(
+        textMatchesTarget(
+            "favorite cartoon unique coat",
+            "favorite character unicode",
+        ),
+        false,
+    );
+    assert.equal(
+        textMatchesTarget(
             "favorite cartoon unique code",
             "favorite character unicode",
         ),
