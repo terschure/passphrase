@@ -113,6 +113,11 @@ import {
     talkbackUrl,
 } from "../src/talkback/reference.js";
 import { TALKBACK_RUNTIME_CONFIG } from "../src/talkback/defaultConfig.js";
+import {
+    DEPLOYED_TALKBACK_ENDPOINT,
+    LOCAL_TALKBACK_ENDPOINT,
+    getDefaultTalkbackEndpoint,
+} from "../src/talkback/endpoint.js";
 
 function test(name, fn) {
     try {
@@ -1696,6 +1701,33 @@ test("echo and talkback default configs expose runtime tuning", () => {
         "audio/webm;codecs=opus",
     );
     assert.equal(getPreferredEchoMimeType(null), "");
+});
+
+test("talkback endpoint defaults follow the deployment origin", () => {
+    assert.equal(
+        getDefaultTalkbackEndpoint({
+            protocol: "https:",
+            hostname: "passphrase.fun",
+            pathname: "/",
+        }),
+        DEPLOYED_TALKBACK_ENDPOINT,
+    );
+    assert.equal(
+        getDefaultTalkbackEndpoint({
+            protocol: "https:",
+            hostname: "terschure.github.io",
+            pathname: "/passphrase/",
+        }),
+        DEPLOYED_TALKBACK_ENDPOINT,
+    );
+    assert.equal(
+        getDefaultTalkbackEndpoint({
+            protocol: "http:",
+            hostname: "127.0.0.1",
+            pathname: "/",
+        }),
+        LOCAL_TALKBACK_ENDPOINT,
+    );
 });
 
 test("echo runtime renders panel state through injected dependencies", () => {

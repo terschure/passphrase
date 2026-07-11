@@ -1,3 +1,12 @@
+            @font-face {
+                font-family: "Pexico";
+                src: url("../assets/font/Pexico/Pexico-Regular.woff2")
+                    format("woff2");
+                font-style: normal;
+                font-weight: 400;
+                font-display: swap;
+            }
+
             :root {
                 color-scheme: dark;
                 font-family:
