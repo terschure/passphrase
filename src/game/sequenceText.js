@@ -7,8 +7,18 @@ export function findSequenceSearchStart(
     findWordEnd,
 ) {
     let searchFrom = 0;
+    const currentPhrase = String(words[currentWordIndex] || "")
+        .trim()
+        .toLowerCase();
 
     for (let i = 0; i < currentWordIndex; i += 1) {
+        // Recognition often returns only the latest spoken phrase. Do not let
+        // an earlier duplicate target claim the sole occurrence that belongs
+        // to the currently active target.
+        if (String(words[i] || "").trim().toLowerCase() === currentPhrase) {
+            continue;
+        }
+
         const end = findWordEnd(text, words[i], searchFrom);
         if (end !== -1) {
             searchFrom = end;

@@ -617,6 +617,30 @@ test("ordered matching anchors after completed words", () => {
     );
 });
 
+test("ordered matching reserves a repeated phrase for the current target", () => {
+    const words = [
+        "Yes I am sure",
+        "Favorite character Unicode",
+        "Confirm deletion of account",
+        "Yes I am sure",
+    ];
+    const state = createInitialGameState();
+    state.currentWordIndex = 3;
+
+    const result = consumeSequenceText(state, words, "Yes I am sure", {
+        mode: "ordered",
+        findWordEnd: (text, target, fromIndex) =>
+            findTargetEnd(text, target, {
+                fromIndex,
+                fuzzyThreshold: 0.78,
+            }),
+    });
+
+    assert.equal(result.changed, true);
+    assert.deepEqual(result.completedPhrases, ["Yes I am sure"]);
+    assert.equal(state.currentWordIndex, 4);
+});
+
 test("speech recognition result helpers collect finals and live transcript", () => {
     const event = {
         resultIndex: 1,
