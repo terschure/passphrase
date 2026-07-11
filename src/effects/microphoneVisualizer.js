@@ -43,6 +43,12 @@ export function createMicrophoneVisualizer({
         draw(performanceRef.now());
     }
 
+    function unlockAudio() {
+        audioContext = audioContext || new AudioContextClass();
+        audioContext.resume?.().catch(() => {});
+        return audioContext;
+    }
+
     async function start() {
         if (
             !navigatorRef.mediaDevices ||
@@ -52,11 +58,8 @@ export function createMicrophoneVisualizer({
         }
 
         stopIdle();
+        unlockAudio();
         micStream = await navigatorRef.mediaDevices.getUserMedia({ audio: true });
-        audioContext = new AudioContextClass();
-        // Best effort: some browsers create the context suspended until a
-        // gesture. Resuming lets the spectrum react as soon as possible.
-        audioContext.resume?.().catch(() => {});
         analyser = audioContext.createAnalyser();
         analyser.fftSize = 256;
 
@@ -115,6 +118,7 @@ export function createMicrophoneVisualizer({
             return micStream;
         },
         start,
+        unlockAudio,
         stop,
         startIdle,
         isActive,

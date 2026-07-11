@@ -40,6 +40,7 @@ export function createTalkbackRuntime({
     getProgress,
     getMicStream,
     getAudioContext,
+    getPlaybackAudioContext = getAudioContext,
     mimeType = "",
     MediaRecorderClass = MediaRecorder,
     AudioClass = Audio,
@@ -72,7 +73,8 @@ export function createTalkbackRuntime({
     let uploadPromise = null;
     let generatePromise = null;
     let audio = null;
-    let lastGeneratedAt = 0;
+    let activePrompt = "";
+    let lastRandomQueuedAt = 0;
     let sessionId = 0;
 
     function render() {
@@ -354,11 +356,7 @@ export function createTalkbackRuntime({
             return;
         }
 
-        if (
-            generatePromise ||
-            audio ||
-            now() - lastGeneratedAt < settings.cooldownMs
-        ) {
+        if (now() - lastRandomQueuedAt < settings.cooldownMs) {
             return;
         }
 
@@ -374,7 +372,10 @@ export function createTalkbackRuntime({
 
         const phrases = getPhrases();
         const prompt = phrases[Math.floor(Math.random() * phrases.length)];
-        queuePrompt(prompt);
+
+        if (queuePrompt(prompt)) {
+            lastRandomQueuedAt = now();
+        }
     }
 
     // Fire a specific scripted phrase (a positional narrative cue). It skips the
@@ -390,12 +391,18 @@ export function createTalkbackRuntime({
     }
 
     function queuePrompt(prompt) {
-        if (!prompt || queue.includes(prompt) || queue.length > 2) {
-            return;
+        if (
+            !prompt ||
+            prompt === activePrompt ||
+            queue.includes(prompt) ||
+            queue.length > 2
+        ) {
+            return false;
         }
 
         queue.push(prompt);
         runQueue();
+        return true;
     }
 
     async function runQueue() {
@@ -410,13 +417,18 @@ export function createTalkbackRuntime({
             return;
         }
 
+        activePrompt = prompt;
         generatePromise = generate(prompt);
 
         try {
             await generatePromise;
         } finally {
             generatePromise = null;
+            activePrompt = "";
             render();
+            // Playback is deliberately serial: the next generated clip starts
+            // only after the current one has ended, so it can never cut it off.
+            runQueue();
         }
     }
 
@@ -479,7 +491,7 @@ export function createTalkbackRuntime({
                 "bad",
             );
         } finally {
-            lastGeneratedAt = now();
+            render();
         }
     }
 
@@ -488,6 +500,9 @@ export function createTalkbackRuntime({
             endpoint: getEndpoint(),
             audioUrl,
             prompt,
+            audioContext: getPlaybackAudioContext(),
+            fetchAudio: (url, options) =>
+                fetchWithTimeout(url, options, settings.fetchTimeoutMs),
             AudioClass,
             onCreated(createdAudio) {
                 audio = createdAudio;

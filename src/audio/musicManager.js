@@ -6,9 +6,6 @@ export const AUDIO_MIX_CONFIG = {
 
 export function createMusicManager({
   assetBaseUrl = "assets/audio",
-  level2AudioDegradationStart = 0,
-  level2AudioDegradationPerWord = 0.06,
-  level2AudioDegradationMax = 1,
   windowRef = window,
   documentRef = document,
   AudioCtor = Audio,
@@ -17,7 +14,6 @@ export function createMusicManager({
   const MUSIC_VOLUME = AUDIO_MIX_CONFIG.musicVolume;
   const MUSIC_DUCKED_VOLUME = AUDIO_MIX_CONFIG.musicDuckedVolume;
   const SFX_VOLUME = AUDIO_MIX_CONFIG.sfxVolume;
-  const MUSIC_DEGRADATION_ENABLED = true;
   const DUCK_FADE_MS = 120;
   const DUCK_HOLD_MS = 400;
   const SFX_COOLDOWN_MS = 120;
@@ -29,18 +25,8 @@ export function createMusicManager({
   let musicFadeFrame = null;
   let restoreTimer = null;
   let musicContext = null;
-  let musicSource = null;
-  let musicInputGain = null;
-  let distortionNode = null;
-  let bitcrusherNode = null;
-  let lowpassNode = null;
-  let musicEffectsReady = false;
   let currentMusicLevel = 0;
   let currentThemeKey = "";
-  let degradationAmount = 0;
-  let currentDistortionAmount = 0;
-  let currentBitcrusherAmount = 0;
-  let effectTransitionFrame = null;
 
   const mainTheme = new AudioCtor();
   mainTheme.loop = true;
@@ -58,23 +44,11 @@ export function createMusicManager({
       ["main_sound_theme.ogg", "audio/ogg"],
       ["main_sound_theme.mp3", "audio/mpeg"],
     ],
-    level3: [
-      ["level_3_theme.ogg", "audio/ogg"],
-      ["level_3_theme.mp3", "audio/mpeg"],
-      ["level_2_theme.ogg", "audio/ogg"],
-      ["level_2_theme.mp3", "audio/mpeg"],
-      ["main_sound_theme.ogg", "audio/ogg"],
-      ["main_sound_theme.mp3", "audio/mpeg"],
-    ],
   };
 
   function resolveThemeKey(level) {
-    if (Number(level) === 2) {
+    if (Number(level) >= 2) {
       return "level2";
-    }
-
-    if (Number(level) >= 3) {
-      return "level3";
     }
 
     return "level1";
@@ -103,6 +77,18 @@ export function createMusicManager({
   }
 
   setThemeSources("level1");
+
+  // A source replacement can leave an unlocked HTMLAudioElement paused on
+  // iOS until its new media is ready. Retry at both useful readiness stages;
+  // startMainTheme guards concurrent play attempts.
+  function resumeThemeWhenReady() {
+    if (unlocked && mainTheme.paused) {
+      startMainTheme();
+    }
+  }
+
+  mainTheme.addEventListener?.("loadeddata", resumeThemeWhenReady);
+  mainTheme.addEventListener?.("canplay", resumeThemeWhenReady);
 
   const sfx = {
     levelFailed: createSfx(`${assetBaseUrl}/game_fx_level_failed.wav`, "levelFailed"),
@@ -151,100 +137,32 @@ export function createMusicManager({
     unlocked = true;
   }
 
-  // Called from an explicit user tap to prime the sound engine: it creates
-  // and resumes the WebAudio context *inside* that gesture, so that later a
-  // voice-triggered game start can still play music on iOS (which only lets
-  // an AudioContext resume within a user gesture).
+  // Prime a shared context inside the user gesture for generated talkback on
+  // iOS. Music itself stays on the HTMLAudioElement and is not processed.
   function unlock() {
     unlockAudio();
 
-    if (ensureMusicGraph() && musicContext) {
+    if (ensurePlaybackContext() && musicContext) {
       musicContext.resume().catch(() => {});
     }
   }
 
-  function makeDistortionCurve(amount) {
-    const samples = 44100;
-    const curve = new Float32Array(samples);
-    const k = amount * 600;
-    const deg = Math.PI / 180;
-
-    for (let i = 0; i < samples; i += 1) {
-      const x = (i * 2) / samples - 1;
-      curve[i] = ((3 + k) * x * 20 * deg) / (Math.PI + k * Math.abs(x));
-    }
-
-    return curve;
-  }
-
-  function createBitcrusher(context) {
-    const node = context.createScriptProcessor(2048, 1, 1);
-    node.bits = 16;
-    node.normfreq = 1;
-    node.phaser = 0;
-    node.last = 0;
-
-    node.onaudioprocess = (event) => {
-      const input = event.inputBuffer.getChannelData(0);
-      const output = event.outputBuffer.getChannelData(0);
-      const step = Math.pow(0.5, node.bits);
-
-      for (let i = 0; i < input.length; i += 1) {
-        node.phaser += node.normfreq;
-
-        if (node.phaser >= 1) {
-          node.phaser -= 1;
-          node.last = step * Math.floor(input[i] / step + 0.5);
-        }
-
-        output[i] = node.last;
-      }
-    };
-
-    return node;
-  }
-
-  function ensureMusicGraph() {
-    if (musicEffectsReady) {
+  function ensurePlaybackContext() {
+    if (musicContext) {
       return true;
     }
 
     const Context = windowRef.AudioContext || windowRef.webkitAudioContext;
 
     if (!Context) {
-      warn("Web Audio is unavailable; music effects disabled.");
       return false;
     }
 
     try {
-      musicContext = musicContext || new Context();
-      console.log("[audio] music audio context started");
-
-      musicSource =
-        musicSource || musicContext.createMediaElementSource(mainTheme);
-      musicInputGain = musicContext.createGain();
-      distortionNode = musicContext.createWaveShaper();
-      bitcrusherNode = createBitcrusher(musicContext);
-      lowpassNode = musicContext.createBiquadFilter();
-
-      lowpassNode.type = "lowpass";
-      lowpassNode.frequency.value = 16000;
-      lowpassNode.Q.value = 0.65;
-      musicInputGain.gain.value = 1;
-      distortionNode.curve = makeDistortionCurve(0);
-      distortionNode.oversample = "2x";
-
-      musicSource
-        .connect(musicInputGain)
-        .connect(distortionNode)
-        .connect(bitcrusherNode)
-        .connect(lowpassNode)
-        .connect(musicContext.destination);
-
-      musicEffectsReady = true;
+      musicContext = new Context();
       return true;
     } catch (error) {
-      warn("Music effects could not initialize; playing clean theme.", error);
+      warn("Shared talkback audio context could not initialize.", error);
       return false;
     }
   }
@@ -253,7 +171,7 @@ export function createMusicManager({
     unlockAudio();
     setThemeSources(resolveThemeKey(currentMusicLevel || 1));
 
-    const graphReady = ensureMusicGraph();
+    const contextReady = ensurePlaybackContext();
 
     // iOS Safari only permits media playback and AudioContext.resume()
     // that are *initiated synchronously* inside the user gesture — before
@@ -261,22 +179,31 @@ export function createMusicManager({
     // (Awaiting resume() before calling play() silently drops the gesture
     // on iOS, so the music never starts even though desktop tolerates it.)
     if (mainTheme.paused && !mainThemePlayPromise) {
-      mainThemePlayPromise = mainTheme.play().finally(() => {
-        mainThemePlayPromise = null;
-      });
+      let playResult;
+
+      try {
+        playResult = mainTheme.play();
+      } catch (error) {
+        playResult = Promise.reject(error);
+      }
+
+      const playPromise = Promise.resolve(playResult);
+      mainThemePlayPromise = playPromise;
+      const clearPlayPromise = () => {
+        if (mainThemePlayPromise === playPromise) {
+          mainThemePlayPromise = null;
+        }
+      };
+      playPromise.then(clearPlayPromise, clearPlayPromise);
     }
 
     const resumePromise =
-      graphReady && musicContext && musicContext.state !== "running"
+      contextReady && musicContext && musicContext.state !== "running"
         ? musicContext.resume()
         : null;
 
     try {
       await Promise.all([mainThemePlayPromise, resumePromise].filter(Boolean));
-
-      if (graphReady && musicContext) {
-        applyMusicDegradationAmount(degradationAmount, "resume");
-      }
     } catch (error) {
       warn(
         "Main theme could not play. It may need a user click or a supported audio codec.",
@@ -296,11 +223,6 @@ export function createMusicManager({
       musicFadeFrame = null;
     }
 
-    if (effectTransitionFrame) {
-      windowRef.cancelAnimationFrame(effectTransitionFrame);
-      effectTransitionFrame = null;
-    }
-
     mainTheme.pause();
     mainTheme.currentTime = 0;
   }
@@ -311,6 +233,9 @@ export function createMusicManager({
     const themeChanged = setThemeSources(resolveThemeKey(nextLevel));
 
     if (themeChanged && unlocked) {
+      // Do not let a pending play() for the previous source suppress the new
+      // source's attempt. Its completion cannot clear a newer promise.
+      mainThemePlayPromise = null;
       mainTheme.currentTime = 0;
       startMainTheme();
     }
@@ -338,137 +263,6 @@ export function createMusicManager({
     }
 
     musicFadeFrame = windowRef.requestAnimationFrame(step);
-  }
-
-  function smoothSetAudioParam(param, targetValue, timeMs) {
-    if (!musicContext || !param) {
-      return;
-    }
-
-    const now = musicContext.currentTime;
-    param.cancelScheduledValues(now);
-    param.setValueAtTime(param.value, now);
-    param.linearRampToValueAtTime(
-      targetValue,
-      now + Math.max(0.01, timeMs / 1000),
-    );
-  }
-
-  function setDistortionAmount(amount) {
-    if (!distortionNode) {
-      return;
-    }
-
-    currentDistortionAmount = amount;
-    distortionNode.curve = makeDistortionCurve(amount);
-  }
-
-  function setBitcrusherAmount(amount) {
-    if (!bitcrusherNode) {
-      return;
-    }
-
-    currentBitcrusherAmount = amount;
-    bitcrusherNode.bits = Math.max(5, Math.round(16 - amount * 10));
-    bitcrusherNode.normfreq = Math.max(0.16, 1 - amount * 0.82);
-  }
-
-  function smoothSetEffectAmounts(
-    targetDistortionAmount,
-    targetBitcrusherAmount,
-    timeMs,
-  ) {
-    if (effectTransitionFrame) {
-      windowRef.cancelAnimationFrame(effectTransitionFrame);
-      effectTransitionFrame = null;
-    }
-
-    const fromDistortionAmount = currentDistortionAmount;
-    const fromBitcrusherAmount = currentBitcrusherAmount;
-    const startedAt = performanceRef.now();
-    const duration = Math.max(1, timeMs);
-
-    function step(timestamp) {
-      const progress = Math.min(1, (timestamp - startedAt) / duration);
-      const distortionAmount =
-        fromDistortionAmount +
-        (targetDistortionAmount - fromDistortionAmount) * progress;
-      const bitcrusherAmount =
-        fromBitcrusherAmount +
-        (targetBitcrusherAmount - fromBitcrusherAmount) * progress;
-
-      setDistortionAmount(distortionAmount);
-      setBitcrusherAmount(bitcrusherAmount);
-
-      if (progress < 1) {
-        effectTransitionFrame = windowRef.requestAnimationFrame(step);
-      } else {
-        effectTransitionFrame = null;
-      }
-    }
-
-    effectTransitionFrame = windowRef.requestAnimationFrame(step);
-  }
-
-  function applyMusicDegradationAmount(requestedAmount, source = "level") {
-    const amount = MUSIC_DEGRADATION_ENABLED
-      ? Math.min(1, Math.max(0, Number(requestedAmount) || 0))
-      : 0;
-    degradationAmount = amount;
-    const distortionAmount = amount * 0.45;
-    const bitcrusherAmount = amount * 0.55;
-    const lowpassFrequency = 16000 - amount * 5200;
-    const compensatedGain = Math.max(0.78, 1 - amount * 0.35);
-
-    if (!unlocked) {
-      console.log("[audio] music degradation queued", {
-        source,
-        amount: degradationAmount,
-        distortionAmount,
-        bitcrusherAmount,
-        lowpassFrequency,
-        compensatedGain,
-      });
-      return;
-    }
-
-    if (!ensureMusicGraph()) {
-      return;
-    }
-
-    smoothSetEffectAmounts(distortionAmount, bitcrusherAmount, 900);
-    smoothSetAudioParam(lowpassNode.frequency, lowpassFrequency, 900);
-    smoothSetAudioParam(musicInputGain.gain, compensatedGain, 900);
-
-    console.log("[audio] music degradation updated", {
-      source,
-      amount: degradationAmount,
-      distortionAmount,
-      bitcrusherAmount,
-      bitcrusherBits: bitcrusherNode ? bitcrusherNode.bits : "clean",
-      lowpassFrequency,
-      compensatedGain,
-    });
-  }
-
-  function updateMusicDegradation(level) {
-    const maxDegradationLevel = 5;
-    const degradationLevel = Math.max(1, Number(level) || 1);
-    const amount = Math.min(
-      Math.max((degradationLevel - 1) / (maxDegradationLevel - 1), 0),
-      1,
-    );
-    applyMusicDegradationAmount(amount, "level");
-  }
-
-  function updateLevel2MusicDegradation(completedWords) {
-    const amount = Math.min(
-      level2AudioDegradationMax,
-      level2AudioDegradationStart +
-        Math.max(0, Number(completedWords) || 0) *
-          level2AudioDegradationPerWord,
-    );
-    applyMusicDegradationAmount(amount, "level-2-word");
   }
 
   function restoreMusic() {
@@ -535,10 +329,8 @@ export function createMusicManager({
     restoreMusic,
     fadeMusicVolume,
     setMusicLevel,
-    updateMusicDegradation,
-    updateLevel2MusicDegradation,
-    setDistortionAmount,
-    setBitcrusherAmount,
+    ensureMusicPlaying: startMainTheme,
+    getAudioContext: () => musicContext,
     playLevelFailedSound: () => playSfx("levelFailed"),
     playLevelCompleteSound: () => playSfx("levelComplete"),
     playRespawnSound: () => playSfx("respawn"),

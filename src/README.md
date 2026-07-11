@@ -32,11 +32,11 @@ shared audio-buffer logic.
 - `game/levelProgression.js` captures level activation, next-level selection,
   and keygen distortion helpers.
 - `game/levelProgressionEffects.js` owns Level 2 completion counts and the
-  music/keygen/memory-enemy side-effect policy for level progression.
+  keygen/memory-enemy side-effect policy for level progression.
 - `game/sequenceText.js` consumes transcript text against the current sequence
   and returns pure progression results for the app to decorate with effects.
 - `audio/bufferUtils.js` contains shared audio-buffer utilities.
-- `audio/musicManager.js` owns music, SFX, ducking, and degradation.
+- `audio/musicManager.js` owns clean music playback, SFX, and ducking.
 - `audio/segmentRecorder.js` owns reusable MediaRecorder segment capture
   setup, stop, and discard behavior.
 - `speech/speechService.js` wraps the Web Speech API.

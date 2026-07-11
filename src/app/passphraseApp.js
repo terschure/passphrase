@@ -182,9 +182,6 @@ export function initPassphraseApp() {
             const LEVEL_INTRO_DURATION_MS = 1800;
             const LEVEL_3_WARNING_DURATION_MS = 2200;
             const LEVEL_COMPLETE_DURATION_MS = 1900;
-            const LEVEL_2_AUDIO_DEGRADATION_START = 0;
-            const LEVEL_2_AUDIO_DEGRADATION_PER_WORD = 0.018;
-            const LEVEL_2_AUDIO_DEGRADATION_MAX = 0.28;
             const VOCAL_THRESHOLD = 0.18;
             const VOCAL_MIN_MS = 350;
             const vocalizationDetector = createVocalizationDetector({
@@ -250,9 +247,6 @@ export function initPassphraseApp() {
 
             const AudioManager = createMusicManager({
                 assetBaseUrl: "assets/audio",
-                level2AudioDegradationStart: LEVEL_2_AUDIO_DEGRADATION_START,
-                level2AudioDegradationPerWord: LEVEL_2_AUDIO_DEGRADATION_PER_WORD,
-                level2AudioDegradationMax: LEVEL_2_AUDIO_DEGRADATION_MAX,
             });
 
             const startMainTheme = AudioManager.startMainTheme;
@@ -261,13 +255,8 @@ export function initPassphraseApp() {
             const playRespawnSound = AudioManager.playRespawnSound;
             const playWallPassSound = AudioManager.playWallPassSound;
             const playLevelCompleteSound = AudioManager.playLevelCompleteSound;
-            const updateMusicDegradation = AudioManager.updateMusicDegradation;
-            const updateLevel2MusicDegradation =
-                AudioManager.updateLevel2MusicDegradation;
             const levelProgressionEffects = createLevelProgressionEffects({
                 getCurrentLevel: () => currentLevel,
-                updateMusicDegradation,
-                updateLevel2MusicDegradation,
                 syncLevel2EnemyCount() {
                     memoryPhraseSystem.syncEnemyCount();
                 },
@@ -538,6 +527,7 @@ export function initPassphraseApp() {
             // than an unexpected pop-up on page load.
             function initializeMicAndAudio() {
                 AudioManager.unlock();
+                microphoneVisualizer.unlockAudio();
                 hideMicInit();
                 startOnboarding();
                 onboardingAction.focus();
@@ -765,6 +755,11 @@ export function initPassphraseApp() {
                 levelTransitionActive = false;
                 level3WarningShown = currentLevel === 3;
                 renderSequenceStatus();
+
+                // Source changes during level transitions can pause media on
+                // iOS Safari. Reassert both element and AudioContext playback
+                // when the intro has finished.
+                AudioManager.ensureMusicPlaying?.();
 
                 if (gameStarted) {
                     startRoadAnimation();
@@ -1379,7 +1374,7 @@ export function initPassphraseApp() {
                 const entries = getTargetEntries();
                 const words = entries.map((entry) => entry.text);
                 renderLevelStatus(entries);
-                levelProgressionEffects.syncMusicDegradationToLevel();
+                levelProgressionEffects.syncLevelEffects();
                 renderTimeline(words);
                 renderSequenceStatusText({
                     sequenceStatus,
@@ -1667,6 +1662,8 @@ export function initPassphraseApp() {
                 getProgress: () => getTalkbackProgress(),
                 getMicStream,
                 getAudioContext,
+                getPlaybackAudioContext: () =>
+                    AudioManager.getAudioContext() || getAudioContext(),
                 mimeType: ECHO_MIME,
                 MediaRecorderClass: window.MediaRecorder,
                 AudioClass: window.Audio,

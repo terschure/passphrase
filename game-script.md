@@ -62,8 +62,10 @@ Send €10,000 from Grandma’s account
 
 ## Round 1
 Squirrel
+~Taking a break?
 Rural
 Thorough
+~This call is being recorded for training and quality purposes
 Draught
 Authoritarian
 Mischievous
@@ -75,7 +77,7 @@ Onomatopoeia
 # Level 3
 subtitle: Getting access to the server / Removing your data from the server
 environment: voice-firewall
-talkback-frequency: 2.5
+talkback-frequency: 3.5
 
 ## Talkback
 Incorrect password. Try again.

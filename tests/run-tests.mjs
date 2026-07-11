@@ -60,7 +60,10 @@ import {
     discardRecorder,
     startSegmentRecorder,
 } from "../src/audio/segmentRecorder.js";
-import { AUDIO_MIX_CONFIG } from "../src/audio/musicManager.js";
+import {
+    AUDIO_MIX_CONFIG,
+    createMusicManager,
+} from "../src/audio/musicManager.js";
 import { readConfig } from "../src/ui/domRefs.js";
 import { createLevelIntroController } from "../src/ui/levelIntro.js";
 import {
@@ -98,7 +101,10 @@ import {
 import { buildReverbImpulse } from "../src/echo/fxBus.js";
 import { createEchoRuntime } from "../src/echo/runtime.js";
 import { generateAsciiWaveform } from "../src/effects/asciiWaveform.js";
-import { getWaveformAmplitude } from "../src/effects/microphoneVisualizer.js";
+import {
+    createMicrophoneVisualizer,
+    getWaveformAmplitude,
+} from "../src/effects/microphoneVisualizer.js";
 import {
     createLevel2MatrixFragment,
     DEFAULT_MEMORY_PHRASE_ENEMY_CONFIG,
@@ -831,33 +837,30 @@ test("level progression helpers select levels and activation state", () => {
     assert.equal(state.retriesLeft, 1);
 });
 
-test("level progression effects sync music and Level 2 enemy counts", () => {
+test("level progression effects sync visuals and Level 2 enemy counts", () => {
     let currentLevel = 1;
     const calls = [];
     const effects = createLevelProgressionEffects({
         getCurrentLevel: () => currentLevel,
-        updateMusicDegradation: (value) => calls.push(`music:${value}`),
-        updateLevel2MusicDegradation: (value) =>
-            calls.push(`level2Music:${value}`),
         syncLevel2EnemyCount: () => calls.push("syncEnemies"),
         updateKeygenDistortion: (level) => calls.push(`distort:${level}`),
     });
 
-    effects.syncMusicDegradationToLevel();
-    effects.syncMusicDegradationToLevel();
-    assert.deepEqual(calls.splice(0), ["music:1", "distort:1"]);
+    effects.syncLevelEffects();
+    effects.syncLevelEffects();
+    assert.deepEqual(calls.splice(0), ["distort:1"]);
 
     currentLevel = 2;
     effects.reset(2);
     assert.equal(effects.getLevel2CompletedWordCount(), 0);
-    assert.deepEqual(calls.splice(0), ["level2Music:0", "syncEnemies"]);
+    assert.deepEqual(calls.splice(0), ["syncEnemies"]);
 
     assert.equal(effects.registerSuccessfulPhrase(), true);
     assert.equal(effects.getLevel2CompletedWordCount(), 1);
-    assert.deepEqual(calls.splice(0), ["syncEnemies", "level2Music:1"]);
+    assert.deepEqual(calls.splice(0), ["syncEnemies"]);
 
-    effects.syncMusicDegradationToLevel();
-    assert.deepEqual(calls.splice(0), ["level2Music:1", "distort:2"]);
+    effects.syncLevelEffects();
+    assert.deepEqual(calls.splice(0), ["distort:2"]);
 
     currentLevel = 1;
     assert.equal(effects.registerSuccessfulPhrase(), false);
@@ -937,6 +940,78 @@ test("audio utilities compute rms, peaks, trim, and wav header", () => {
     const view = new DataView(wav);
     assert.equal(String.fromCharCode(...new Uint8Array(wav, 0, 4)), "RIFF");
     assert.equal(view.getUint32(24, true), 1000);
+});
+
+test("music manager resumes a changed theme without reloading level three", () => {
+    const audioInstances = [];
+
+    class FakeAudio {
+        constructor(src = "") {
+            this.src = src;
+            this.paused = true;
+            this.children = [];
+            this.listeners = new Map();
+            this.playCount = 0;
+            this.loadCount = 0;
+            audioInstances.push(this);
+        }
+
+        addEventListener(type, listener) {
+            this.listeners.set(type, listener);
+        }
+
+        replaceChildren() {
+            this.children = [];
+        }
+
+        append(child) {
+            this.children.push(child);
+        }
+
+        load() {
+            this.loadCount += 1;
+        }
+
+        play() {
+            this.playCount += 1;
+            this.paused = false;
+        }
+
+        pause() {
+            this.paused = true;
+        }
+    }
+
+    const manager = createMusicManager({
+        AudioCtor: FakeAudio,
+        documentRef: {
+            createElement() {
+                return {
+                    addEventListener() {},
+                };
+            },
+        },
+        windowRef: {},
+    });
+    const mainTheme = audioInstances[0];
+
+    manager.unlock();
+    manager.setMusicLevel(2);
+    const level2LoadCount = mainTheme.loadCount;
+
+    assert.equal(mainTheme.playCount, 1);
+    assert.deepEqual(
+        mainTheme.children.map((source) => source.src),
+        [
+            "assets/audio/level_2_theme.ogg",
+            "assets/audio/level_2_theme.mp3",
+            "assets/audio/main_sound_theme.ogg",
+            "assets/audio/main_sound_theme.mp3",
+        ],
+    );
+
+    manager.setMusicLevel(3);
+    assert.equal(mainTheme.loadCount, level2LoadCount);
 });
 
 test("segment recorder wraps MediaRecorder lifecycle", () => {
@@ -1650,6 +1725,39 @@ test("ascii waveform helper returns stable dimensions and broken glitches", () =
 test("microphone visualizer computes normalized waveform amplitude", () => {
     assert.equal(getWaveformAmplitude(Uint8Array.from([128, 128, 128])), 0);
     assert.ok(getWaveformAmplitude(Uint8Array.from([0, 255, 128])) > 0.9);
+});
+
+test("microphone visualizer unlocks one shared audio context", () => {
+    let contextCount = 0;
+    let resumeCount = 0;
+
+    class FakeAudioContext {
+        constructor() {
+            contextCount += 1;
+        }
+
+        resume() {
+            resumeCount += 1;
+            return Promise.resolve();
+        }
+    }
+
+    const visualizer = createMicrophoneVisualizer({
+        navigatorRef: {},
+        AudioContextClass: FakeAudioContext,
+        requestFrame: () => 1,
+        cancelFrame: () => {},
+        performanceRef: { now: () => 0 },
+        onAmplitude: () => {},
+        onIdleFrame: () => {},
+    });
+
+    const first = visualizer.unlockAudio();
+    const second = visualizer.unlockAudio();
+
+    assert.equal(first, second);
+    assert.equal(contextCount, 1);
+    assert.equal(resumeCount, 2);
 });
 
 test("memory phrase enemy helpers scale count and create matrix fragments", () => {

@@ -68,7 +68,7 @@ export function absolutizeTalkbackAudioUrl(endpoint, audioUrl) {
     return `${endpoint}${audioUrl}`;
 }
 
-export function playTalkbackAudio({
+function playTalkbackMediaElement({
     endpoint,
     audioUrl,
     prompt,
@@ -99,5 +99,112 @@ export function playTalkbackAudio({
             onError?.("playback blocked", audio);
             resolve(audio);
         });
+    });
+}
+
+async function playTalkbackWebAudio({
+    endpoint,
+    audioUrl,
+    prompt,
+    audioContext,
+    fetchAudio,
+    onCreated,
+    onPlay,
+    onEnded,
+}) {
+    await audioContext.resume?.();
+
+    const response = await fetchAudio(
+        absolutizeTalkbackAudioUrl(endpoint, audioUrl),
+    );
+
+    if (!response.ok) {
+        throw new Error(`audio ${response.status}`);
+    }
+
+    const bytes = await response.arrayBuffer();
+    const decoded = await audioContext.decodeAudioData(bytes);
+    const source = audioContext.createBufferSource();
+    source.buffer = decoded;
+    source.connect(audioContext.destination);
+
+    return new Promise((resolve) => {
+        let finished = false;
+
+        function finish(notifyEnded) {
+            if (finished) {
+                return;
+            }
+
+            finished = true;
+            source.onended = null;
+
+            if (notifyEnded) {
+                onEnded?.(playback);
+            }
+
+            resolve(playback);
+        }
+
+        const playback = {
+            pause() {
+                try {
+                    source.stop();
+                } catch (error) {
+                    // Source may already have ended.
+                }
+                finish(false);
+            },
+        };
+
+        source.onended = () => finish(true);
+        onCreated?.(playback);
+        source.start();
+        onPlay?.(prompt, playback);
+    });
+}
+
+export async function playTalkbackAudio({
+    endpoint,
+    audioUrl,
+    prompt,
+    audioContext = null,
+    fetchAudio = fetch,
+    AudioClass = Audio,
+    onCreated,
+    onPlay,
+    onEnded,
+    onError,
+}) {
+    if (
+        audioContext?.decodeAudioData &&
+        audioContext?.createBufferSource &&
+        fetchAudio
+    ) {
+        try {
+            return await playTalkbackWebAudio({
+                endpoint,
+                audioUrl,
+                prompt,
+                audioContext,
+                fetchAudio,
+                onCreated,
+                onPlay,
+                onEnded,
+            });
+        } catch (error) {
+            // Cross-origin/decode failures retain the media-element fallback.
+        }
+    }
+
+    return playTalkbackMediaElement({
+        endpoint,
+        audioUrl,
+        prompt,
+        AudioClass,
+        onCreated,
+        onPlay,
+        onEnded,
+        onError,
     });
 }
