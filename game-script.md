@@ -38,6 +38,7 @@ talkback-frequency: 1
 
 
 ## Round 1
+Can you hear me?
 Lala
 Mama and papa
 Yum Yum
