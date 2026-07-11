@@ -64,14 +64,14 @@ Send €10,000 from Grandma’s account
 Squirrel
 ~Taking a break?
 Rural
+~Can you recognize who is speaking right now?
 Thorough
 ~This call is being recorded for training and quality purposes
-Draught
 Authoritarian
-Mischievous
-Anemone
+~Hey Siri, set an alarm for 5 o’clock
 Bureaucracy
-Onomatopoeia
+~Accessing savings account
+Ubiquitous
 
 
 # Level 3

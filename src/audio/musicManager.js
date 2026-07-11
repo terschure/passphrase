@@ -1,7 +1,7 @@
 export const AUDIO_MIX_CONFIG = {
-  musicVolume: 0.32,
-  musicDuckedVolume: 0.08,
-  sfxVolume: 0.4,
+  musicVolume: 0.25,
+  musicDuckedVolume: 0.06,
+  sfxVolume: 0.32,
 };
 
 export function createMusicManager({
