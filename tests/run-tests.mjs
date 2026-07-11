@@ -104,6 +104,7 @@ import {
     getMemoryPhraseEnemyTargetCount,
 } from "../src/effects/memoryPhraseEnemies.js";
 import { absolutizeTalkbackAudioUrl } from "../src/talkback/client.js";
+import { createTalkbackGenerationCache } from "../src/talkback/cache.js";
 import {
     createTalkbackRuntime,
     encodeWavFromBuffers,
@@ -112,7 +113,10 @@ import {
     selectTalkbackReference,
     talkbackUrl,
 } from "../src/talkback/reference.js";
-import { TALKBACK_RUNTIME_CONFIG } from "../src/talkback/defaultConfig.js";
+import {
+    getTalkbackTriggerProbability,
+    TALKBACK_RUNTIME_CONFIG,
+} from "../src/talkback/defaultConfig.js";
 import {
     DEPLOYED_TALKBACK_ENDPOINT,
     LOCAL_TALKBACK_ENDPOINT,
@@ -301,12 +305,14 @@ test("parseGameScript reads level metadata, comments, and header zone", () => {
 # Level 1
 subtitle: Border Checkpoint
 environment: border-fence
+talkback-frequency: 0.5
 ## Round 1
 Albania
 Exit
 # Level 2
 subtitle: Undersea Cable
 environment: undersea-cable
+talkback-frequency: 9
 ## Round 1
 Monkey
 environment: not-metadata-after-round`);
@@ -315,12 +321,14 @@ environment: not-metadata-after-round`);
     assert.equal(levels[0].name, "Level 1");
     assert.equal(levels[0].subtitle, "Border Checkpoint");
     assert.equal(levels[0].environment, "border-fence");
+    assert.equal(levels[0].talkbackFrequency, 0.5);
     assert.equal(levels[0].id, 1);
     assert.deepEqual(
         levels[0].entries.map((entry) => entry.text),
         ["Albania", "Exit"],
     );
     assert.equal(levels[1].environment, "undersea-cable");
+    assert.equal(levels[1].talkbackFrequency, 4);
     // a "key: value" line after a round starts is a phrase, not metadata
     assert.deepEqual(
         levels[1].entries.map((entry) => entry.text),
@@ -1690,6 +1698,30 @@ test("echo and talkback default configs expose runtime tuning", () => {
     assert.equal(ECHO_RUNTIME_CONFIG.probabilities.life, 1);
     assert.equal(TALKBACK_RUNTIME_CONFIG.modelId, "qwen3-tts-0.6b-base");
     assert.equal(TALKBACK_RUNTIME_CONFIG.probabilities.random, 0.12);
+    assert.equal(
+        getTalkbackTriggerProbability(
+            TALKBACK_RUNTIME_CONFIG.probabilities,
+            "beat",
+            2.5,
+        ),
+        0.5,
+    );
+    assert.equal(
+        getTalkbackTriggerProbability(
+            TALKBACK_RUNTIME_CONFIG.probabilities,
+            "life",
+            4,
+        ),
+        1,
+    );
+    assert.equal(
+        getTalkbackTriggerProbability(
+            TALKBACK_RUNTIME_CONFIG.probabilities,
+            "random",
+            0,
+        ),
+        0,
+    );
 
     const MediaRecorderClass = {
         isTypeSupported(type) {
@@ -1701,6 +1733,25 @@ test("echo and talkback default configs expose runtime tuning", () => {
         "audio/webm;codecs=opus",
     );
     assert.equal(getPreferredEchoMimeType(null), "");
+});
+
+test("talkback generation cache isolates endpoints and evicts least recent", () => {
+    const cache = createTalkbackGenerationCache(2);
+
+    cache.set("https://one.example", "model", "first", "/audio/first.wav");
+    cache.set("https://one.example", "model", "second", "/audio/second.wav");
+    assert.equal(
+        cache.get("https://one.example", "model", "first"),
+        "/audio/first.wav",
+    );
+
+    cache.set("https://one.example", "model", "third", "/audio/third.wav");
+    assert.equal(cache.get("https://one.example", "model", "second"), null);
+    assert.equal(cache.get("https://two.example", "model", "first"), null);
+    assert.equal(cache.size, 2);
+
+    cache.clear();
+    assert.equal(cache.size, 0);
 });
 
 test("talkback endpoint defaults follow the deployment origin", () => {

@@ -52,6 +52,7 @@ Schema:
 # Level 1                     a level (the name shows on the intro card)
 subtitle: BORDER CHECKPOINT   optional smaller line under the name
 environment: border-fence     optional style preset (see below)
+talkback-frequency: 1         optional random talk-back probability multiplier
 
 ## Talkback                   optional: this level's random talk-back pool
 How can I help you?           spoken at random moments during the level
@@ -76,6 +77,9 @@ sensitivity is set by `VOCAL_THRESHOLD` / `VOCAL_MIN_MS` in `src/app/passphraseA
   - `border-fence` — fence walls, passport avatar, land background.
   - `undersea-cable` — firewall, key avatar, dark sea, memory-phrase swarm.
   An unknown value falls back to the default (`border-fence`) look.
+- `talkback-frequency:` multiplies the random talk-back probability for that
+  level. It defaults to `1`, accepts `0` through `4`, and does not bypass the
+  generation cooldown or single-request queue.
 - Add a level simply by adding another `# Level …` block; a dev jump button
   appears for it automatically.
 
@@ -91,7 +95,8 @@ also configured per level, so all content lives in one file:
 Talk-back never interrupts the game loop — cues are generated and queued
 asynchronously and only play if talk-back is enabled and the TTS endpoint is
 ready. The endpoint URL, on/off, and random-frequency threshold remain in the
-settings panel.
+settings panel. Generated prompt audio is cached in memory and reused within
+the browser session, with a bounded 32-entry cache.
 
 To run the local Qwen backend through an HTTPS tunnel for the deployed game,
 follow the [Qwen TTS tunnel quick start](documentation/qwen-tts-tunnel-guide.md).

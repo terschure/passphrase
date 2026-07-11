@@ -16,6 +16,7 @@ export function createLevelCatalog({ getScriptLevels }) {
                 name: "Level 1",
                 subtitle: "",
                 environment: "border-fence",
+                talkbackFrequency: 1,
                 rounds: [],
                 entries: [],
             }

@@ -1,4 +1,8 @@
-const METADATA_KEYS = new Set(["subtitle", "environment"]);
+const METADATA_FIELDS = new Map([
+    ["subtitle", "subtitle"],
+    ["environment", "environment"],
+    ["talkback-frequency", "talkbackFrequency"],
+]);
 const DEFAULT_ENVIRONMENT = "border-fence";
 const DEFAULT_SEQUENCE_TITLE = "Main sequence";
 const TALKBACK_SECTION = /^talkback$/i;
@@ -9,6 +13,7 @@ const TALKBACK_SECTION = /^talkback$/i;
 //   "# name"            -> starts a level (name is the level title)
 //   "subtitle: value"   -> level metadata, only in the header zone
 //   "environment: value"-> level metadata, only in the header zone
+//   "talkback-frequency: number" -> random talk-back probability multiplier
 //   "## name"           -> starts a round/sequence within the current level
 //   "## Talkback"       -> starts the level's random talk-back pool (not a round)
 //   "~ text"            -> a talk-back line spoken by the system:
@@ -34,6 +39,7 @@ export function parseGameScript(source) {
             name,
             subtitle: "",
             environment: DEFAULT_ENVIRONMENT,
+            talkbackFrequency: 1,
             rounds: [],
             entries: [],
             talkbackRandom: [],
@@ -134,9 +140,22 @@ export function parseGameScript(source) {
         }
 
         if (level && inHeaderZone && !inTalkback) {
-            const metaMatch = line.match(/^([A-Za-z]+)\s*:\s*(.+)$/);
-            if (metaMatch && METADATA_KEYS.has(metaMatch[1].toLowerCase())) {
-                level[metaMatch[1].toLowerCase()] = metaMatch[2].trim();
+            const metaMatch = line.match(/^([A-Za-z][A-Za-z-]*)\s*:\s*(.+)$/);
+            const field = metaMatch
+                ? METADATA_FIELDS.get(metaMatch[1].toLowerCase())
+                : null;
+
+            if (field) {
+                const value = metaMatch[2].trim();
+
+                if (field === "talkbackFrequency") {
+                    const frequency = Number(value);
+                    level.talkbackFrequency = Number.isFinite(frequency)
+                        ? Math.max(0, Math.min(4, frequency))
+                        : 1;
+                } else {
+                    level[field] = value;
+                }
                 continue;
             }
         }

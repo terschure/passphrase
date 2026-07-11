@@ -77,6 +77,7 @@ shared audio-buffer logic.
 - `talkback/reference.js` owns talk-back URL/fetch/reference helpers.
 - `talkback/endpoint.js` selects local or deployed talk-back API defaults from
   the page origin.
+- `talkback/cache.js` owns the bounded generated-audio URL cache.
 - `talkback/defaultConfig.js` owns talk-back runtime defaults.
 - `talkback/panel.js` owns talk-back panel rendering.
 - `talkback/client.js` owns talk-back reference upload, generation request, and

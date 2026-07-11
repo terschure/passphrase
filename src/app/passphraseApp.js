@@ -1662,6 +1662,8 @@ export function initPassphraseApp() {
                 getEndpoint: () => getTalkbackEndpoint(),
                 getThreshold: () => getTalkbackThreshold(),
                 getPhrases: () => getTalkbackPhrases(),
+                getFrequency: () =>
+                    getLevelConfig().talkbackFrequency ?? 1,
                 getProgress: () => getTalkbackProgress(),
                 getMicStream,
                 getAudioContext,

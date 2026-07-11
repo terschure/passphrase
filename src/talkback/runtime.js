@@ -21,7 +21,11 @@ import {
     renderTalkbackPanel,
     setTalkbackStatus,
 } from "./panel.js";
-import { TALKBACK_RUNTIME_CONFIG } from "./defaultConfig.js";
+import { createTalkbackGenerationCache } from "./cache.js";
+import {
+    getTalkbackTriggerProbability,
+    TALKBACK_RUNTIME_CONFIG,
+} from "./defaultConfig.js";
 
 export function createTalkbackRuntime({
     endpointStatus,
@@ -32,6 +36,7 @@ export function createTalkbackRuntime({
     getEndpoint,
     getThreshold,
     getPhrases,
+    getFrequency = () => 1,
     getProgress,
     getMicStream,
     getAudioContext,
@@ -51,6 +56,9 @@ export function createTalkbackRuntime({
     const settings = { ...TALKBACK_RUNTIME_CONFIG, ...config };
     const segments = [];
     const queue = [];
+    const generationCache = createTalkbackGenerationCache(
+        settings.maxGeneratedCacheEntries,
+    );
     const HEALTH_BASE_MS = 8000;
     const HEALTH_MAX_MS = 60000;
     let recorder = null;
@@ -354,10 +362,11 @@ export function createTalkbackRuntime({
             return;
         }
 
-        const chance =
-            settings.probabilities[kind] ||
-            settings.probabilities.random ||
-            0.1;
+        const chance = getTalkbackTriggerProbability(
+            settings.probabilities,
+            kind,
+            getFrequency(),
+        );
 
         if (Math.random() >= chance) {
             return;
@@ -381,7 +390,7 @@ export function createTalkbackRuntime({
     }
 
     function queuePrompt(prompt) {
-        if (!prompt || queue.length > 2) {
+        if (!prompt || queue.includes(prompt) || queue.length > 2) {
             return;
         }
 
@@ -413,8 +422,21 @@ export function createTalkbackRuntime({
 
     async function generate(prompt) {
         const activeSession = sessionId;
+        const endpoint = getEndpoint();
 
         try {
+            const cachedAudioUrl = generationCache.get(
+                endpoint,
+                settings.modelId,
+                prompt,
+            );
+
+            if (cachedAudioUrl) {
+                setTalkbackStatus(lastStatus, "cached", "ok");
+                await play(cachedAudioUrl, prompt);
+                return;
+            }
+
             const ref = await ensureReference();
 
             if (!ref || activeSession !== sessionId) {
@@ -437,6 +459,12 @@ export function createTalkbackRuntime({
                 return;
             }
 
+            generationCache.set(
+                endpoint,
+                settings.modelId,
+                prompt,
+                record.audio_url,
+            );
             await play(record.audio_url, prompt);
         } catch (error) {
             if (activeSession !== sessionId) {
@@ -485,6 +513,7 @@ export function createTalkbackRuntime({
         ready = false;
         reference = null;
         referenceSignature = "";
+        generationCache.clear();
         // Re-probe promptly after the endpoint changes.
         healthDelay = HEALTH_BASE_MS;
     }
@@ -501,6 +530,7 @@ export function createTalkbackRuntime({
         queue.length = 0;
         reference = null;
         referenceSignature = "";
+        generationCache.clear();
 
         if (audio) {
             audio.pause();

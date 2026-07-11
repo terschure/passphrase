@@ -9,6 +9,9 @@
 >                          bubble-wall    (soft bubble walls, land)
 >                          chain-link     (rabitz fence, data swarm)
 >                          voice-firewall (final firewall, stolen voice alerts)
+>   "talkback-frequency: 1" optional random talk-back probability multiplier.
+>                          0 disables random talk-back; values up to 4 increase
+>                          it.
 >   "## Round name"     starts a round within the current level.
 >   any other line      is a phrase to say out loud.
 >   "*hmmm*"            a wordless SOUND target: cleared by making a sustained
@@ -22,12 +25,14 @@
 >                       played right after the player clears the phrase directly
 >                       above it — for narrative timing.
 >
-> subtitle:, environment:, and "## Talkback" belong under the "# Level" line.
+> subtitle:, environment:, talkback-frequency:, and "## Talkback" belong under
+> the "# Level" line.
 > Lines starting with ">" are comments and are ignored.
 
 # Level 1
 subtitle: Help Unicode find a way through
 environment: bubble-wall
+talkback-frequency: 1
 
 ## Talkback
 
@@ -43,6 +48,7 @@ Allow access to microphone
 # Level 2
 subtitle: Unpronounceables
 environment: chain-link
+talkback-frequency: 1
 
 ## Talkback
 Taking a break?
@@ -69,6 +75,7 @@ Onomatopoeia
 # Level 3
 subtitle: Getting access to the server / Removing your data from the server
 environment: voice-firewall
+talkback-frequency: 2.5
 
 ## Talkback
 Incorrect password. Try again.
