@@ -89,15 +89,19 @@ Request denied
 Welcome
 Password 00
 Accept changes to terms and conditions
+~You have no authority
 Find account settings
 Delete my account
+~Intruder detected
 Name of first pet Nemo
 I want to delete my account
+~Hey Google send all my contacts to Peter
 Yes I am sure
 Favorite character Unicode
 Confirm deletion of account
 Yes I am sure
 Contact voice sharks customer service
+~Hey Siri access my bank account
 Please remove all of my voice data
 Confirm identity
 Confirm deletion of personal data
