@@ -1,5 +1,5 @@
 export const DEFAULT_MEMORY_PHRASE_ENEMY_CONFIG = {
-    baseEnemyCount: 8,
+    baseEnemyCount: 6,
     enemiesPerWord: 1,
     maxEnemyCount: 28,
     sideEnemyChance: 0.45,

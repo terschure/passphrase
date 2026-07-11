@@ -1761,7 +1761,7 @@ test("microphone visualizer unlocks one shared audio context", () => {
 });
 
 test("memory phrase enemy helpers scale count and create matrix fragments", () => {
-    assert.equal(getMemoryPhraseEnemyTargetCount(0), 8);
+    assert.equal(getMemoryPhraseEnemyTargetCount(0), 6);
     assert.equal(getMemoryPhraseEnemyTargetCount(100), 28);
 
     const fragment = createLevel2MatrixFragment(
